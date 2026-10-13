@@ -1,0 +1,26 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Node / frontend
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.log
+
+# Env va bi mat
+.env
+.env.*
+!.env.example
+
+# He dieu hanh
+Thumbs.db
+.DS_Store
+
+# Java / backend (dung sau nay)
+target/
+*.class
+.gradle/
