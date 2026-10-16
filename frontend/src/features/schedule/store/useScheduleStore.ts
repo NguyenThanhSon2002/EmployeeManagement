@@ -29,6 +29,7 @@ import { copyScheduleWeek } from '@/utils/copy-merge.utils';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
 import { useSettingsStore } from '@/features/settings/store/useSettingsStore';
 import { scheduleService } from '../api/scheduleService';
+import { workShiftService } from '@/features/shifts/api/workShiftService';
 import { isMockEnabled } from '@/config/env.config';
 
 const STORAGE_KEY = 'EMS_SCHEDULE_STATE_V1';
@@ -84,9 +85,10 @@ interface ScheduleState {
   recomputeAllConflicts: () => void;
   resetDemoData: () => void;
 
-  addShiftTemplate: (template: Omit<ShiftTemplate, 'id'>) => void;
-  updateShiftTemplate: (id: number, data: Partial<ShiftTemplate>) => void;
-  deleteShiftTemplate: (id: number) => { success: boolean; error?: string };
+  fetchShiftTemplates: () => Promise<void>;
+  addShiftTemplate: (template: Omit<ShiftTemplate, 'id'>) => Promise<ShiftTemplate> | ShiftTemplate;
+  updateShiftTemplate: (id: number, data: Partial<ShiftTemplate>) => Promise<void> | void;
+  deleteShiftTemplate: (id: number) => Promise<{ success: boolean; error?: string }> | { success: boolean; error?: string };
   addApprovedLeave: (leave: LeaveRequest) => void;
   removeApprovedLeave: (leaveId: number) => void;
 }
@@ -679,29 +681,80 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       });
     },
 
-    addShiftTemplate: (template) => {
-      const state = get();
-      const newId = Math.max(0, ...state.shiftTemplates.map((t) => t.id)) + 1;
-      const newTemplate: ShiftTemplate = { ...template, id: newId };
-      set({ shiftTemplates: [...state.shiftTemplates, newTemplate] });
+    fetchShiftTemplates: async () => {
+      if (isMockEnabled() || import.meta.env.MODE === 'test') {
+        return;
+      }
+      try {
+        const list = await workShiftService.getAllWorkShifts();
+        if (list && list.length > 0) {
+          set({ shiftTemplates: list });
+        }
+      } catch (err) {
+        console.warn('Failed to fetch shift templates from backend:', err);
+      }
     },
 
-    updateShiftTemplate: (id, data) => {
+    addShiftTemplate: async (template) => {
       const state = get();
+      const isTest = isMockEnabled() || import.meta.env.MODE === 'test';
+      const tempId = Math.max(0, ...state.shiftTemplates.map((t) => t.id)) + 1;
+      const localTemplate: ShiftTemplate = { ...template, id: tempId };
+
+      if (isTest) {
+        set({ shiftTemplates: [...state.shiftTemplates, localTemplate] });
+        return localTemplate;
+      }
+
+      try {
+        const created = await workShiftService.createWorkShift(template);
+        set({ shiftTemplates: [...get().shiftTemplates, created] });
+        return created;
+      } catch (err) {
+        console.error('Failed to create shift template on backend:', err);
+        set({ shiftTemplates: [...get().shiftTemplates, localTemplate] });
+        return localTemplate;
+      }
+    },
+
+    updateShiftTemplate: async (id, data) => {
+      const state = get();
+      const isTest = isMockEnabled() || import.meta.env.MODE === 'test';
+
       set({
         shiftTemplates: state.shiftTemplates.map((t) => (t.id === id ? { ...t, ...data } : t)),
       });
+
+      if (!isTest) {
+        try {
+          await workShiftService.updateWorkShift(id, data);
+        } catch (err) {
+          console.error('Failed to update shift template on backend:', err);
+        }
+      }
     },
 
-    deleteShiftTemplate: (id) => {
+    deleteShiftTemplate: async (id) => {
       const state = get();
       const isUsed = Object.values(state.assignments).some((a) => a.workShiftId === id && a.status === 'ASSIGNED');
       if (isUsed) {
         return { success: false, error: 'Không thể xóa mẫu ca đang có nhân viên được phân công làm việc.' };
       }
+
+      const isTest = isMockEnabled() || import.meta.env.MODE === 'test';
       set({
         shiftTemplates: state.shiftTemplates.filter((t) => t.id !== id),
       });
+
+      if (!isTest) {
+        try {
+          await workShiftService.deleteWorkShift(id);
+        } catch (err) {
+          console.error('Failed to delete shift template on backend:', err);
+          set({ shiftTemplates: state.shiftTemplates });
+          return { success: false, error: 'Lỗi khi xóa mẫu ca trên máy chủ.' };
+        }
+      }
       return { success: true };
     },
 
