@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarCheck, Clock, AlertTriangle, UserX } from 'lucide-react';
+import { CalendarCheck, Clock, AlertTriangle, UserX, Filter } from 'lucide-react';
 
 interface ScheduleSummaryCardsProps {
   totalShifts: number;
@@ -22,130 +22,136 @@ export const ScheduleSummaryCards: React.FC<ScheduleSummaryCardsProps> = ({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
         gap: 'var(--space-md)',
         marginBottom: 'var(--space-md)',
       }}
     >
       {/* Card 1: Total Shifts */}
-      <div className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--color-info-bg)',
+            width: 44,
+            height: 44,
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--color-primary-light)',
             color: 'var(--color-primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexShrink: 0,
           }}
         >
           <CalendarCheck size={22} />
         </div>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-            TỔNG SỐ CA TUẦN NÀY
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Tổng Số Ca Tuần Này
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            {totalShifts} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>ca</span>
+          <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+            {totalShifts}{' '}
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>ca</span>
           </div>
         </div>
       </div>
 
       {/* Card 2: Total Net Hours */}
-      <div className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: '#f6ffed',
-            color: '#52c41a',
+            width: 44,
+            height: 44,
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: '#ECFDF5',
+            color: '#10B981',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexShrink: 0,
           }}
         >
           <Clock size={22} />
         </div>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-            TỔNG GIỜ LÀM VIỆC (NET)
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Tổng Giờ Làm Việc (Net)
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
             {totalHours.toFixed(1)}{' '}
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>giờ</span>
           </div>
         </div>
       </div>
 
-      {/* Card 3: Conflicts (Clickable Filter) */}
+      {/* Card 3: Conflicts (Clickable Filter Card) */}
       <button
         type="button"
         onClick={onToggleConflictFilter}
-        className="card"
+        className="card card-interactive"
         style={{
-          padding: '12px 16px',
+          padding: '14px 18px',
           display: 'flex',
           alignItems: 'center',
           gap: 14,
-          cursor: 'pointer',
           textAlign: 'left',
-          backgroundColor: onlyShowConflicts ? '#fffbe6' : 'var(--color-surface)',
-          border: onlyShowConflicts ? '2px solid var(--color-warning)' : '1px solid var(--color-border)',
-          transition: 'all 0.15s ease',
+          backgroundColor: onlyShowConflicts ? '#FFFBEB' : 'var(--color-surface)',
+          borderColor: onlyShowConflicts ? '#F59E0B' : 'var(--color-border)',
+          boxShadow: onlyShowConflicts ? '0 0 0 2px rgba(245, 158, 11, 0.2)' : 'var(--shadow-sm)',
+          position: 'relative',
         }}
-        title="Nhấp để bật/tắt lọc chỉ các nhân viên có cảnh báo"
+        title="Nhấp để bật/tắt lọc chỉ các nhân viên có cảnh báo xung đột"
       >
         <div
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: '#fffbe6',
-            color: '#faad14',
+            width: 44,
+            height: 44,
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: '#FFFBEB',
+            color: '#D97706',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexShrink: 0,
           }}
         >
           <AlertTriangle size={22} />
         </div>
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-            CẢNH BÁO XUNG ĐỘT
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Cảnh Báo Xung Đột</span>
+            {onlyShowConflicts && <Filter size={11} color="#D97706" />}
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: conflictCount > 0 ? '#d46b08' : '#52c41a' }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: conflictCount > 0 ? '#D97706' : '#10B981', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
             {conflictCount}{' '}
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-muted)' }}>
-              {onlyShowConflicts ? '(Đang lọc ⚠️)' : 'mục'}
+            <span style={{ fontSize: 12, fontWeight: 500, color: onlyShowConflicts ? '#D97706' : 'var(--color-text-muted)' }}>
+              {onlyShowConflicts ? '(Đang lọc ⚠️)' : 'vấn đề'}
             </span>
           </div>
         </div>
       </button>
 
       {/* Card 4: Understaffed Days */}
-      <div className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: understaffedDaysCount > 0 ? '#fff1f0' : 'var(--color-bg-layout)',
-            color: understaffedDaysCount > 0 ? '#ff4d4f' : 'var(--color-text-muted)',
+            width: 44,
+            height: 44,
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: understaffedDaysCount > 0 ? '#FEF2F2' : '#F1F5F9',
+            color: understaffedDaysCount > 0 ? '#EF4444' : 'var(--color-text-muted)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexShrink: 0,
           }}
         >
           <UserX size={22} />
         </div>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-            NGÀY THIẾU ĐỊNH BIÊN
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Ngày Thiếu Định Biên
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: understaffedDaysCount > 0 ? '#cf1322' : 'var(--color-text-primary)' }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: understaffedDaysCount > 0 ? '#DC2626' : 'var(--color-text-primary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
             {understaffedDaysCount}{' '}
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>ngày</span>
           </div>

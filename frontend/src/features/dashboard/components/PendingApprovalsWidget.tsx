@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useUIStore } from '@/store/useUIStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { Check, X, FileText, Palmtree } from 'lucide-react';
 
 interface PendingItem {

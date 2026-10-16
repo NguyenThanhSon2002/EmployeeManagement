@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
-import { useScheduleStore } from '@/store/useScheduleStore';
-import { useAttendanceStore } from '@/store/useAttendanceStore';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
+import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
 import { Download, Search } from 'lucide-react';

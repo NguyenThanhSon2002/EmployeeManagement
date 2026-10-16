@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useLeaveStore } from '@/store/useLeaveStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useUIStore } from '@/store/useUIStore';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
+import { useLeaveStore } from '../store/useLeaveStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useUIStore } from '@/shared/store/useUIStore';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
 import { format, differenceInCalendarDays, parseISO } from 'date-fns';
 import { X, Calendar, AlertCircle } from 'lucide-react';
 
@@ -79,7 +79,7 @@ export const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ isOpen, on
     addToast({
       type: 'success',
       title: 'Nộp đơn xin nghỉ thành công',
-      message: `Đơn xin nghỉ ${totalDays} ngày đã được gửi và chuyển vào danh sách chờ duyệt.`,
+      message: `Đơn xin nghỉ ${totalDays} ngày đã được gửi và lưu vào CSDL MySQL (chờ phê duyệt).`,
     });
     onClose();
   };

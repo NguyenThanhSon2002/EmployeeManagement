@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
-import { useUIStore } from '@/store/useUIStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { CheckCircle2, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
@@ -39,17 +39,20 @@ export const AppLayout: React.FC = () => {
           tabIndex={-1}
           style={{
             flex: 1,
-            padding: 'var(--space-md) var(--space-lg)',
+            padding: '24px 32px',
             display: 'flex',
             flexDirection: 'column',
             outline: 'none',
+            maxWidth: 1600,
+            width: '100%',
+            margin: '0 auto',
           }}
         >
           <Outlet />
         </main>
       </div>
 
-      {/* Toast Notification Container */}
+      {/* Modern Floating Toast Notification Container */}
       <div
         aria-live="polite"
         style={{
@@ -58,25 +61,26 @@ export const AppLayout: React.FC = () => {
           right: 24,
           display: 'flex',
           flexDirection: 'column',
-          gap: 8,
+          gap: 10,
           zIndex: 'var(--z-toast)',
-          maxWidth: 380,
+          maxWidth: 400,
+          pointerEvents: 'none',
         }}
       >
         {toasts.map((toast) => {
           let borderColor = 'var(--color-info-border)';
-          let bgColor = 'var(--color-surface)';
+          let bgColor = 'rgba(255, 255, 255, 0.96)';
           let icon = <Info size={18} color="var(--color-primary)" />;
 
           if (toast.type === 'success') {
-            borderColor = 'var(--color-success-border)';
-            icon = <CheckCircle2 size={18} color="var(--color-success)" />;
+            borderColor = '#A7F3D0';
+            icon = <CheckCircle2 size={18} color="#10B981" />;
           } else if (toast.type === 'warning') {
-            borderColor = 'var(--color-warning-border)';
-            icon = <AlertTriangle size={18} color="var(--color-warning)" />;
+            borderColor = '#FDE68A';
+            icon = <AlertTriangle size={18} color="#F59E0B" />;
           } else if (toast.type === 'error') {
-            borderColor = 'var(--color-error-border)';
-            icon = <AlertCircle size={18} color="var(--color-error)" />;
+            borderColor = '#FECACA';
+            icon = <AlertCircle size={18} color="#EF4444" />;
           }
 
           return (
@@ -87,18 +91,28 @@ export const AppLayout: React.FC = () => {
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: 12,
-                padding: '12px 14px',
+                padding: '14px 16px',
                 backgroundColor: bgColor,
                 border: `1px solid ${borderColor}`,
-                borderRadius: 'var(--radius-md)',
-                boxShadow: 'var(--shadow-lg)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-xl)',
                 fontSize: 'var(--font-caption)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                pointerEvents: 'auto',
+                animation: 'slide-left 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
-              <span style={{ marginTop: 2 }}>{icon}</span>
+              <span style={{ marginTop: 2, flexShrink: 0 }}>{icon}</span>
               <div style={{ flex: 1 }}>
-                {toast.title && <div style={{ fontWeight: 600, marginBottom: 2 }}>{toast.title}</div>}
-                <div>{toast.message}</div>
+                {toast.title && (
+                  <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-text-primary)', marginBottom: 2 }}>
+                    {toast.title}
+                  </div>
+                )}
+                <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.4, fontSize: '12px' }}>
+                  {toast.message}
+                </div>
               </div>
               <button
                 type="button"
@@ -110,9 +124,12 @@ export const AppLayout: React.FC = () => {
                   cursor: 'pointer',
                   padding: 2,
                   color: 'var(--color-text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                <X size={14} />
+                <X size={15} />
               </button>
             </div>
           );

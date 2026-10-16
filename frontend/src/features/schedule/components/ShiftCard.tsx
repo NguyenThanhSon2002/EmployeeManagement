@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ShiftAssignment, ScheduleConflict } from '@/types/domain.types';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
-import { AlertTriangle, Moon, Sun, Sunrise, Sunset } from 'lucide-react';
+import { AlertTriangle, Moon, Sun, Sunrise, Sunset, ShieldAlert } from 'lucide-react';
 
 interface ShiftCardProps {
   assignment: ShiftAssignment;
@@ -78,20 +78,20 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({ assignment, conflicts, onC
 
         {/* Conflict Flag Indicator */}
         {hasMandatory && (
-          <span className="card-conflict-icon" title={conflictTooltip} style={{ color: 'var(--color-error)' }}>
-            <AlertTriangle size={14} color="var(--color-error)" />
+          <span className="card-conflict-icon" title={conflictTooltip} style={{ color: '#DC2626' }}>
+            <ShieldAlert size={14} color="#DC2626" />
           </span>
         )}
         {!hasMandatory && hasWarning && (
-          <span className="card-conflict-icon" title={conflictTooltip} style={{ color: 'var(--color-warning)' }}>
-            <AlertTriangle size={14} color="#d48806" />
+          <span className="card-conflict-icon" title={conflictTooltip} style={{ color: '#D97706' }}>
+            <AlertTriangle size={14} color="#D97706" />
           </span>
         )}
       </div>
 
       <div className="shift-card-time">
         {assignment.snapshotStartTime} - {assignment.snapshotEndTime}
-        {assignment.snapshotCrossMidnight && <span style={{ fontWeight: 600 }}> (+1)</span>}
+        {assignment.snapshotCrossMidnight && <span style={{ fontWeight: 700 }}> (+1)</span>}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
@@ -99,7 +99,15 @@ export const ShiftCard: React.FC<ShiftCardProps> = ({ assignment, conflicts, onC
           {netHours.toFixed(1)}h
         </span>
         {assignment.overrideRule && (
-          <span style={{ fontSize: 9, fontStyle: 'italic', opacity: 0.8 }}>
+          <span
+            style={{
+              fontSize: 9.5,
+              fontWeight: 600,
+              padding: '1px 4px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'rgba(0, 0, 0, 0.08)',
+            }}
+          >
             Đặc cách
           </span>
         )}

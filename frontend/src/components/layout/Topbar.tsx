@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { RoleSwitcher } from './RoleSwitcher';
 import { Clock } from 'lucide-react';
 
@@ -21,10 +21,9 @@ export const Topbar: React.FC = () => {
 
   return (
     <header
+      className="glass-surface"
       style={{
         height: 'var(--topbar-height)',
-        backgroundColor: 'var(--color-surface)',
-        borderBottom: '1px solid var(--color-border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -32,66 +31,95 @@ export const Topbar: React.FC = () => {
         position: 'sticky',
         top: 0,
         zIndex: 'var(--z-sticky)',
+        boxShadow: 'var(--shadow-xs)',
       }}
     >
-      {/* Left: System Status / Portal Greeting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+      {/* Left: System Title, Department Scope & Operational Status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div>
-          <div style={{ fontSize: 'var(--font-body-md)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>
             Hệ Thống Quản Lý Phân Ca & Nhân Sự
           </div>
-          <div style={{ fontSize: 'var(--font-caption)', color: 'var(--color-text-secondary)' }}>
-            Phân hệ: Phòng Vận hành Dịch vụ (DEPT-OPS)
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+            <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+              Phòng Vận hành Dịch vụ (DEPT-OPS)
+            </span>
+            <span style={{ color: 'var(--color-border)' }}>•</span>
+            <span className="pulse-dot-green" />
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#059669' }}>Hệ thống sẵn sàng</span>
           </div>
         </div>
       </div>
 
-      {/* Right Controls: Real-time Clock, RoleSwitcher, User Info */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)' }}>
-        {/* Real-time Clock GMT+7 */}
+      {/* Right Controls: Clock, Role Switcher, User Identity */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        {/* Real-time Clock GMT+7 with Tabular Monospace */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            padding: '4px 10px',
-            backgroundColor: 'var(--color-bg-layout)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border-subtle)',
+            gap: 8,
+            padding: '5px 12px',
+            backgroundColor: 'var(--color-surface)',
+            borderRadius: 'var(--radius-full)',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-xs)',
             fontSize: 'var(--font-caption)',
             color: 'var(--color-text-secondary)',
           }}
-          title="Thời gian hệ thống chuẩn GMT+7"
+          title="Thời gian chuẩn hệ thống (GMT+7)"
         >
           <Clock size={14} color="var(--color-primary)" />
-          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+          <span
+            style={{
+              fontWeight: 700,
+              color: 'var(--color-text-primary)',
+              fontVariantNumeric: 'tabular-nums',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontSize: 13,
+            }}
+          >
             {timeFormatted}
           </span>
-          <span style={{ color: 'var(--color-text-muted)' }}>|</span>
-          <span style={{ textTransform: 'capitalize' }}>{dateFormatted}</span>
+          <span style={{ color: '#CBD5E1' }}>|</span>
+          <span style={{ textTransform: 'capitalize', fontSize: 12 }}>{dateFormatted}</span>
         </div>
 
         {/* Interactive Role Switcher */}
         <RoleSwitcher />
 
         {/* User Profile Summary */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '4px 10px 4px 4px',
+            backgroundColor: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-full)',
+            boxShadow: 'var(--shadow-xs)',
+          }}
+        >
           <img
-            src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+            src={
+              currentUser.avatarUrl ||
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
+            }
             alt={currentUser.fullName}
             style={{
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               borderRadius: 'var(--radius-full)',
               objectFit: 'cover',
-              border: '2px solid var(--color-border)',
+              border: '2px solid var(--color-primary-light)',
             }}
           />
           <div style={{ lineHeight: 1.2 }}>
-            <div style={{ fontSize: 'var(--font-caption)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text-primary)' }}>
               {currentUser.fullName}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+            <div style={{ fontSize: 10.5, color: 'var(--color-text-muted)' }}>
               {currentUser.employeeCode}
             </div>
           </div>

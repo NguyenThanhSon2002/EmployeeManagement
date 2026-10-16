@@ -41,36 +41,39 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
 
   return (
     <div
+      className="card"
       style={{
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 'var(--space-md)',
-        padding: '10px 16px',
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-sm)',
+        padding: '10px 18px',
         marginBottom: 'var(--space-md)',
       }}
     >
-      {/* Left: Search & Filter Dropdowns */}
+      {/* Left: Search & Filter Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        {/* Search Input */}
-        <div style={{ position: 'relative', width: 240 }}>
+        {/* Search Input with Clear Button */}
+        <div style={{ position: 'relative', width: 260 }}>
           <Search
-            size={16}
+            size={15}
             color="var(--color-text-muted)"
-            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}
+            style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}
           />
           <input
             type="text"
             className="input-base"
-            placeholder="Tìm theo tên hoặc mã NV..."
+            placeholder="Tìm theo tên hoặc mã nhân viên..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
-            style={{ width: '100%', paddingLeft: 32, paddingRight: localSearch ? 28 : 10, height: 34, fontSize: 'var(--font-caption)' }}
+            style={{
+              width: '100%',
+              paddingLeft: 34,
+              paddingRight: localSearch ? 28 : 10,
+              height: 34,
+              fontSize: '12.5px',
+            }}
           />
           {localSearch && (
             <button
@@ -88,7 +91,9 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
                 border: 'none',
                 cursor: 'pointer',
                 color: 'var(--color-text-muted)',
+                padding: 2,
               }}
+              aria-label="Xóa từ khóa tìm kiếm"
             >
               <X size={14} />
             </button>
@@ -97,12 +102,12 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
 
         {/* Shift Filter Dropdown */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Filter size={15} color="var(--color-text-muted)" />
+          <Filter size={14} color="var(--color-text-muted)" />
           <select
             className="input-base"
             value={shiftCodeFilter}
             onChange={(e) => onShiftFilterChange(e.target.value)}
-            style={{ height: 34, fontSize: 'var(--font-caption)', minWidth: 160 }}
+            style={{ height: 34, fontSize: '12.5px', minWidth: 170, fontWeight: 500 }}
           >
             <option value="">Tất cả ca làm việc</option>
             {shiftTemplates.map((t) => (
@@ -113,29 +118,30 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
           </select>
         </div>
 
-        {/* Conflicts Toggle */}
+        {/* Conflicts Toggle Pill */}
         <label
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 7,
             cursor: 'pointer',
-            fontSize: 'var(--font-caption)',
-            fontWeight: 500,
-            padding: '6px 10px',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: onlyShowConflicts ? '#fffbe6' : 'var(--color-bg-layout)',
-            border: onlyShowConflicts ? '1px solid var(--color-warning)' : '1px solid var(--color-border-subtle)',
-            color: onlyShowConflicts ? '#d46b08' : 'var(--color-text-secondary)',
+            fontSize: '12px',
+            fontWeight: 600,
+            padding: '5px 12px',
+            borderRadius: 'var(--radius-full)',
+            backgroundColor: onlyShowConflicts ? '#FFFBEB' : '#F8FAFC',
+            border: onlyShowConflicts ? '1px solid #F59E0B' : '1px solid var(--color-border)',
+            color: onlyShowConflicts ? '#B45309' : 'var(--color-text-secondary)',
+            transition: 'all var(--transition-fast)',
           }}
         >
           <input
             type="checkbox"
             checked={onlyShowConflicts}
             onChange={(e) => onToggleConflicts(e.target.checked)}
-            style={{ accentColor: 'var(--color-warning)' }}
+            style={{ accentColor: '#F59E0B' }}
           />
-          <AlertTriangle size={14} />
+          <AlertTriangle size={13} color={onlyShowConflicts ? '#D97706' : 'var(--color-text-muted)'} />
           <span>Chỉ hiện có cảnh báo ⚠️</span>
         </label>
 
@@ -155,9 +161,18 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
         )}
       </div>
 
-      {/* Right: Counter */}
-      <div style={{ fontSize: 'var(--font-caption)', color: 'var(--color-text-muted)' }}>
-        Hiển thị <strong>{filteredCount}</strong> / {totalEmployees} nhân sự
+      {/* Right: Counter Badge */}
+      <div
+        style={{
+          fontSize: '12px',
+          color: 'var(--color-text-secondary)',
+          backgroundColor: '#F8FAFC',
+          padding: '4px 10px',
+          borderRadius: 'var(--radius-full)',
+          border: '1px solid var(--color-border-subtle)',
+        }}
+      >
+        Đang hiển thị <strong style={{ color: 'var(--color-primary)' }}>{filteredCount}</strong> / {totalEmployees} nhân sự
       </div>
     </div>
   );

@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
-import { MOCK_POSITIONS } from '@/data/mock/positions.mock';
-import { useScheduleStore } from '@/store/useScheduleStore';
+import type { Employee, Department } from '@/types/domain.types';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
+import { MOCK_POSITIONS } from '@/mocks/positions.mock';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
+import { employeeService } from './api/employeeService';
+import { departmentService } from '@/shared/department/departmentService';
+import { isMockEnabled } from '@/config/env.config';
 import { formatDateVi } from '@/utils/date.utils';
 import {
   ArrowLeft,
@@ -25,9 +29,67 @@ export const EmployeeDetailPage: React.FC = () => {
 
   const { assignments, approvedLeaves } = useScheduleStore();
 
-  const employee = MOCK_EMPLOYEES.find((e) => e.id === Number(id)) || MOCK_EMPLOYEES[0];
+  const [employee, setEmployee] = useState<Employee>(() => {
+    return MOCK_EMPLOYEES.find((e) => e.id === Number(id)) || MOCK_EMPLOYEES[0];
+  });
+  const [departmentsList, setDepartmentsList] = useState<Department[]>(MOCK_DEPARTMENTS);
 
-  const dept = MOCK_DEPARTMENTS.find((d) => d.id === employee.departmentId);
+  useEffect(() => {
+    if (isMockEnabled() || !id) return;
+
+    let isMounted = true;
+    const fetchEmployee = async () => {
+      try {
+        const [empData, deptData] = await Promise.all([
+          employeeService.getEmployeeById(Number(id)).catch(() => null),
+          departmentService.getAllDepartments().catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+
+        if (deptData && Array.isArray(deptData) && deptData.length > 0) {
+          const mappedDepts: Department[] = deptData.map((d: any) => ({
+            id: d.id,
+            departmentCode: d.department_code || d.departmentCode,
+            departmentName: d.department_name || d.departmentName,
+            managerId: d.manager_id || d.managerId || null,
+          }));
+          setDepartmentsList(mappedDepts);
+        }
+
+        if (empData) {
+          setEmployee({
+            id: empData.id,
+            employeeCode: empData.employee_code || (empData as any).employeeCode,
+            fullName: empData.full_name || (empData as any).fullName,
+            email: empData.email,
+            phoneNumber: empData.phone_number || (empData as any).phoneNumber || '',
+            nationalId: empData.national_id || (empData as any).nationalId || '',
+            dateOfBirth: empData.date_of_birth || (empData as any).dateOfBirth || '',
+            gender: empData.gender || 'OTHER',
+            address: empData.address || '',
+            departmentId: empData.department_id || (empData as any).departmentId || 1,
+            positionId: empData.position_id || (empData as any).positionId || 1,
+            managerId: empData.manager_id || (empData as any).managerId || null,
+            employmentStatus: empData.employment_status || (empData as any).employmentStatus || 'OFFICIAL',
+            employmentType: empData.employment_type || (empData as any).employmentType || 'FULL_TIME',
+            hireDate: empData.hire_date || (empData as any).hireDate || '2026-01-01',
+            isActive: empData.is_active !== undefined ? empData.is_active : true,
+            version: empData.version || 1,
+          });
+        }
+      } catch (err) {
+        console.warn('Could not fetch employee by id from API:', err);
+      }
+    };
+
+    fetchEmployee();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  const dept = departmentsList.find((d) => d.id === employee.departmentId);
   const position = MOCK_POSITIONS.find((p) => p.id === employee.positionId);
 
   // Shifts of this employee

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useAttendanceStore } from '@/store/useAttendanceStore';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
+import { useAttendanceStore } from './store/useAttendanceStore';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
 import { AttendanceCorrectionModal } from './components/AttendanceCorrectionModal';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
 import type { AttendanceRecord } from '@/types/domain.types';
@@ -22,7 +22,12 @@ export const AttendanceOverviewPage: React.FC = () => {
     departmentFilter,
     setSelectedDate,
     setDepartmentFilter,
+    fetchRecords,
   } = useAttendanceStore();
+
+  React.useEffect(() => {
+    fetchRecords?.(selectedDate, departmentFilter || undefined);
+  }, [fetchRecords, selectedDate, departmentFilter]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -116,14 +121,16 @@ export const AttendanceOverviewPage: React.FC = () => {
       {/* Top Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 'var(--font-h1)', fontWeight: 700 }}>Bảng Tổng Quan Chấm Công Hàng Ngày (SCR-08)</h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginTop: 4 }}>
-            Giám sát thời gian thực giờ vào/ra, cảnh báo đi muộn, về sớm và tiếp nhận giải trình công
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            Bảng Tổng Quan Chấm Công Hàng Ngày (SCR-08)
+          </h1>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
+            Giám sát thời gian thực giờ vào/ra, cảnh báo đi muộn, về sớm và tiếp nhận giải trình công.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
-          <button type="button" className="btn btn-secondary" onClick={handleOpenAllCorrections}>
+          <button type="button" className="btn btn-default" onClick={handleOpenAllCorrections}>
             <FileQuestion size={16} /> Quản lý Giải trình (SCR-09)
           </button>
           <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
@@ -140,36 +147,108 @@ export const AttendanceOverviewPage: React.FC = () => {
           gap: 16,
         }}
       >
-        <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid #1890ff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Tổng Quân Số</span>
-            <UserCheck size={18} color="#1890ff" />
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--color-primary-light)',
+              color: 'var(--color-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <UserCheck size={22} />
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>{totalRecords}</div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Tổng Quân Số
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              {totalRecords} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+            </div>
+          </div>
         </div>
 
-        <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid #52c41a' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Có Mặt / Đúng Giờ</span>
-            <CheckCircle size={18} color="#52c41a" />
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: '#ECFDF5',
+              color: '#10B981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <CheckCircle size={22} />
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, color: '#389e0d' }}>{presentCount}</div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Có Mặt / Đúng Giờ
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#047857', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              {presentCount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+            </div>
+          </div>
         </div>
 
-        <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid #faad14' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Đi Muộn / Về Sớm</span>
-            <Clock size={18} color="#faad14" />
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: '#FFFBEB',
+              color: '#F59E0B',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Clock size={22} />
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, color: '#d46b08' }}>{lateOrEarlyCount}</div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Đi Muộn / Về Sớm
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#B45309', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              {lateOrEarlyCount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+            </div>
+          </div>
         </div>
 
-        <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid #f5222d' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Thiếu Check-out</span>
-            <AlertTriangle size={18} color="#f5222d" />
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: '#FEF2F2',
+              color: '#EF4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <AlertTriangle size={22} />
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, color: '#cf1322' }}>{missingCheckoutCount}</div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Thiếu Check-out
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#DC2626', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              {missingCheckoutCount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -177,7 +256,7 @@ export const AttendanceOverviewPage: React.FC = () => {
       <div
         className="card"
         style={{
-          padding: '14px 20px',
+          padding: '12px 18px',
           display: 'flex',
           gap: 14,
           alignItems: 'center',
@@ -185,21 +264,21 @@ export const AttendanceOverviewPage: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: 13, fontWeight: 500 }}>Ngày chấm công:</label>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>Ngày chấm công:</label>
           <input
             type="date"
-            className="input"
-            style={{ width: 160 }}
+            className="input-base"
+            style={{ width: 160, height: 36, fontSize: '12.5px' }}
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
           />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: 13, fontWeight: 500 }}>Phòng ban:</label>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>Phòng ban:</label>
           <select
-            className="input"
-            style={{ width: 180 }}
+            className="input-base"
+            style={{ width: 190, height: 36, fontSize: '12.5px', fontWeight: 500 }}
             value={departmentFilter || ''}
             onChange={(e) => setDepartmentFilter(e.target.value ? Number(e.target.value) : null)}
           >
@@ -212,21 +291,21 @@ export const AttendanceOverviewPage: React.FC = () => {
           </select>
         </div>
 
-        <div style={{ flex: 1, minWidth: 220, position: 'relative' }}>
-          <Search size={16} style={{ position: 'absolute', left: 10, top: 11, color: 'var(--color-text-muted)' }} />
+        <div style={{ flex: 1, minWidth: 240, position: 'relative' }}>
+          <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
           <input
             type="text"
-            className="input"
+            className="input-base"
             placeholder="Tìm theo tên hoặc mã nhân viên..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: 34, width: '100%' }}
+            style={{ paddingLeft: 34, width: '100%', height: 36, fontSize: '12.5px' }}
           />
         </div>
       </div>
 
       {/* Attendance Table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card" style={{ padding: 0, overflowX: 'auto', borderRadius: 'var(--radius-xl)' }}>
         <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
@@ -245,7 +324,7 @@ export const AttendanceOverviewPage: React.FC = () => {
           <tbody>
             {filteredRecords.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-secondary)' }}>
+                <td colSpan={10} style={{ textAlign: 'center', padding: '36px 0', color: 'var(--color-text-muted)' }}>
                   Không tìm thấy bản ghi chấm công nào phù hợp.
                 </td>
               </tr>
@@ -262,41 +341,58 @@ export const AttendanceOverviewPage: React.FC = () => {
                 return (
                   <tr key={r.id}>
                     <td>
-                      <span style={{ fontWeight: 600 }}>{emp?.employeeCode}</span>
+                      <span style={{ fontWeight: 700, color: 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                        {emp?.employeeCode}
+                      </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <img
                           src={emp?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                           alt={emp?.fullName}
-                          style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }}
+                          style={{ width: 32, height: 32, borderRadius: 'var(--radius-full)', objectFit: 'cover', border: '1.5px solid var(--color-border)' }}
                         />
-                        <span>{emp?.fullName}</span>
+                        <span style={{ fontWeight: 600 }}>{emp?.fullName}</span>
                       </div>
                     </td>
-                    <td>{dept?.departmentName}</td>
                     <td>
-                      <strong style={{ color: r.lateMinutes > 0 ? '#cf1322' : 'inherit' }}>{inStr}</strong>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: '#F1F5F9',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {dept?.departmentName}
+                      </span>
                     </td>
                     <td>
-                      <strong style={{ color: r.status === 'MISSING_CHECKOUT' ? '#cf1322' : 'inherit' }}>{outStr}</strong>
+                      <strong style={{ color: r.lateMinutes > 0 ? '#DC2626' : 'inherit', fontVariantNumeric: 'tabular-nums' }}>
+                        {inStr}
+                      </strong>
+                    </td>
+                    <td>
+                      <strong style={{ color: r.status === 'MISSING_CHECKOUT' ? '#DC2626' : 'inherit', fontVariantNumeric: 'tabular-nums' }}>
+                        {outStr}
+                      </strong>
                     </td>
                     <td>
                       {r.lateMinutes > 0 ? (
-                        <span style={{ color: '#cf1322', fontWeight: 600 }}>+{r.lateMinutes}p</span>
+                        <span style={{ color: '#DC2626', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>+{r.lateMinutes}p</span>
                       ) : (
-                        '-'
+                        <span style={{ color: 'var(--color-text-muted)' }}>-</span>
                       )}
                     </td>
                     <td>
                       {r.earlyLeaveMinutes > 0 ? (
-                        <span style={{ color: '#cf1322', fontWeight: 600 }}>-{r.earlyLeaveMinutes}p</span>
+                        <span style={{ color: '#DC2626', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>-{r.earlyLeaveMinutes}p</span>
                       ) : (
-                        '-'
+                        <span style={{ color: 'var(--color-text-muted)' }}>-</span>
                       )}
                     </td>
                     <td>
-                      <span style={{ fontWeight: 600 }}>{r.actualHours.toFixed(1)}h</span>
+                      <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{r.actualHours.toFixed(1)}h</span>
                     </td>
                     <td>
                       <span
@@ -325,9 +421,9 @@ export const AttendanceOverviewPage: React.FC = () => {
                     <td style={{ textAlign: 'right' }}>
                       <button
                         type="button"
-                        className="btn btn-secondary"
+                        className="btn btn-default"
                         onClick={() => handleOpenCorrection(r)}
-                        style={{ height: 28, padding: '0 8px', fontSize: 12 }}
+                        style={{ height: 30, padding: '0 10px', fontSize: 12 }}
                       >
                         Giải trình
                       </button>

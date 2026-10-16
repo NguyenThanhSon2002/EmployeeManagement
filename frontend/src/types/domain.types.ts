@@ -12,7 +12,7 @@ export interface Department {
   departmentCode: string;
   departmentName: string;
   managerId: number | null;
-  parentDepartmentId: number | null;
+  parentDepartmentId?: number | null;
 }
 
 /** Job Position / Title */
@@ -39,6 +39,12 @@ export interface Employee {
   hireDate: string; // YYYY-MM-DD
   avatarUrl?: string;
   isActive: boolean;
+  version?: number;
+  nationalId?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
+  employmentType?: string;
 }
 
 /** Shift Template (Work Shift Definition) */

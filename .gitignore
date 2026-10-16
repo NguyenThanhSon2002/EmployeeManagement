@@ -10,6 +10,7 @@ build/
 coverage/
 .vite/
 *.log
+*.tsbuildinfo
 
 # Env va bi mat
 .env

@@ -1,59 +1,61 @@
 :root {
   /* Semantic Color Palette - WCAG 2.1 AA Compliant */
   --color-primary: #1677FF;
-  --color-primary-hover: #4096FF;
-  --color-primary-active: #0958D9;
-  --color-bg-layout: #F5F7FA;
+  --color-primary-hover: #2563EB;
+  --color-primary-active: #1D4ED8;
+  --color-primary-light: #EFF6FF;
+  --color-primary-gradient: linear-gradient(135deg, #2563EB 0%, #1677FF 100%);
+  --color-bg-layout: #F8FAFC;
   --color-surface: #FFFFFF;
-  --color-surface-hover: #FAFAFA;
-  --color-border: #D9D9D9;
-  --color-border-subtle: #F0F0F0;
-  --color-text-primary: #1F1F1F;
-  --color-text-secondary: #595959;
-  --color-text-muted: #8C8C8C;
+  --color-surface-hover: #F8FAFC;
+  --color-border: #E2E8F0;
+  --color-border-subtle: #F1F5F9;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94A3B8;
 
   /* Functional Status Colors */
-  --color-success: #52C41A;
-  --color-success-bg: #F6FFED;
-  --color-success-border: #B7EB8F;
-  --color-warning: #FAAD14;
-  --color-warning-bg: #FFFBE6;
-  --color-warning-border: #FFE58F;
-  --color-error: #FF4D4F;
-  --color-error-bg: #FFF1F0;
-  --color-error-border: #FFA39E;
-  --color-info: #1890FF;
-  --color-info-bg: #E6F7FF;
-  --color-info-border: #91CAFF;
+  --color-success: #10B981;
+  --color-success-bg: #ECFDF5;
+  --color-success-border: #A7F3D0;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FFFBEB;
+  --color-warning-border: #FDE68A;
+  --color-error: #EF4444;
+  --color-error-bg: #FEF2F2;
+  --color-error-border: #FECACA;
+  --color-info: #0284C7;
+  --color-info-bg: #F0F9FF;
+  --color-info-border: #BAE6FD;
 
-  /* Colorblind-Safe Shift Palette */
-  --shift-morning-bg: #E6F7FF;
-  --shift-morning-border: #91CAFF;
-  --shift-morning-text: #0958D9;
+  /* Colorblind-Safe Shift Palette (WCAG AA) */
+  --shift-morning-bg: #EFF6FF;
+  --shift-morning-border: #BFDBFE;
+  --shift-morning-text: #1D4ED8;
 
-  --shift-early-bg: #E6FFFB;
-  --shift-early-border: #87E8DE;
-  --shift-early-text: #006D75;
+  --shift-early-bg: #F0FDFA;
+  --shift-early-border: #99F6E4;
+  --shift-early-text: #0F766E;
 
-  --shift-afternoon-bg: #FFF7E6;
-  --shift-afternoon-border: #FFD591;
-  --shift-afternoon-text: #AD4E00;
+  --shift-afternoon-bg: #FFFBEB;
+  --shift-afternoon-border: #FDE68A;
+  --shift-afternoon-text: #B45309;
 
-  --shift-evening-bg: #F9F0FF;
-  --shift-evening-border: #D3ADF7;
-  --shift-evening-text: #531DAB;
+  --shift-evening-bg: #FAF5FF;
+  --shift-evening-border: #E9D5FF;
+  --shift-evening-text: #7E22CE;
 
-  --shift-night-bg: #FFF1F0;
-  --shift-night-border: #FFA39E;
-  --shift-night-text: #CF1322;
+  --shift-night-bg: #FEF2F2;
+  --shift-night-border: #FECACA;
+  --shift-night-text: #B91C1C;
 
-  --shift-leave-bg: #F6FFED;
-  --shift-leave-border: #B7EB8F;
-  --shift-leave-text: #389E0D;
+  --shift-leave-bg: #ECFDF5;
+  --shift-leave-border: #A7F3D0;
+  --shift-leave-text: #047857;
 
-  --shift-holiday-bg: #FFF0F6;
-  --shift-holiday-border: #FFADD2;
-  --shift-holiday-text: #C41D7F;
+  --shift-holiday-bg: #FDF2F8;
+  --shift-holiday-border: #FBCFE8;
+  --shift-holiday-text: #BE185D;
 
   /* Typography Scale */
   --font-family: 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -81,16 +83,27 @@
   --space-xl: 32px;
   --space-xxl: 48px;
 
-  /* Border Radius */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Modern Border Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
   --radius-full: 9999px;
 
-  /* Shadows / Elevations */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  /* Multi-layered Soft Shadows / Elevations */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --shadow-glow-primary: 0 0 20px rgba(37, 99, 235, 0.25);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 300ms cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Z-Index Layers */
   --z-base: 1;
@@ -103,10 +116,10 @@
   --z-tooltip: 3000;
 
   /* Layout Dimensions */
-  --sidebar-width: 250px;
+  --sidebar-width: 256px;
   --sidebar-width-collapsed: 80px;
   --topbar-height: 64px;
-  --drawer-width: 450px;
+  --drawer-width: 460px;
 
   /* Responsive Breakpoints */
   --bp-mobile: 768px;

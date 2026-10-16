@@ -1,18 +1,30 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Employee } from '@/types/domain.types';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
-import { MOCK_POSITIONS } from '@/data/mock/positions.mock';
+import type { Employee, Department } from '@/types/domain.types';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
+import { MOCK_POSITIONS } from '@/mocks/positions.mock';
 import { EmployeeFormModal } from './components/EmployeeFormModal';
-import { useUIStore } from '@/store/useUIStore';
-import { Search, Plus, Eye, Edit2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useUIStore } from '@/shared/store/useUIStore';
+import { employeeService } from './api/employeeService';
+import { departmentService } from '@/shared/department/departmentService';
+import { isMockEnabled } from '@/config/env.config';
+import { Search, Plus, Eye, Edit2, ChevronLeft, ChevronRight, X, Phone, Mail } from 'lucide-react';
+
+const toArray = (res: any): any[] => {
+  if (Array.isArray(res)) return res;
+  if (res && Array.isArray(res.content)) return res.content;
+  if (res && Array.isArray(res.items)) return res.items;
+  if (res && Array.isArray(res.data)) return res.data;
+  return [];
+};
 
 export const EmployeeListPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useUIStore();
 
-  const [employeesList, setEmployeesList] = useState<Employee[]>(MOCK_EMPLOYEES);
+  const [employeesList, setEmployeesList] = useState<Employee[]>(isMockEnabled() ? MOCK_EMPLOYEES : []);
+  const [departmentsList, setDepartmentsList] = useState<Department[]>(isMockEnabled() ? MOCK_DEPARTMENTS : []);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDeptId, setSelectedDeptId] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -20,6 +32,71 @@ export const EmployeeListPage: React.FC = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+
+  useEffect(() => {
+    if (isMockEnabled()) return;
+
+    let isMounted = true;
+    const loadData = async () => {
+      try {
+        const [empRes, deptRes] = await Promise.all([
+          employeeService.getEmployees({ page: 1, size: 100 }),
+          departmentService.getAllDepartments(),
+        ]);
+
+        if (!isMounted) return;
+
+        const empData = toArray(empRes);
+        const deptData = toArray(deptRes);
+
+        if (deptData && Array.isArray(deptData) && deptData.length > 0) {
+          const mappedDepts: Department[] = deptData.map((d: any) => ({
+            id: d.id,
+            departmentCode: d.department_code || d.departmentCode,
+            departmentName: d.department_name || d.departmentName,
+            managerId: d.manager_id || d.managerId || null,
+          }));
+          setDepartmentsList(mappedDepts);
+        }
+
+        if (empData && Array.isArray(empData) && empData.length > 0) {
+          const mappedEmps: Employee[] = empData.map((dto: any) => ({
+            id: dto.id,
+            employeeCode: dto.employee_code || dto.employeeCode,
+            fullName: dto.full_name || dto.fullName,
+            email: dto.email,
+            phoneNumber: dto.phone_number || dto.phoneNumber || '',
+            nationalId: dto.national_id || dto.nationalId || '',
+            dateOfBirth: dto.date_of_birth || dto.dateOfBirth || '',
+            gender: dto.gender || 'OTHER',
+            address: dto.address || '',
+            departmentId: dto.department_id || dto.departmentId || 1,
+            positionId: dto.position_id || dto.positionId || 1,
+            managerId: dto.manager_id || dto.managerId || null,
+            employmentStatus: dto.employment_status || dto.employmentStatus || 'OFFICIAL',
+            employmentType: dto.employment_type || dto.employmentType || 'FULL_TIME',
+            hireDate: dto.hire_date || dto.hireDate || '2026-01-01',
+            isActive: dto.is_active !== undefined ? dto.is_active : true,
+            version: dto.version || 1,
+          }));
+          setEmployeesList(mappedEmps);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error('Không tải được dữ liệu nhân sự:', err);
+        addToast({
+          type: 'error',
+          title: 'Không tải được dữ liệu',
+          message: 'Không kết nối được máy chủ. Hãy kiểm tra backend đã chạy chưa.',
+        });
+      }
+    };
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [addToast]);
 
   // Filtered List
   const filteredEmployees = useMemo(() => {
@@ -56,11 +133,43 @@ export const EmployeeListPage: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleSaveEmployee = (data: Omit<Employee, 'id'> & { id?: number }) => {
+  const handleSaveEmployee = async (data: Omit<Employee, 'id'> & { id?: number }) => {
+    const payload = {
+      employee_code: data.employeeCode,
+      full_name: data.fullName,
+      email: data.email,
+      phone_number: data.phoneNumber,
+      department_id: data.departmentId,
+      position_id: data.positionId,
+      employment_status: data.employmentStatus,
+      hire_date: data.hireDate,
+      is_active: data.isActive,
+    } as any;
+
+    let savedId = data.id ?? Math.max(0, ...employeesList.map((e) => e.id)) + 1;
+
+    if (!isMockEnabled()) {
+      try {
+        if (data.id) {
+          await employeeService.updateEmployee(data.id, payload);
+        } else {
+          const res = await employeeService.createEmployee({ ...payload, employment_type: 'FULL_TIME' });
+          if (res && res.id) savedId = res.id;
+        }
+      } catch (err) {
+        console.error('Lưu nhân viên thất bại:', err);
+        addToast({
+          type: 'error',
+          title: 'Lưu thất bại',
+          message: 'Không lưu được vào máy chủ. Dữ liệu chưa được thay đổi.',
+        });
+        return;
+      }
+    }
+
     if (data.id) {
-      // Edit
       setEmployeesList((prev) =>
-        prev.map((e) => (e.id === data.id ? ({ ...e, ...data } as Employee) : e))
+          prev.map((e) => (e.id === data.id ? ({ ...e, ...data } as Employee) : e))
       );
       addToast({
         type: 'success',
@@ -68,11 +177,7 @@ export const EmployeeListPage: React.FC = () => {
         message: `Đã lưu thông tin nhân viên ${data.fullName}.`,
       });
     } else {
-      // Add
-      const newEmp: Employee = {
-        ...data,
-        id: Math.max(...employeesList.map((e) => e.id)) + 1,
-      };
+      const newEmp: Employee = { ...data, id: savedId };
       setEmployeesList((prev) => [newEmp, ...prev]);
       addToast({
         type: 'success',
@@ -83,7 +188,7 @@ export const EmployeeListPage: React.FC = () => {
   };
 
   const getDeptName = (id: number) => {
-    return MOCK_DEPARTMENTS.find((d) => d.id === id)?.departmentName || '---';
+    return departmentsList.find((d) => d.id === id)?.departmentName || '---';
   };
 
   const getPositionName = (id: number) => {
@@ -93,20 +198,22 @@ export const EmployeeListPage: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {/* Header & Add Button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 'var(--font-h1)', fontWeight: 600 }}>Quản Lý Hồ Sơ Nhân Sự</h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: 'var(--font-body)' }}>
-            Danh sách toàn bộ 25 nhân sự công ty, quản lý chức danh, phòng ban và hợp đồng.
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            Quản Lý Hồ Sơ Nhân Sự
+          </h1>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
+            Danh mục hồ sơ nhân viên, chức danh, phòng ban và tiến độ ký kết hợp đồng.
           </p>
         </div>
         <button
           type="button"
           className="btn btn-primary"
           onClick={handleOpenAdd}
-          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
         >
-          <Plus size={16} /> Thêm nhân viên
+          <Plus size={16} /> Thêm nhân viên mới
         </button>
       </div>
 
@@ -114,9 +221,9 @@ export const EmployeeListPage: React.FC = () => {
       <div
         className="card"
         style={{
-          padding: '10px 16px',
+          padding: '12px 18px',
           display: 'flex',
-          gap: 12,
+          gap: 14,
           alignItems: 'center',
           flexWrap: 'wrap',
           justifyContent: 'space-between',
@@ -124,11 +231,11 @@ export const EmployeeListPage: React.FC = () => {
       >
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Search */}
-          <div style={{ position: 'relative', width: 280 }}>
+          <div style={{ position: 'relative', width: 290 }}>
             <Search
-              size={16}
+              size={15}
               color="var(--color-text-muted)"
-              style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}
+              style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}
             />
             <input
               type="text"
@@ -139,8 +246,35 @@ export const EmployeeListPage: React.FC = () => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              style={{ width: '100%', paddingLeft: 32, height: 34, fontSize: 'var(--font-caption)' }}
+              style={{
+                width: '100%',
+                paddingLeft: 34,
+                paddingRight: searchTerm ? 28 : 10,
+                height: 36,
+                fontSize: '12.5px',
+              }}
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setCurrentPage(1);
+                }}
+                style={{
+                  position: 'absolute',
+                  right: 8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--color-text-muted)',
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           {/* Department Filter */}
@@ -151,10 +285,10 @@ export const EmployeeListPage: React.FC = () => {
               setSelectedDeptId(Number(e.target.value));
               setCurrentPage(1);
             }}
-            style={{ height: 34, fontSize: 'var(--font-caption)', minWidth: 200 }}
+            style={{ height: 36, fontSize: '12.5px', minWidth: 200, fontWeight: 500 }}
           >
             <option value={0}>Tất cả phòng ban</option>
-            {MOCK_DEPARTMENTS.map((d) => (
+            {departmentsList.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.departmentName}
               </option>
@@ -162,21 +296,39 @@ export const EmployeeListPage: React.FC = () => {
           </select>
         </div>
 
-        <div style={{ fontSize: 'var(--font-caption)', color: 'var(--color-text-muted)' }}>
-          Hiển thị <strong>{filteredEmployees.length}</strong> kết quả
+        <div
+          style={{
+            fontSize: '12px',
+            color: 'var(--color-text-secondary)',
+            backgroundColor: '#F8FAFC',
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-full)',
+            border: '1px solid var(--color-border-subtle)',
+          }}
+        >
+          Hiển thị <strong style={{ color: 'var(--color-primary)' }}>{filteredEmployees.length}</strong> kết quả
         </div>
       </div>
 
       {/* Employee Data Table */}
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--font-body)' }}>
+      <div className="card" style={{ overflowX: 'auto', borderRadius: 'var(--radius-xl)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
           <thead>
-            <tr style={{ backgroundColor: '#fafafa', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+            <tr
+              style={{
+                backgroundColor: '#F8FAFC',
+                borderBottom: '1px solid var(--color-border)',
+                color: 'var(--color-text-secondary)',
+                fontSize: 12.5,
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+              }}
+            >
               <th style={{ padding: '12px 16px' }}>Mã NV</th>
               <th style={{ padding: '12px 16px' }}>Họ và Tên</th>
               <th style={{ padding: '12px 16px' }}>Phòng Ban</th>
               <th style={{ padding: '12px 16px' }}>Chức Danh</th>
-              <th style={{ padding: '12px 16px' }}>Số Điện Thoại</th>
+              <th style={{ padding: '12px 16px' }}>Liên Hệ</th>
               <th style={{ padding: '12px 16px' }}>Trạng Thái</th>
               <th style={{ padding: '12px 16px', textAlign: 'center' }}>Thao Tác</th>
             </tr>
@@ -184,19 +336,35 @@ export const EmployeeListPage: React.FC = () => {
           <tbody>
             {paginatedEmployees.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                  Không tìm thấy nhân viên nào phù hợp.
+                <td colSpan={7} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                  Không tìm thấy nhân viên nào phù hợp với bộ lọc hiện tại.
                 </td>
               </tr>
             ) : (
               paginatedEmployees.map((emp) => {
-                let badge = <span className="badge badge-success"><span className="badge-dot" /> Chính thức</span>;
+                let badge = (
+                  <span className="badge badge-success">
+                    <span className="badge-dot" /> Chính thức
+                  </span>
+                );
                 if (emp.employmentStatus === 'PROBATION') {
-                  badge = <span className="badge badge-warning"><span className="badge-dot" /> Thử việc</span>;
+                  badge = (
+                    <span className="badge badge-warning">
+                      <span className="badge-dot" /> Thử việc
+                    </span>
+                  );
                 } else if (emp.employmentStatus === 'RESIGNED' || !emp.isActive) {
-                  badge = <span className="badge badge-error"><span className="badge-dot" /> Đã nghỉ việc</span>;
+                  badge = (
+                    <span className="badge badge-error">
+                      <span className="badge-dot" /> Đã nghỉ việc
+                    </span>
+                  );
                 } else if (emp.employmentStatus === 'ON_LEAVE') {
-                  badge = <span className="badge badge-info"><span className="badge-dot" /> Nghỉ chế độ</span>;
+                  badge = (
+                    <span className="badge badge-info">
+                      <span className="badge-dot" /> Nghỉ chế độ
+                    </span>
+                  );
                 }
 
                 return (
@@ -204,33 +372,56 @@ export const EmployeeListPage: React.FC = () => {
                     key={emp.id}
                     style={{
                       borderBottom: '1px solid var(--color-border-subtle)',
-                      transition: 'background-color 0.1s ease',
+                      transition: 'background-color var(--transition-fast)',
                     }}
                   >
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--color-primary)' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
                       {emp.employeeCode}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <img
-                          src={emp.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                          src={
+                            emp.avatarUrl ||
+                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
+                          }
                           alt={emp.fullName}
-                          style={{ width: 32, height: 32, borderRadius: 'var(--radius-full)', objectFit: 'cover' }}
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 'var(--radius-full)',
+                            objectFit: 'cover',
+                            border: '1.5px solid var(--color-border)',
+                          }}
                         />
                         <div>
-                          <div style={{ fontWeight: 600 }}>{emp.fullName}</div>
-                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{emp.email}</div>
+                          <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{emp.fullName}</div>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Mail size={11} /> {emp.email}
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
-                      {getDeptName(emp.departmentId)}
+                    <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: '#F1F5F9',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {getDeptName(emp.departmentId)}
+                      </span>
                     </td>
                     <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
                       {getPositionName(emp.positionId)}
                     </td>
                     <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
-                      {emp.phoneNumber}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+                        <Phone size={12} color="var(--color-text-muted)" />
+                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{emp.phoneNumber}</span>
+                      </div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>{badge}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -239,7 +430,7 @@ export const EmployeeListPage: React.FC = () => {
                           type="button"
                           className="btn btn-default"
                           onClick={() => navigate(`/employees/${emp.id}`)}
-                          style={{ padding: '0 8px', height: 30 }}
+                          style={{ padding: '0 8px', height: 32 }}
                           title="Xem chi tiết hồ sơ 360 độ"
                           aria-label={`Xem chi tiết ${emp.fullName}`}
                         >
@@ -249,7 +440,7 @@ export const EmployeeListPage: React.FC = () => {
                           type="button"
                           className="btn btn-default"
                           onClick={() => handleOpenEdit(emp)}
-                          style={{ padding: '0 8px', height: 30 }}
+                          style={{ padding: '0 8px', height: 32 }}
                           title="Sửa thông tin"
                           aria-label={`Sửa ${emp.fullName}`}
                         >
@@ -267,13 +458,14 @@ export const EmployeeListPage: React.FC = () => {
         {/* Pagination Footer */}
         <div
           style={{
-            padding: '12px 16px',
+            padding: '12px 18px',
             borderTop: '1px solid var(--color-border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: 'var(--font-caption)',
             color: 'var(--color-text-secondary)',
+            backgroundColor: '#F8FAFC',
           }}
         >
           <div>
@@ -285,18 +477,18 @@ export const EmployeeListPage: React.FC = () => {
               className="btn btn-default"
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              style={{ height: 30, padding: '0 8px' }}
+              style={{ height: 32, padding: '0 10px' }}
             >
-              <ChevronLeft size={16} /> Trước
+              <ChevronLeft size={15} /> Trước
             </button>
             <button
               type="button"
               className="btn btn-default"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              style={{ height: 30, padding: '0 8px' }}
+              style={{ height: 32, padding: '0 10px' }}
             >
-              Sau <ChevronRight size={16} />
+              Sau <ChevronRight size={15} />
             </button>
           </div>
         </div>
@@ -306,7 +498,7 @@ export const EmployeeListPage: React.FC = () => {
       <EmployeeFormModal
         isOpen={modalOpen}
         initialData={editingEmployee}
-        departments={MOCK_DEPARTMENTS}
+        departments={departmentsList}
         positions={MOCK_POSITIONS}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSaveEmployee}

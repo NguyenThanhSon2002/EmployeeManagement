@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useLeaveStore } from '@/store/useLeaveStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useUIStore } from '@/store/useUIStore';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
+import { useLeaveStore } from '../store/useLeaveStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useUIStore } from '@/shared/store/useUIStore';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
 import type { LeaveRequest } from '@/types/domain.types';
 import { X, CheckCircle, XCircle, Calendar } from 'lucide-react';
 
@@ -34,7 +34,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
     addToast({
       type: 'success',
       title: 'Đã duyệt đơn nghỉ phép',
-      message: `Đơn của ${emp?.fullName} đã được chấp thuận. Thẻ [🏖️ PHÉP NĂM] đã tự động đồng bộ sang Bảng Lịch Tuần (SCR-11).`,
+      message: `Đơn của ${emp?.fullName} đã được chấp thuận và lưu vào CSDL MySQL. Thẻ [🏖️ PHÉP NĂM] đã tự động đồng bộ sang Bảng Lịch Tuần.`,
     });
     onClose();
   };
@@ -52,7 +52,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
     addToast({
       type: 'info',
       title: 'Đã từ chối đơn nghỉ phép',
-      message: 'Hệ thống đã cập nhật trạng thái đơn thành TỪ CHỐI.',
+      message: 'Hệ thống đã cập nhật trạng thái đơn thành TỪ CHỐI trong CSDL MySQL.',
     });
     onClose();
   };
@@ -78,7 +78,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{emp?.fullName}</div>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                {emp?.employeeCode} • {leaveRequest.leaveTypeName}
+                {emp?.employeeCode} â€¢ {leaveRequest.leaveTypeName}
               </div>
             </div>
           </div>
@@ -87,7 +87,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
             <div style={{ padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Thời gian nghỉ</div>
               <div style={{ fontWeight: 600, fontSize: 14, marginTop: 4 }}>
-                {leaveRequest.startDate} 👉 {leaveRequest.endDate}
+                {leaveRequest.startDate} ðŸ‘‰ {leaveRequest.endDate}
               </div>
               <div style={{ fontSize: 12, color: 'var(--color-primary)', marginTop: 2 }}>
                 Tổng: {leaveRequest.totalDays} ngày

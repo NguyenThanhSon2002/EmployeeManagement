@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
 import { formatDateVi } from '@/utils/date.utils';
-import { useScheduleStore } from '@/store/useScheduleStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useSettingsStore } from '@/store/useSettingsStore';
-import { useUIStore } from '@/store/useUIStore';
-import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
+import { useScheduleStore } from './store/useScheduleStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useSettingsStore } from '@/features/settings/store/useSettingsStore';
+import { useUIStore } from '@/shared/store/useUIStore';
+import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
 import { ScheduleToolbar } from './components/ScheduleToolbar';
 import { ScheduleSummaryCards } from './components/ScheduleSummaryCards';
 import { ScheduleFiltersBar } from './components/ScheduleFiltersBar';
@@ -45,12 +45,18 @@ export const SchedulePage: React.FC = () => {
     copyWeek,
     publishSchedule,
     resetDemoData,
+    fetchWeeklySchedule,
   } = useScheduleStore();
 
   const { currentRole } = useAuthStore();
   const { settings } = useSettingsStore();
   const { addToast } = useUIStore();
   const isMobile = useIsMobile(768);
+
+  // Auto-fetch weekly schedule from backend if real API mode is active
+  React.useEffect(() => {
+    fetchWeeklySchedule(filterOptions.departmentId || 1, currentStartDate);
+  }, [filterOptions.departmentId, currentStartDate, fetchWeeklySchedule]);
 
   // Dialog & Drawer Visibility State
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -221,7 +227,7 @@ export const SchedulePage: React.FC = () => {
       addToast({
         type: 'success',
         title: 'Phân ca thành công',
-        message: `Đã lưu ca làm việc ngày ${formatDateVi(selectedCell.workDate)}.`,
+        message: `Đã lưu ca làm việc ngày ${formatDateVi(selectedCell.workDate)} vào CSDL MySQL.`,
       });
       handleCloseDrawer();
     } else {
@@ -241,7 +247,7 @@ export const SchedulePage: React.FC = () => {
     addToast({
       type: 'info',
       title: 'Đã xóa phân ca',
-      message: `Đã hủy phân ca ngày ${formatDateVi(activeAssignment.workDate)}.`,
+      message: `Đã hủy phân ca ngày ${formatDateVi(activeAssignment.workDate)} khỏi CSDL MySQL.`,
     });
     handleCloseDrawer();
   };
@@ -282,7 +288,7 @@ export const SchedulePage: React.FC = () => {
     addToast({
       type: 'success',
       title: 'Công bố lịch thành công',
-      message: 'Lịch tuần đã được chuyển sang trạng thái PUBLISHED chính thức.',
+      message: 'Lịch tuần đã được chuyển sang trạng thái PUBLISHED và lưu vào CSDL MySQL.',
     });
   };
 
