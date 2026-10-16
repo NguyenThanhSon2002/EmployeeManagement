@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useScheduleStore } from '@/store/useScheduleStore';
-import { useUIStore } from '@/store/useUIStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { Sliders, RotateCcw, Check, ShieldAlert } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {

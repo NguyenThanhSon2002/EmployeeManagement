@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import type { RoleType } from '@/types/domain.types';
 import { ShieldCheck, UserCheck, User, ChevronDown } from 'lucide-react';
 

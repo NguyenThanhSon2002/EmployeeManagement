@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { format, addDays } from 'date-fns';
 import { useScheduleStore } from '@/store/useScheduleStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { formatDateVi } from '@/utils/date.utils';
 import { ChevronLeft, ChevronRight, Plus, Moon, AlertTriangle, Trash2, Edit } from 'lucide-react';
 

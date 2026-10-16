@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { useAttendanceStore } from '@/store/useAttendanceStore';
 import { LogIn, LogOut, CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';

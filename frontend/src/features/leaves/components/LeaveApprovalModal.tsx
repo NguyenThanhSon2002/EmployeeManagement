@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLeaveStore } from '@/store/useLeaveStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
 import type { LeaveRequest } from '@/types/domain.types';
 import { X, CheckCircle, XCircle, Calendar } from 'lucide-react';

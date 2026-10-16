@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
-import { useUIStore } from '@/store/useUIStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { CheckCircle2, AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLeaveStore } from '@/store/useLeaveStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
 import { format, differenceInCalendarDays, parseISO } from 'date-fns';
 import { X, Calendar, AlertCircle } from 'lucide-react';

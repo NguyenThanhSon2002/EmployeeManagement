@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { TrendBarChart } from '@/components/charts/TrendBarChart';
 import { QuickAttendanceCard } from './components/QuickAttendanceCard';
 import { PendingApprovalsWidget } from './components/PendingApprovalsWidget';

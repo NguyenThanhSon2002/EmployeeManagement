@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAttendanceStore } from '@/store/useAttendanceStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
 import type { AttendanceRecord } from '@/types/domain.types';
 import { X, CheckCircle, XCircle } from 'lucide-react';

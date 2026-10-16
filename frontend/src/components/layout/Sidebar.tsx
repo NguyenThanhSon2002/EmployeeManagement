@@ -13,7 +13,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
-import { useUIStore } from '@/store/useUIStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { ROUTE_PATHS } from '@/routes/route-paths';
 
 interface NavSection {

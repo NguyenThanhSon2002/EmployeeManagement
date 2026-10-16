@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Employee, RoleType } from '@/types/domain.types';
 import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
-import { authService } from '@/services/authService';
+import { authService } from './authService';
 import { isMockEnabled, getDefaultAuthPassword } from '@/config/env.config';
 
 interface AuthState {

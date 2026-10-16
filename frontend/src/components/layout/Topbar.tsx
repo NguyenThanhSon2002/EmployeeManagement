@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { RoleSwitcher } from './RoleSwitcher';
 import { Clock } from 'lucide-react';
 

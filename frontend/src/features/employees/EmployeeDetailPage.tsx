@@ -6,7 +6,7 @@ import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
 import { MOCK_POSITIONS } from '@/data/mock/positions.mock';
 import { useScheduleStore } from '@/store/useScheduleStore';
 import { employeeService } from '@/services/employeeService';
-import { departmentService } from '@/services/departmentService';
+import { departmentService } from '@/shared/department/departmentService';
 import { isMockEnabled } from '@/config/env.config';
 import { formatDateVi } from '@/utils/date.utils';
 import {
