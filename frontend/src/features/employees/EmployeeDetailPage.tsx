@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Employee, Department } from '@/types/domain.types';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
-import { MOCK_POSITIONS } from '@/data/mock/positions.mock';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
+import { MOCK_POSITIONS } from '@/mocks/positions.mock';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { employeeService } from './api/employeeService';
 import { departmentService } from '@/shared/department/departmentService';
@@ -110,7 +110,7 @@ export const EmployeeDetailPage: React.FC = () => {
           onClick={() => navigate('/employees')}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32 }}
         >
-          <ArrowLeft size={16} /> Quay lại danh sách
+          <ArrowLeft size={16} /> Quay láº¡i danh sÃ¡ch
         </button>
       </div>
 
@@ -147,11 +147,11 @@ export const EmployeeDetailPage: React.FC = () => {
               <span className="badge badge-info">{employee.employeeCode}</span>
               {employee.isActive ? (
                 <span className="badge badge-success">
-                  <span className="badge-dot" /> Đang làm việc
+                  <span className="badge-dot" /> Äang lÃ m viá»‡c
                 </span>
               ) : (
                 <span className="badge badge-error">
-                  <span className="badge-dot" /> Đã nghỉ việc
+                  <span className="badge-dot" /> ÄÃ£ nghá»‰ viá»‡c
                 </span>
               )}
             </div>
@@ -202,7 +202,7 @@ export const EmployeeDetailPage: React.FC = () => {
             gap: 6,
           }}
         >
-          <User size={16} /> Lý Lịch & Hợp Đồng
+          <User size={16} /> LÃ½ Lá»‹ch & Há»£p Äá»“ng
         </button>
 
         <button
@@ -225,7 +225,7 @@ export const EmployeeDetailPage: React.FC = () => {
             gap: 6,
           }}
         >
-          <Calendar size={16} /> Lịch Ca ({employeeShifts.length})
+          <Calendar size={16} /> Lá»‹ch Ca ({employeeShifts.length})
         </button>
 
         <button
@@ -248,7 +248,7 @@ export const EmployeeDetailPage: React.FC = () => {
             gap: 6,
           }}
         >
-          <Clock size={16} /> Bảng Chấm Công
+          <Clock size={16} /> Báº£ng Cháº¥m CÃ´ng
         </button>
 
         <button
@@ -271,7 +271,7 @@ export const EmployeeDetailPage: React.FC = () => {
             gap: 6,
           }}
         >
-          <Palmtree size={16} /> Nghỉ Phép ({employeeLeaves.length})
+          <Palmtree size={16} /> Nghá»‰ PhÃ©p ({employeeLeaves.length})
         </button>
       </div>
 
@@ -279,31 +279,31 @@ export const EmployeeDetailPage: React.FC = () => {
       {activeTab === 'PROFILE' && (
         <div className="card" style={{ padding: '20px 24px' }}>
           <h3 style={{ fontSize: 'var(--font-h3)', fontWeight: 600, marginBottom: 16 }}>
-            Thông Tin Hợp Đồng & Nhân Sự
+            ThÃ´ng Tin Há»£p Äá»“ng & NhÃ¢n Sá»±
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Mã nhân viên</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>MÃ£ nhÃ¢n viÃªn</div>
               <div style={{ fontWeight: 600, marginTop: 2 }}>{employee.employeeCode}</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Họ và tên</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Há» vÃ  tÃªn</div>
               <div style={{ fontWeight: 600, marginTop: 2 }}>{employee.fullName}</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Phòng ban trực thuộc</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>PhÃ²ng ban trá»±c thuá»™c</div>
               <div style={{ fontWeight: 600, marginTop: 2 }}>{dept?.departmentName}</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Chức danh chuyên môn</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Chá»©c danh chuyÃªn mÃ´n</div>
               <div style={{ fontWeight: 600, marginTop: 2 }}>{position?.positionName}</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Loại hình hợp đồng</div>
-              <div style={{ fontWeight: 600, marginTop: 2 }}>Hợp đồng lao động không xác định thời hạn</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Loáº¡i hÃ¬nh há»£p Ä‘á»“ng</div>
+              <div style={{ fontWeight: 600, marginTop: 2 }}>Há»£p Ä‘á»“ng lao Ä‘á»™ng khÃ´ng xÃ¡c Ä‘á»‹nh thá»i háº¡n</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Ngày ký hợp đồng / Vào làm</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>NgÃ y kÃ½ há»£p Ä‘á»“ng / VÃ o lÃ m</div>
               <div style={{ fontWeight: 600, marginTop: 2 }}>{formatDateVi(employee.hireDate)}</div>
             </div>
           </div>
@@ -314,11 +314,11 @@ export const EmployeeDetailPage: React.FC = () => {
       {activeTab === 'SCHEDULE' && (
         <div className="card" style={{ padding: '20px 24px' }}>
           <h3 style={{ fontSize: 'var(--font-h3)', fontWeight: 600, marginBottom: 14 }}>
-            Danh Sách Ca Làm Việc Được Phân Công ({employeeShifts.length} ca)
+            Danh SÃ¡ch Ca LÃ m Viá»‡c ÄÆ°á»£c PhÃ¢n CÃ´ng ({employeeShifts.length} ca)
           </h3>
           {employeeShifts.length === 0 ? (
             <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-              Nhân viên này hiện chưa được xếp ca trong kỳ phân ca hiện tại.
+              NhÃ¢n viÃªn nÃ y hiá»‡n chÆ°a Ä‘Æ°á»£c xáº¿p ca trong ká»³ phÃ¢n ca hiá»‡n táº¡i.
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
@@ -334,11 +334,11 @@ export const EmployeeDetailPage: React.FC = () => {
                 >
                   <div style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{a.snapshotShiftName}</div>
                   <div style={{ fontSize: 12, marginTop: 4 }}>
-                    Ngày: <strong>{formatDateVi(a.workDate)}</strong>
+                    NgÃ y: <strong>{formatDateVi(a.workDate)}</strong>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                    Khung giờ: {a.snapshotStartTime} - {a.snapshotEndTime}
-                    {a.snapshotCrossMidnight && ' (+1 ngày)'}
+                    Khung giá»: {a.snapshotStartTime} - {a.snapshotEndTime}
+                    {a.snapshotCrossMidnight && ' (+1 ngÃ y)'}
                   </div>
                 </div>
               ))}
@@ -351,7 +351,7 @@ export const EmployeeDetailPage: React.FC = () => {
       {activeTab === 'ATTENDANCE' && (
         <div className="card" style={{ padding: '20px 24px' }}>
           <h3 style={{ fontSize: 'var(--font-h3)', fontWeight: 600, marginBottom: 14 }}>
-            Bảng Chấm Công Gần Nhất
+            Báº£ng Cháº¥m CÃ´ng Gáº§n Nháº¥t
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div
@@ -365,10 +365,10 @@ export const EmployeeDetailPage: React.FC = () => {
               }}
             >
               <div>
-                <div style={{ fontWeight: 600 }}>Hôm nay (Ca Sáng)</div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Vào ca: 07:55:12 • Chưa ra ca</div>
+                <div style={{ fontWeight: 600 }}>HÃ´m nay (Ca SÃ¡ng)</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>VÃ o ca: 07:55:12 â€¢ ChÆ°a ra ca</div>
               </div>
-              <span className="badge badge-success"><span className="badge-dot" /> Có mặt</span>
+              <span className="badge badge-success"><span className="badge-dot" /> CÃ³ máº·t</span>
             </div>
           </div>
         </div>
@@ -378,15 +378,15 @@ export const EmployeeDetailPage: React.FC = () => {
       {activeTab === 'LEAVE' && (
         <div className="card" style={{ padding: '20px 24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ fontSize: 'var(--font-h3)', fontWeight: 600 }}>Quỹ Phép & Đơn Nghỉ Phép</h3>
+            <h3 style={{ fontSize: 'var(--font-h3)', fontWeight: 600 }}>Quá»¹ PhÃ©p & ÄÆ¡n Nghá»‰ PhÃ©p</h3>
             <div style={{ padding: '6px 12px', backgroundColor: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 'var(--radius-md)', color: '#389e0d', fontWeight: 600, fontSize: 13 }}>
-              Quỹ phép năm: 8.5 / 12.0 ngày còn lại
+              Quá»¹ phÃ©p nÄƒm: 8.5 / 12.0 ngÃ y cÃ²n láº¡i
             </div>
           </div>
 
           {employeeLeaves.length === 0 ? (
             <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-              Nhân viên chưa có đơn nghỉ phép nào trong kỳ này.
+              NhÃ¢n viÃªn chÆ°a cÃ³ Ä‘Æ¡n nghá»‰ phÃ©p nÃ o trong ká»³ nÃ y.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -406,10 +406,10 @@ export const EmployeeDetailPage: React.FC = () => {
                   <div>
                     <div style={{ fontWeight: 600, color: 'var(--shift-leave-text)' }}>{l.leaveTypeName}</div>
                     <div style={{ fontSize: 12, marginTop: 2 }}>
-                      Ngày nghỉ: {formatDateVi(l.startDate)} • Lý do: {l.reason}
+                      NgÃ y nghá»‰: {formatDateVi(l.startDate)} â€¢ LÃ½ do: {l.reason}
                     </div>
                   </div>
-                  <span className="badge badge-success"><span className="badge-dot" /> Đã duyệt</span>
+                  <span className="badge badge-success"><span className="badge-dot" /> ÄÃ£ duyá»‡t</span>
                 </div>
               ))}
             </div>

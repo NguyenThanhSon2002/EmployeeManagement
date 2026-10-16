@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
 import type { AttendanceRecord } from '@/types/domain.types';
 import { X, CheckCircle, XCircle } from 'lucide-react';
 
@@ -43,8 +43,8 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
     if (!reason.trim()) {
       addToast({
         type: 'warning',
-        title: 'Thiếu thông tin',
-        message: 'Vui lòng cung cấp lý do giải trình chi tiết.',
+        title: 'Thiáº¿u thÃ´ng tin',
+        message: 'Vui lÃ²ng cung cáº¥p lÃ½ do giáº£i trÃ¬nh chi tiáº¿t.',
       });
       return;
     }
@@ -61,8 +61,8 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
 
     addToast({
       type: 'success',
-      title: 'Đã gửi đơn giải trình',
-      message: 'Đơn giải trình giờ công đã được chuyển đến Quản lý bộ phận phê duyệt.',
+      title: 'ÄÃ£ gá»­i Ä‘Æ¡n giáº£i trÃ¬nh',
+      message: 'ÄÆ¡n giáº£i trÃ¬nh giá» cÃ´ng Ä‘Ã£ Ä‘Æ°á»£c chuyá»ƒn Ä‘áº¿n Quáº£n lÃ½ bá»™ pháº­n phÃª duyá»‡t.',
     });
     setReason('');
     onClose();
@@ -72,8 +72,8 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
     approveCorrection(id, currentUser.id);
     addToast({
       type: 'success',
-      title: 'Đã phê duyệt giải trình',
-      message: 'Dữ liệu chấm công đã được cập nhật chính xác theo giờ đề xuất.',
+      title: 'ÄÃ£ phÃª duyá»‡t giáº£i trÃ¬nh',
+      message: 'Dá»¯ liá»‡u cháº¥m cÃ´ng Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t chÃ­nh xÃ¡c theo giá» Ä‘á» xuáº¥t.',
     });
   };
 
@@ -81,8 +81,8 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
     if (!rejectionReasonInput.trim()) {
       addToast({
         type: 'warning',
-        title: 'Yêu cầu lý do',
-        message: 'Vui lòng nhập lý do từ chối giải trình.',
+        title: 'YÃªu cáº§u lÃ½ do',
+        message: 'Vui lÃ²ng nháº­p lÃ½ do tá»« chá»‘i giáº£i trÃ¬nh.',
       });
       return;
     }
@@ -91,8 +91,8 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
     setRejectionReasonInput('');
     addToast({
       type: 'info',
-      title: 'Đã từ chối đơn giải trình',
-      message: 'Hệ thống đã ghi nhận lý do từ chối.',
+      title: 'ÄÃ£ tá»« chá»‘i Ä‘Æ¡n giáº£i trÃ¬nh',
+      message: 'Há»‡ thá»‘ng Ä‘Ã£ ghi nháº­n lÃ½ do tá»« chá»‘i.',
     });
   };
 
@@ -102,10 +102,10 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h2 style={{ fontSize: 'var(--font-h2)', fontWeight: 600 }}>
-              Giải Trình Bổ Sung Giờ Công (SCR-09)
+              Giáº£i TrÃ¬nh Bá»• Sung Giá» CÃ´ng (SCR-09)
             </h2>
             <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-              Xử lý các sự cố quên quét thẻ, máy lỗi hoặc sự cố chấm công ngoài văn phòng
+              Xá»­ lÃ½ cÃ¡c sá»± cá»‘ quÃªn quÃ©t tháº», mÃ¡y lá»—i hoáº·c sá»± cá»‘ cháº¥m cÃ´ng ngoÃ i vÄƒn phÃ²ng
             </div>
           </div>
           <button type="button" onClick={onClose} className="btn-icon">
@@ -129,7 +129,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                 cursor: 'pointer',
               }}
             >
-              Nộp Đơn Cho Bản Ghi Này
+              Ná»™p ÄÆ¡n Cho Báº£n Ghi NÃ y
             </button>
           )}
           <button
@@ -145,7 +145,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
               cursor: 'pointer',
             }}
           >
-            Danh Sách Chờ Duyệt ({corrections.filter((c) => c.status === 'PENDING').length})
+            Danh SÃ¡ch Chá» Duyá»‡t ({corrections.filter((c) => c.status === 'PENDING').length})
           </button>
         </div>
 
@@ -159,17 +159,17 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
               }}
             >
               <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                Bản ghi chấm công: <strong>{targetRecord.workDate}</strong>
+                Báº£n ghi cháº¥m cÃ´ng: <strong>{targetRecord.workDate}</strong>
               </div>
               <div style={{ fontSize: 13, marginTop: 4 }}>
-                Hiện tại: Check-in [<strong>{targetRecord.checkInTime?.split('T')[1]?.substring(0, 5) || 'Chưa có'}</strong>] - Check-out [<strong>{targetRecord.checkOutTime?.split('T')[1]?.substring(0, 5) || 'Thiếu'}</strong>]
+                Hiá»‡n táº¡i: Check-in [<strong>{targetRecord.checkInTime?.split('T')[1]?.substring(0, 5) || 'ChÆ°a cÃ³'}</strong>] - Check-out [<strong>{targetRecord.checkOutTime?.split('T')[1]?.substring(0, 5) || 'Thiáº¿u'}</strong>]
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
-                  Giờ vào đề xuất <span style={{ color: 'red' }}>*</span>
+                  Giá» vÃ o Ä‘á» xuáº¥t <span style={{ color: 'red' }}>*</span>
                 </label>
                 <input
                   type="time"
@@ -181,7 +181,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
-                  Giờ ra đề xuất <span style={{ color: 'red' }}>*</span>
+                  Giá» ra Ä‘á» xuáº¥t <span style={{ color: 'red' }}>*</span>
                 </label>
                 <input
                   type="time"
@@ -195,12 +195,12 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
 
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
-                Lý do giải trình cụ thể <span style={{ color: 'red' }}>*</span>
+                LÃ½ do giáº£i trÃ¬nh cá»¥ thá»ƒ <span style={{ color: 'red' }}>*</span>
               </label>
               <textarea
                 className="input"
                 rows={3}
-                placeholder="VD: Máy chấm công bị lỗi không nhận vân tay lúc 17:00, đã báo bảo vệ..."
+                placeholder="VD: MÃ¡y cháº¥m cÃ´ng bá»‹ lá»—i khÃ´ng nháº­n vÃ¢n tay lÃºc 17:00, Ä‘Ã£ bÃ¡o báº£o vá»‡..."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 required
@@ -209,10 +209,10 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
               <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Hủy
+                Há»§y
               </button>
               <button type="submit" className="btn btn-primary">
-                Gửi Đơn Giải Trình
+                Gá»­i ÄÆ¡n Giáº£i TrÃ¬nh
               </button>
             </div>
           </form>
@@ -222,7 +222,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 420, overflowY: 'auto' }}>
             {corrections.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-secondary)' }}>
-                Không có đơn giải trình nào trong hệ thống.
+                KhÃ´ng cÃ³ Ä‘Æ¡n giáº£i trÃ¬nh nÃ o trong há»‡ thá»‘ng.
               </div>
             ) : (
               corrections.map((corr) => {
@@ -243,20 +243,20 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontWeight: 600, fontSize: 14 }}>
-                        {emp?.fullName || `Nhân viên #${corr.employeeId}`} ({emp?.employeeCode})
+                        {emp?.fullName || `NhÃ¢n viÃªn #${corr.employeeId}`} ({emp?.employeeCode})
                       </div>
                       <span className={`badge ${isPending ? 'badge-warning' : corr.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
-                        {isPending ? 'Chờ duyệt' : corr.status === 'APPROVED' ? 'Đã duyệt' : 'Từ chối'}
+                        {isPending ? 'Chá» duyá»‡t' : corr.status === 'APPROVED' ? 'ÄÃ£ duyá»‡t' : 'Tá»« chá»‘i'}
                       </span>
                     </div>
 
                     <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', display: 'flex', gap: 16 }}>
-                      <span>Ban đầu: {corr.originalCheckIn || '--:--'} - {corr.originalCheckOut || '--:--'}</span>
-                      <span>👉 Đề xuất: <strong style={{ color: 'var(--color-primary)' }}>{corr.requestedCheckIn} - {corr.requestedCheckOut}</strong></span>
+                      <span>Ban Ä‘áº§u: {corr.originalCheckIn || '--:--'} - {corr.originalCheckOut || '--:--'}</span>
+                      <span>ðŸ‘‰ Äá» xuáº¥t: <strong style={{ color: 'var(--color-primary)' }}>{corr.requestedCheckIn} - {corr.requestedCheckOut}</strong></span>
                     </div>
 
                     <div style={{ fontSize: 13, backgroundColor: 'var(--color-bg-subtle)', padding: '6px 10px', borderRadius: 'var(--radius-sm)' }}>
-                      <strong>Lý do:</strong> {corr.reason}
+                      <strong>LÃ½ do:</strong> {corr.reason}
                     </div>
 
                     {isPending && isManagerOrAdmin && (
@@ -266,7 +266,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                             <input
                               type="text"
                               className="input"
-                              placeholder="Lý do từ chối giải trình..."
+                              placeholder="LÃ½ do tá»« chá»‘i giáº£i trÃ¬nh..."
                               value={rejectionReasonInput}
                               onChange={(e) => setRejectionReasonInput(e.target.value)}
                               style={{ flex: 1, height: 32, fontSize: 12 }}
@@ -277,7 +277,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                               style={{ height: 32, padding: '0 10px', fontSize: 12 }}
                               onClick={() => handleReject(corr.id)}
                             >
-                              Xác nhận từ chối
+                              XÃ¡c nháº­n tá»« chá»‘i
                             </button>
                             <button
                               type="button"
@@ -285,7 +285,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                               style={{ height: 32, padding: '0 10px', fontSize: 12 }}
                               onClick={() => setRejectingCorrectionId(null)}
                             >
-                              Hủy
+                              Há»§y
                             </button>
                           </div>
                         ) : (
@@ -296,7 +296,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                               style={{ height: 30, padding: '0 10px', fontSize: 12 }}
                               onClick={() => setRejectingCorrectionId(corr.id)}
                             >
-                              <XCircle size={13} /> Từ chối
+                              <XCircle size={13} /> Tá»« chá»‘i
                             </button>
                             <button
                               type="button"
@@ -304,7 +304,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
                               style={{ height: 30, padding: '0 10px', fontSize: 12, backgroundColor: '#52c41a' }}
                               onClick={() => handleApprove(corr.id)}
                             >
-                              <CheckCircle size={13} /> Chấp thuận
+                              <CheckCircle size={13} /> Cháº¥p thuáº­n
                             </button>
                           </>
                         )}

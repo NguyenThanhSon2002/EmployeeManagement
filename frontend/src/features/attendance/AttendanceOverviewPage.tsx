@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAttendanceStore } from './store/useAttendanceStore';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
 import { AttendanceCorrectionModal } from './components/AttendanceCorrectionModal';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
 import type { AttendanceRecord } from '@/types/domain.types';
@@ -68,17 +68,17 @@ export const AttendanceOverviewPage: React.FC = () => {
 
   const handleExportCsv = () => {
     const columns = [
-      { key: 'employeeCode', header: 'Mã NV' },
-      { key: 'fullName', header: 'Họ và tên' },
-      { key: 'department', header: 'Phòng ban' },
-      { key: 'workDate', header: 'Ngày' },
-      { key: 'checkIn', header: 'Giờ vào' },
-      { key: 'checkOut', header: 'Giờ ra' },
-      { key: 'lateMinutes', header: 'Đi muộn (phút)' },
-      { key: 'earlyMinutes', header: 'Về sớm (phút)' },
-      { key: 'actualHours', header: 'Giờ thực tế' },
-      { key: 'nightHours', header: 'Giờ đêm' },
-      { key: 'status', header: 'Trạng thái' },
+      { key: 'employeeCode', header: 'MÃ£ NV' },
+      { key: 'fullName', header: 'Há» vÃ  tÃªn' },
+      { key: 'department', header: 'PhÃ²ng ban' },
+      { key: 'workDate', header: 'NgÃ y' },
+      { key: 'checkIn', header: 'Giá» vÃ o' },
+      { key: 'checkOut', header: 'Giá» ra' },
+      { key: 'lateMinutes', header: 'Äi muá»™n (phÃºt)' },
+      { key: 'earlyMinutes', header: 'Vá» sá»›m (phÃºt)' },
+      { key: 'actualHours', header: 'Giá» thá»±c táº¿' },
+      { key: 'nightHours', header: 'Giá» Ä‘Ãªm' },
+      { key: 'status', header: 'Tráº¡ng thÃ¡i' },
     ];
 
     const dataRows = filteredRecords.map((r) => {
@@ -97,14 +97,14 @@ export const AttendanceOverviewPage: React.FC = () => {
         nightHours: r.nightHours.toFixed(1),
         status:
           r.status === 'PRESENT'
-            ? 'Có mặt'
+            ? 'CÃ³ máº·t'
             : r.status === 'LATE'
-            ? 'Đi muộn'
+            ? 'Äi muá»™n'
             : r.status === 'MISSING_CHECKOUT'
-            ? 'Thiếu Check-out'
+            ? 'Thiáº¿u Check-out'
             : r.status === 'CORRECTED'
-            ? 'Đã giải trình'
-            : 'Vắng',
+            ? 'ÄÃ£ giáº£i trÃ¬nh'
+            : 'Váº¯ng',
       };
     });
 
@@ -112,7 +112,7 @@ export const AttendanceOverviewPage: React.FC = () => {
       `DiemDanh_Ngay_${selectedDate}.csv`,
       dataRows,
       columns,
-      `Báo cáo Điểm danh Ngày ${selectedDate}`
+      `BÃ¡o cÃ¡o Äiá»ƒm danh NgÃ y ${selectedDate}`
     );
   };
 
@@ -122,19 +122,19 @@ export const AttendanceOverviewPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            Bảng Tổng Quan Chấm Công Hàng Ngày (SCR-08)
+            Báº£ng Tá»•ng Quan Cháº¥m CÃ´ng HÃ ng NgÃ y (SCR-08)
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-            Giám sát thời gian thực giờ vào/ra, cảnh báo đi muộn, về sớm và tiếp nhận giải trình công.
+            GiÃ¡m sÃ¡t thá»i gian thá»±c giá» vÃ o/ra, cáº£nh bÃ¡o Ä‘i muá»™n, vá» sá»›m vÃ  tiáº¿p nháº­n giáº£i trÃ¬nh cÃ´ng.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button type="button" className="btn btn-default" onClick={handleOpenAllCorrections}>
-            <FileQuestion size={16} /> Quản lý Giải trình (SCR-09)
+            <FileQuestion size={16} /> Quáº£n lÃ½ Giáº£i trÃ¬nh (SCR-09)
           </button>
           <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
-            <Download size={16} /> Xuất CSV Điểm Danh
+            <Download size={16} /> Xuáº¥t CSV Äiá»ƒm Danh
           </button>
         </div>
       </div>
@@ -165,10 +165,10 @@ export const AttendanceOverviewPage: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Tổng Quân Số
+              Tá»•ng QuÃ¢n Sá»‘
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-              {totalRecords} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+              {totalRecords} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>ngÆ°á»i</span>
             </div>
           </div>
         </div>
@@ -191,10 +191,10 @@ export const AttendanceOverviewPage: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Có Mặt / Đúng Giờ
+              CÃ³ Máº·t / ÄÃºng Giá»
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#047857', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-              {presentCount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+              {presentCount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>ngÆ°á»i</span>
             </div>
           </div>
         </div>
@@ -217,10 +217,10 @@ export const AttendanceOverviewPage: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Đi Muộn / Về Sớm
+              Äi Muá»™n / Vá» Sá»›m
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#B45309', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-              {lateOrEarlyCount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+              {lateOrEarlyCount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>ngÆ°á»i</span>
             </div>
           </div>
         </div>
@@ -243,10 +243,10 @@ export const AttendanceOverviewPage: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Thiếu Check-out
+              Thiáº¿u Check-out
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#DC2626', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-              {missingCheckoutCount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+              {missingCheckoutCount} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>ngÆ°á»i</span>
             </div>
           </div>
         </div>
@@ -264,7 +264,7 @@ export const AttendanceOverviewPage: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>Ngày chấm công:</label>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>NgÃ y cháº¥m cÃ´ng:</label>
           <input
             type="date"
             className="input-base"
@@ -275,14 +275,14 @@ export const AttendanceOverviewPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>Phòng ban:</label>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>PhÃ²ng ban:</label>
           <select
             className="input-base"
             style={{ width: 190, height: 36, fontSize: '12.5px', fontWeight: 500 }}
             value={departmentFilter || ''}
             onChange={(e) => setDepartmentFilter(e.target.value ? Number(e.target.value) : null)}
           >
-            <option value="">-- Tất cả phòng ban --</option>
+            <option value="">-- Táº¥t cáº£ phÃ²ng ban --</option>
             {MOCK_DEPARTMENTS.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.departmentName}
@@ -296,7 +296,7 @@ export const AttendanceOverviewPage: React.FC = () => {
           <input
             type="text"
             className="input-base"
-            placeholder="Tìm theo tên hoặc mã nhân viên..."
+            placeholder="TÃ¬m theo tÃªn hoáº·c mÃ£ nhÃ¢n viÃªn..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ paddingLeft: 34, width: '100%', height: 36, fontSize: '12.5px' }}
@@ -309,23 +309,23 @@ export const AttendanceOverviewPage: React.FC = () => {
         <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th>Mã NV</th>
-              <th>Họ và tên</th>
-              <th>Phòng ban</th>
-              <th>Giờ vào</th>
-              <th>Giờ ra</th>
-              <th>Đi muộn</th>
-              <th>Về sớm</th>
-              <th>Tổng giờ</th>
-              <th>Trạng thái</th>
-              <th style={{ textAlign: 'right' }}>Thao tác</th>
+              <th>MÃ£ NV</th>
+              <th>Há» vÃ  tÃªn</th>
+              <th>PhÃ²ng ban</th>
+              <th>Giá» vÃ o</th>
+              <th>Giá» ra</th>
+              <th>Äi muá»™n</th>
+              <th>Vá» sá»›m</th>
+              <th>Tá»•ng giá»</th>
+              <th>Tráº¡ng thÃ¡i</th>
+              <th style={{ textAlign: 'right' }}>Thao tÃ¡c</th>
             </tr>
           </thead>
           <tbody>
             {filteredRecords.length === 0 ? (
               <tr>
                 <td colSpan={10} style={{ textAlign: 'center', padding: '36px 0', color: 'var(--color-text-muted)' }}>
-                  Không tìm thấy bản ghi chấm công nào phù hợp.
+                  KhÃ´ng tÃ¬m tháº¥y báº£n ghi cháº¥m cÃ´ng nÃ o phÃ¹ há»£p.
                 </td>
               </tr>
             ) : (
@@ -408,14 +408,14 @@ export const AttendanceOverviewPage: React.FC = () => {
                       >
                         <span className="badge-dot" />
                         {r.status === 'PRESENT'
-                          ? 'Đúng giờ'
+                          ? 'ÄÃºng giá»'
                           : r.status === 'LATE'
-                          ? 'Đi muộn'
+                          ? 'Äi muá»™n'
                           : r.status === 'MISSING_CHECKOUT'
-                          ? 'Thiếu Check-out'
+                          ? 'Thiáº¿u Check-out'
                           : r.status === 'CORRECTED'
-                          ? 'Đã sửa'
-                          : 'Vắng'}
+                          ? 'ÄÃ£ sá»­a'
+                          : 'Váº¯ng'}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -425,7 +425,7 @@ export const AttendanceOverviewPage: React.FC = () => {
                         onClick={() => handleOpenCorrection(r)}
                         style={{ height: 30, padding: '0 10px', fontSize: 12 }}
                       >
-                        Giải trình
+                        Giáº£i trÃ¬nh
                       </button>
                     </td>
                   </tr>

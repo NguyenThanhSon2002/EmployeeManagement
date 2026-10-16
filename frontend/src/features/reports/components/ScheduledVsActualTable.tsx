@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
@@ -64,13 +64,13 @@ export const ScheduledVsActualTable: React.FC = () => {
 
   const handleExportCsv = () => {
     const columns = [
-      { key: 'employeeCode', header: 'Mã NV' },
-      { key: 'fullName', header: 'Họ và tên' },
-      { key: 'departmentName', header: 'Phòng ban' },
-      { key: 'scheduledHours', header: 'Giờ Kế Hoạch (h)' },
-      { key: 'actualHours', header: 'Giờ Thực Tế (h)' },
-      { key: 'diffHours', header: 'Chênh Lệch (h)' },
-      { key: 'fulfillmentRate', header: 'Tỷ Lệ Hoàn Thành (%)' },
+      { key: 'employeeCode', header: 'MÃ£ NV' },
+      { key: 'fullName', header: 'Há» vÃ  tÃªn' },
+      { key: 'departmentName', header: 'PhÃ²ng ban' },
+      { key: 'scheduledHours', header: 'Giá» Káº¿ Hoáº¡ch (h)' },
+      { key: 'actualHours', header: 'Giá» Thá»±c Táº¿ (h)' },
+      { key: 'diffHours', header: 'ChÃªnh Lá»‡ch (h)' },
+      { key: 'fulfillmentRate', header: 'Tá»· Lá»‡ HoÃ n ThÃ nh (%)' },
     ];
 
     const dataRows = comparisonData.map((d) => ({
@@ -87,7 +87,7 @@ export const ScheduledVsActualTable: React.FC = () => {
       'DoiChieu_KeHoach_ThucTe.csv',
       dataRows,
       columns,
-      'Báo cáo Đối chiếu Giờ Kế Hoạch vs Giờ Thực Tế'
+      'BÃ¡o cÃ¡o Äá»‘i chiáº¿u Giá» Káº¿ Hoáº¡ch vs Giá» Thá»±c Táº¿'
     );
   };
 
@@ -112,7 +112,7 @@ export const ScheduledVsActualTable: React.FC = () => {
             value={departmentFilter || ''}
             onChange={(e) => setDepartmentFilter(e.target.value ? Number(e.target.value) : null)}
           >
-            <option value="">-- Tất cả phòng ban --</option>
+            <option value="">-- Táº¥t cáº£ phÃ²ng ban --</option>
             {MOCK_DEPARTMENTS.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.departmentName}
@@ -125,7 +125,7 @@ export const ScheduledVsActualTable: React.FC = () => {
             <input
               type="text"
               className="input"
-              placeholder="Tìm theo tên hoặc mã NV..."
+              placeholder="TÃ¬m theo tÃªn hoáº·c mÃ£ NV..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ paddingLeft: 34, width: '100%' }}
@@ -134,7 +134,7 @@ export const ScheduledVsActualTable: React.FC = () => {
         </div>
 
         <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
-          <Download size={16} /> Xuất CSV Đối Chiếu (UTF-8 BOM)
+          <Download size={16} /> Xuáº¥t CSV Äá»‘i Chiáº¿u (UTF-8 BOM)
         </button>
       </div>
 
@@ -143,14 +143,14 @@ export const ScheduledVsActualTable: React.FC = () => {
         <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th>Mã NV</th>
-              <th>Họ và tên</th>
-              <th>Phòng ban</th>
-              <th style={{ textAlign: 'right' }}>Kế hoạch (Scheduled)</th>
-              <th style={{ textAlign: 'right' }}>Thực tế (Actual)</th>
-              <th style={{ textAlign: 'right' }}>Chênh lệch (Diff)</th>
-              <th style={{ textAlign: 'center' }}>Tỷ lệ hoàn thành</th>
-              <th>Đánh giá</th>
+              <th>MÃ£ NV</th>
+              <th>Há» vÃ  tÃªn</th>
+              <th>PhÃ²ng ban</th>
+              <th style={{ textAlign: 'right' }}>Káº¿ hoáº¡ch (Scheduled)</th>
+              <th style={{ textAlign: 'right' }}>Thá»±c táº¿ (Actual)</th>
+              <th style={{ textAlign: 'right' }}>ChÃªnh lá»‡ch (Diff)</th>
+              <th style={{ textAlign: 'center' }}>Tá»· lá»‡ hoÃ n thÃ nh</th>
+              <th>ÄÃ¡nh giÃ¡</th>
             </tr>
           </thead>
           <tbody>
@@ -200,11 +200,11 @@ export const ScheduledVsActualTable: React.FC = () => {
                   </td>
                   <td>
                     {isUnder ? (
-                      <span className="badge badge-danger">Thiếu công</span>
+                      <span className="badge badge-danger">Thiáº¿u cÃ´ng</span>
                     ) : isOver ? (
-                      <span className="badge badge-info">Vượt kế hoạch / OT</span>
+                      <span className="badge badge-info">VÆ°á»£t káº¿ hoáº¡ch / OT</span>
                     ) : (
-                      <span className="badge badge-success">Đạt chuẩn 100%</span>
+                      <span className="badge badge-success">Äáº¡t chuáº©n 100%</span>
                     )}
                   </td>
                 </tr>

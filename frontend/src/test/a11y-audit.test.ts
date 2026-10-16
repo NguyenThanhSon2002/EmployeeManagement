@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MOCK_SHIFT_TEMPLATES } from '@/data/mock/shift-templates.mock';
+import { MOCK_SHIFT_TEMPLATES } from '@/mocks/shift-templates.mock';
 
 /**
  * Calculates relative luminance of an sRGB hex color.

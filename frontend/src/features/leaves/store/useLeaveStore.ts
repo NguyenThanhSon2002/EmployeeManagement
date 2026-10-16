@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { LeaveRequest } from '@/types/domain.types';
-import { getMockLeaves } from '@/data/mock/leaves.mock';
+import { getMockLeaves } from '@/mocks/leaves.mock';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { leaveService } from '../api/leaveService';
 import { isMockEnabled } from '@/config/env.config';
@@ -53,7 +53,7 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
             id: item.id,
             employeeId: item.employee_id || item.employeeId,
             leaveTypeId: item.leave_type_id || item.leaveTypeId || 1,
-            leaveTypeName: item.leave_type_name || item.leaveTypeName || 'Nghỉ phép năm',
+            leaveTypeName: item.leave_type_name || item.leaveTypeName || 'Nghá»‰ phÃ©p nÄƒm',
             startDate: item.start_date || item.startDate,
             endDate: item.end_date || item.endDate,
             totalDays: typeof item.total_days === 'number' ? item.total_days : (typeof item.totalDays === 'number' ? item.totalDays : Number(item.total_days || item.totalDays || 1)),
@@ -93,7 +93,7 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
       if (hasOverlap) {
         return {
           success: false,
-          error: 'Nhân viên đã có đơn xin nghỉ phép khác trong khoảng thời gian này (BR-009).',
+          error: 'NhÃ¢n viÃªn Ä‘Ã£ cÃ³ Ä‘Æ¡n xin nghá»‰ phÃ©p khÃ¡c trong khoáº£ng thá»i gian nÃ y (BR-009).',
         };
       }
 
@@ -102,7 +102,7 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
       if (payload.totalDays > balance.remainingDays && payload.leaveTypeId === 1) {
         return {
           success: false,
-          error: `Số ngày xin nghỉ (${payload.totalDays} ngày) vượt quá quỹ phép năm còn lại (${balance.remainingDays} ngày).`,
+          error: `Sá»‘ ngÃ y xin nghá»‰ (${payload.totalDays} ngÃ y) vÆ°á»£t quÃ¡ quá»¹ phÃ©p nÄƒm cÃ²n láº¡i (${balance.remainingDays} ngÃ y).`,
         };
       }
 

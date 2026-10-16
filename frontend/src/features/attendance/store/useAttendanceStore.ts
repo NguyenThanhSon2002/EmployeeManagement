@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { format } from 'date-fns';
 import type { AttendanceRecord, AttendanceCorrection } from '@/types/domain.types';
-import { getMockAttendanceRecords, MOCK_ATTENDANCE_CORRECTIONS } from '@/data/mock/attendance.mock';
+import { getMockAttendanceRecords, MOCK_ATTENDANCE_CORRECTIONS } from '@/mocks/attendance.mock';
 import { attendanceService } from '../api/attendanceService';
 import { isMockEnabled } from '@/config/env.config';
 
@@ -185,7 +185,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
       }
 
       if (!isMockEnabled()) {
-        attendanceService.checkIn('Điểm danh vào ca qua Web', today)
+        attendanceService.checkIn('Äiá»ƒm danh vÃ o ca qua Web', today)
           .then((saved) => {
             if (saved && saved.id) {
               set((curr) => ({
@@ -226,7 +226,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
       set({ records: updated });
 
       if (!isMockEnabled()) {
-        attendanceService.checkOut('Điểm danh tan ca qua Web', today)
+        attendanceService.checkOut('Äiá»ƒm danh tan ca qua Web', today)
           .then((saved) => {
             if (saved && saved.id) {
               set((curr) => ({

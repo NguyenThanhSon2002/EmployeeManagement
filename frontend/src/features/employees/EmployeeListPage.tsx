@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Employee, Department } from '@/types/domain.types';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
-import { MOCK_POSITIONS } from '@/data/mock/positions.mock';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
+import { MOCK_POSITIONS } from '@/mocks/positions.mock';
 import { EmployeeFormModal } from './components/EmployeeFormModal';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { employeeService } from './api/employeeService';
@@ -141,8 +141,8 @@ export const EmployeeListPage: React.FC = () => {
       );
       addToast({
         type: 'success',
-        title: 'Cập nhật thành công',
-        message: `Đã lưu thông tin nhân viên ${data.fullName} vào CSDL MySQL.`,
+        title: 'Cáº­p nháº­t thÃ nh cÃ´ng',
+        message: `ÄÃ£ lÆ°u thÃ´ng tin nhÃ¢n viÃªn ${data.fullName} vÃ o CSDL MySQL.`,
       });
     } else {
       // Add
@@ -175,8 +175,8 @@ export const EmployeeListPage: React.FC = () => {
       setEmployeesList((prev) => [newEmp, ...prev]);
       addToast({
         type: 'success',
-        title: 'Thêm mới thành công',
-        message: `Đã thêm nhân viên ${newEmp.fullName} (${newEmp.employeeCode}) vào CSDL MySQL.`,
+        title: 'ThÃªm má»›i thÃ nh cÃ´ng',
+        message: `ÄÃ£ thÃªm nhÃ¢n viÃªn ${newEmp.fullName} (${newEmp.employeeCode}) vÃ o CSDL MySQL.`,
       });
     }
   };
@@ -195,10 +195,10 @@ export const EmployeeListPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            Quản Lý Hồ Sơ Nhân Sự
+            Quáº£n LÃ½ Há»“ SÆ¡ NhÃ¢n Sá»±
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-            Danh mục hồ sơ nhân viên, chức danh, phòng ban và tiến độ ký kết hợp đồng.
+            Danh má»¥c há»“ sÆ¡ nhÃ¢n viÃªn, chá»©c danh, phÃ²ng ban vÃ  tiáº¿n Ä‘á»™ kÃ½ káº¿t há»£p Ä‘á»“ng.
           </p>
         </div>
         <button
@@ -207,7 +207,7 @@ export const EmployeeListPage: React.FC = () => {
           onClick={handleOpenAdd}
           style={{ display: 'flex', alignItems: 'center', gap: 8 }}
         >
-          <Plus size={16} /> Thêm nhân viên mới
+          <Plus size={16} /> ThÃªm nhÃ¢n viÃªn má»›i
         </button>
       </div>
 
@@ -234,7 +234,7 @@ export const EmployeeListPage: React.FC = () => {
             <input
               type="text"
               className="input-base"
-              placeholder="Tìm theo họ tên, mã NV, email, SĐT..."
+              placeholder="TÃ¬m theo há» tÃªn, mÃ£ NV, email, SÄT..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -281,7 +281,7 @@ export const EmployeeListPage: React.FC = () => {
             }}
             style={{ height: 36, fontSize: '12.5px', minWidth: 200, fontWeight: 500 }}
           >
-            <option value={0}>Tất cả phòng ban</option>
+            <option value={0}>Táº¥t cáº£ phÃ²ng ban</option>
             {MOCK_DEPARTMENTS.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.departmentName}
@@ -300,7 +300,7 @@ export const EmployeeListPage: React.FC = () => {
             border: '1px solid var(--color-border-subtle)',
           }}
         >
-          Hiển thị <strong style={{ color: 'var(--color-primary)' }}>{filteredEmployees.length}</strong> kết quả
+          Hiá»ƒn thá»‹ <strong style={{ color: 'var(--color-primary)' }}>{filteredEmployees.length}</strong> káº¿t quáº£
         </div>
       </div>
 
@@ -318,45 +318,45 @@ export const EmployeeListPage: React.FC = () => {
                 letterSpacing: '0.02em',
               }}
             >
-              <th style={{ padding: '12px 16px' }}>Mã NV</th>
-              <th style={{ padding: '12px 16px' }}>Họ và Tên</th>
-              <th style={{ padding: '12px 16px' }}>Phòng Ban</th>
-              <th style={{ padding: '12px 16px' }}>Chức Danh</th>
-              <th style={{ padding: '12px 16px' }}>Liên Hệ</th>
-              <th style={{ padding: '12px 16px' }}>Trạng Thái</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center' }}>Thao Tác</th>
+              <th style={{ padding: '12px 16px' }}>MÃ£ NV</th>
+              <th style={{ padding: '12px 16px' }}>Há» vÃ  TÃªn</th>
+              <th style={{ padding: '12px 16px' }}>PhÃ²ng Ban</th>
+              <th style={{ padding: '12px 16px' }}>Chá»©c Danh</th>
+              <th style={{ padding: '12px 16px' }}>LiÃªn Há»‡</th>
+              <th style={{ padding: '12px 16px' }}>Tráº¡ng ThÃ¡i</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center' }}>Thao TÃ¡c</th>
             </tr>
           </thead>
           <tbody>
             {paginatedEmployees.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                  Không tìm thấy nhân viên nào phù hợp với bộ lọc hiện tại.
+                  KhÃ´ng tÃ¬m tháº¥y nhÃ¢n viÃªn nÃ o phÃ¹ há»£p vá»›i bá»™ lá»c hiá»‡n táº¡i.
                 </td>
               </tr>
             ) : (
               paginatedEmployees.map((emp) => {
                 let badge = (
                   <span className="badge badge-success">
-                    <span className="badge-dot" /> Chính thức
+                    <span className="badge-dot" /> ChÃ­nh thá»©c
                   </span>
                 );
                 if (emp.employmentStatus === 'PROBATION') {
                   badge = (
                     <span className="badge badge-warning">
-                      <span className="badge-dot" /> Thử việc
+                      <span className="badge-dot" /> Thá»­ viá»‡c
                     </span>
                   );
                 } else if (emp.employmentStatus === 'RESIGNED' || !emp.isActive) {
                   badge = (
                     <span className="badge badge-error">
-                      <span className="badge-dot" /> Đã nghỉ việc
+                      <span className="badge-dot" /> ÄÃ£ nghá»‰ viá»‡c
                     </span>
                   );
                 } else if (emp.employmentStatus === 'ON_LEAVE') {
                   badge = (
                     <span className="badge badge-info">
-                      <span className="badge-dot" /> Nghỉ chế độ
+                      <span className="badge-dot" /> Nghá»‰ cháº¿ Ä‘á»™
                     </span>
                   );
                 }
@@ -425,8 +425,8 @@ export const EmployeeListPage: React.FC = () => {
                           className="btn btn-default"
                           onClick={() => navigate(`/employees/${emp.id}`)}
                           style={{ padding: '0 8px', height: 32 }}
-                          title="Xem chi tiết hồ sơ 360 độ"
-                          aria-label={`Xem chi tiết ${emp.fullName}`}
+                          title="Xem chi tiáº¿t há»“ sÆ¡ 360 Ä‘á»™"
+                          aria-label={`Xem chi tiáº¿t ${emp.fullName}`}
                         >
                           <Eye size={15} />
                         </button>
@@ -435,8 +435,8 @@ export const EmployeeListPage: React.FC = () => {
                           className="btn btn-default"
                           onClick={() => handleOpenEdit(emp)}
                           style={{ padding: '0 8px', height: 32 }}
-                          title="Sửa thông tin"
-                          aria-label={`Sửa ${emp.fullName}`}
+                          title="Sá»­a thÃ´ng tin"
+                          aria-label={`Sá»­a ${emp.fullName}`}
                         >
                           <Edit2 size={15} />
                         </button>
@@ -473,7 +473,7 @@ export const EmployeeListPage: React.FC = () => {
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               style={{ height: 32, padding: '0 10px' }}
             >
-              <ChevronLeft size={15} /> Trước
+              <ChevronLeft size={15} /> TrÆ°á»›c
             </button>
             <button
               type="button"

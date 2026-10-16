@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLeaveStore } from '../store/useLeaveStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
+import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
 import type { LeaveRequest } from '@/types/domain.types';
 import { X, CheckCircle, XCircle, Calendar } from 'lucide-react';
 
@@ -33,8 +33,8 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
     approveLeave(leaveRequest.id, currentUser.id);
     addToast({
       type: 'success',
-      title: 'Đã duyệt đơn nghỉ phép',
-      message: `Đơn của ${emp?.fullName} đã được chấp thuận và lưu vào CSDL MySQL. Thẻ [🏖️ PHÉP NĂM] đã tự động đồng bộ sang Bảng Lịch Tuần.`,
+      title: 'ÄÃ£ duyá»‡t Ä‘Æ¡n nghá»‰ phÃ©p',
+      message: `ÄÆ¡n cá»§a ${emp?.fullName} Ä‘Ã£ Ä‘Æ°á»£c cháº¥p thuáº­n vÃ  lÆ°u vÃ o CSDL MySQL. Tháº» [ðŸ–ï¸ PHÃ‰P NÄ‚M] Ä‘Ã£ tá»± Ä‘á»™ng Ä‘á»“ng bá»™ sang Báº£ng Lá»‹ch Tuáº§n.`,
     });
     onClose();
   };
@@ -43,16 +43,16 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
     if (!rejectionReason.trim()) {
       addToast({
         type: 'warning',
-        title: 'Thiếu lý do từ chối',
-        message: 'Vui lòng nêu rõ lý do không thể duyệt đơn.',
+        title: 'Thiáº¿u lÃ½ do tá»« chá»‘i',
+        message: 'Vui lÃ²ng nÃªu rÃµ lÃ½ do khÃ´ng thá»ƒ duyá»‡t Ä‘Æ¡n.',
       });
       return;
     }
     rejectLeave(leaveRequest.id, currentUser.id, rejectionReason.trim());
     addToast({
       type: 'info',
-      title: 'Đã từ chối đơn nghỉ phép',
-      message: 'Hệ thống đã cập nhật trạng thái đơn thành TỪ CHỐI trong CSDL MySQL.',
+      title: 'ÄÃ£ tá»« chá»‘i Ä‘Æ¡n nghá»‰ phÃ©p',
+      message: 'Há»‡ thá»‘ng Ä‘Ã£ cáº­p nháº­t tráº¡ng thÃ¡i Ä‘Æ¡n thÃ nh Tá»ª CHá»I trong CSDL MySQL.',
     });
     onClose();
   };
@@ -61,7 +61,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
     <div className="modal-backdrop">
       <div className="modal-content" style={{ maxWidth: 500 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 'var(--font-h2)', fontWeight: 600 }}>Phê Duyệt Đơn Nghỉ Phép (SCR-14)</h2>
+          <h2 style={{ fontSize: 'var(--font-h2)', fontWeight: 600 }}>PhÃª Duyá»‡t ÄÆ¡n Nghá»‰ PhÃ©p (SCR-14)</h2>
           <button type="button" onClick={onClose} className="btn-icon">
             <X size={20} />
           </button>
@@ -78,35 +78,35 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{emp?.fullName}</div>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                {emp?.employeeCode} • {leaveRequest.leaveTypeName}
+                {emp?.employeeCode} â€¢ {leaveRequest.leaveTypeName}
               </div>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Thời gian nghỉ</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Thá»i gian nghá»‰</div>
               <div style={{ fontWeight: 600, fontSize: 14, marginTop: 4 }}>
-                {leaveRequest.startDate} 👉 {leaveRequest.endDate}
+                {leaveRequest.startDate} ðŸ‘‰ {leaveRequest.endDate}
               </div>
               <div style={{ fontSize: 12, color: 'var(--color-primary)', marginTop: 2 }}>
-                Tổng: {leaveRequest.totalDays} ngày
+                Tá»•ng: {leaveRequest.totalDays} ngÃ y
               </div>
             </div>
 
             <div style={{ padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Quỹ phép còn lại</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Quá»¹ phÃ©p cÃ²n láº¡i</div>
               <div style={{ fontWeight: 600, fontSize: 14, marginTop: 4, color: '#389e0d' }}>
-                {balance.remainingDays} / {balance.annualQuota} ngày
+                {balance.remainingDays} / {balance.annualQuota} ngÃ y
               </div>
               <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                Đã dùng {balance.usedDays} ngày
+                ÄÃ£ dÃ¹ng {balance.usedDays} ngÃ y
               </div>
             </div>
           </div>
 
           <div style={{ padding: '10px 14px', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Lý do xin nghỉ:</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>LÃ½ do xin nghá»‰:</div>
             <div style={{ fontSize: 13, fontStyle: 'italic' }}>"{leaveRequest.reason}"</div>
           </div>
 
@@ -126,19 +126,19 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
           >
             <Calendar size={16} style={{ flexShrink: 0 }} />
             <span>
-              <strong>Tự động đồng bộ:</strong> Khi bấm Chấp thuận, hệ thống tự động gán thẻ phép màu xanh lá lên Bảng Lịch Tuần (SCR-11) và kiểm tra lại xung đột ca.
+              <strong>Tá»± Ä‘á»™ng Ä‘á»“ng bá»™:</strong> Khi báº¥m Cháº¥p thuáº­n, há»‡ thá»‘ng tá»± Ä‘á»™ng gÃ¡n tháº» phÃ©p mÃ u xanh lÃ¡ lÃªn Báº£ng Lá»‹ch Tuáº§n (SCR-11) vÃ  kiá»ƒm tra láº¡i xung Ä‘á»™t ca.
             </span>
           </div>
 
           {showRejectForm ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
               <label style={{ fontSize: 13, fontWeight: 500, color: '#cf1322' }}>
-                Lý do từ chối đơn:
+                LÃ½ do tá»« chá»‘i Ä‘Æ¡n:
               </label>
               <textarea
                 className="input"
                 rows={2}
-                placeholder="Nhập lý do từ chối..."
+                placeholder="Nháº­p lÃ½ do tá»« chá»‘i..."
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
               />
@@ -148,14 +148,14 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
                   className="btn btn-secondary"
                   onClick={() => setShowRejectForm(false)}
                 >
-                  Quay lại
+                  Quay láº¡i
                 </button>
                 <button
                   type="button"
                   className="btn btn-danger"
                   onClick={handleReject}
                 >
-                  Xác nhận từ chối
+                  XÃ¡c nháº­n tá»« chá»‘i
                 </button>
               </div>
             </div>
@@ -166,14 +166,14 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
                 className="btn btn-secondary"
                 onClick={onClose}
               >
-                Đóng
+                ÄÃ³ng
               </button>
               <button
                 type="button"
                 className="btn btn-danger"
                 onClick={() => setShowRejectForm(true)}
               >
-                <XCircle size={15} /> Từ chối
+                <XCircle size={15} /> Tá»« chá»‘i
               </button>
               <button
                 type="button"
@@ -181,7 +181,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
                 style={{ backgroundColor: '#52c41a' }}
                 onClick={handleApprove}
               >
-                <CheckCircle size={15} /> Chấp thuận (Duyệt)
+                <CheckCircle size={15} /> Cháº¥p thuáº­n (Duyá»‡t)
               </button>
             </div>
           )}
