@@ -1,0 +1,121 @@
+import { api } from './apiClient';
+
+export interface ShiftTemplate {
+  id: number;
+  shift_code: string;
+  shift_name: string;
+  start_time: string;
+  end_time: string;
+  break_minutes: number;
+  is_cross_midnight: boolean;
+  color_code: string;
+  text_color?: string;
+  min_staffing: number;
+  max_staffing: number;
+}
+
+export interface ShiftAssignment {
+  id: number;
+  schedule_id: number;
+  employee_id: number;
+  work_shift_id: number;
+  work_date: string;
+  shift_name: string;
+  start_time: string;
+  end_time: string;
+  break_minutes?: number;
+  is_cross_midnight?: boolean;
+  color_code: string;
+  status: string;
+  override_rule?: string;
+  override_reason?: string;
+  version?: number;
+}
+
+export interface EmployeeSchedule {
+  employee_id: number;
+  employee_code: string;
+  full_name: string;
+  weekly_scheduled_hours: number;
+  assignments: ShiftAssignment[];
+}
+
+export interface WeeklyScheduleData {
+  schedule_id: number;
+  department_id: number;
+  department_name: string;
+  start_date: string;
+  end_date: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  version: number;
+  employees: EmployeeSchedule[];
+  holidays: Array<{ date: string; name: string }>;
+  shift_templates: ShiftTemplate[];
+}
+
+export interface ScheduleConflict {
+  rule_code: string;
+  severity: 'MANDATORY' | 'WARNING';
+  employee_id: number;
+  employee_name?: string;
+  work_date: string;
+  work_shift_id: number;
+  message: string;
+}
+
+export interface ConflictValidationResult {
+  is_valid: boolean;
+  has_mandatory_errors: boolean;
+  has_warnings: boolean;
+  mandatory_errors: ScheduleConflict[];
+  warnings: ScheduleConflict[];
+}
+
+export const scheduleService = {
+  async getWeeklySchedule(departmentId: number, date: string): Promise<WeeklyScheduleData> {
+    return api.get<WeeklyScheduleData>(`/schedules/weekly?department_id=${departmentId}&start_date=${date}`);
+  },
+
+  async validateConflicts(departmentId: number, assignments: Array<{ employee_id: number; work_shift_id: number; work_date: string }>): Promise<ConflictValidationResult> {
+    return api.post<ConflictValidationResult>('/schedules/validate-conflicts', {
+      department_id: departmentId,
+      assignments,
+    });
+  },
+
+  async assignSingleShift(data: {
+    schedule_id: number;
+    employee_id: number;
+    work_shift_id: number;
+    work_date: string;
+    override_rule?: string;
+    override_reason?: string;
+    schedule_version: number;
+  }): Promise<ShiftAssignment> {
+    return api.post<ShiftAssignment>('/schedules/assignments', data);
+  },
+
+  async deleteAssignment(assignmentId: number, scheduleVersion?: number): Promise<void> {
+    const query = scheduleVersion !== undefined ? `?schedule_version=${scheduleVersion}` : '';
+    return api.delete<void>(`/schedules/assignments/${assignmentId}${query}`);
+  },
+
+  async bulkAssign(data: {
+    schedule_id: number;
+    employee_ids: number[];
+    work_shift_id: number;
+    from_date: string;
+    to_date: string;
+    schedule_version: number;
+  }): Promise<ShiftAssignment[]> {
+    return api.post<ShiftAssignment[]>('/schedules/bulk-assign', data);
+  },
+
+  async publishSchedule(scheduleId: number, version: number): Promise<WeeklyScheduleData> {
+    return api.post<WeeklyScheduleData>(`/schedules/${scheduleId}/publish`, { version });
+  },
+
+  async unpublishSchedule(scheduleId: number): Promise<WeeklyScheduleData> {
+    return api.post<WeeklyScheduleData>(`/schedules/${scheduleId}/unpublish`);
+  },
+};

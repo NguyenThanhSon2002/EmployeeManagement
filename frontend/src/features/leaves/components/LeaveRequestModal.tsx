@@ -79,7 +79,7 @@ export const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ isOpen, on
     addToast({
       type: 'success',
       title: 'Nộp đơn xin nghỉ thành công',
-      message: `Đơn xin nghỉ ${totalDays} ngày đã được gửi và chuyển vào danh sách chờ duyệt.`,
+      message: `Đơn xin nghỉ ${totalDays} ngày đã được gửi và lưu vào CSDL MySQL (chờ phê duyệt).`,
     });
     onClose();
   };

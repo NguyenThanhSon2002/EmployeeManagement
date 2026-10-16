@@ -45,7 +45,7 @@ export const EmployeeRow: React.FC<EmployeeRowProps> = ({
     <div role="row" style={{ display: 'contents' }}>
       {/* Sticky Column: Employee Identity & Weekly Hours Progress */}
       <div role="rowheader" className="employee-sticky-cell">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img
             src={
               employee.avatarUrl ||
@@ -53,18 +53,19 @@ export const EmployeeRow: React.FC<EmployeeRowProps> = ({
             }
             alt={employee.fullName}
             style={{
-              width: 32,
-              height: 32,
+              width: 34,
+              height: 34,
               borderRadius: 'var(--radius-full)',
               objectFit: 'cover',
-              border: '1px solid var(--color-border)',
+              border: '2px solid var(--color-border)',
               opacity: isResigned ? 0.6 : 1,
+              flexShrink: 0,
             }}
           />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{
-                fontSize: 'var(--font-caption)',
+                fontSize: '13px',
                 fontWeight: 600,
                 color: isResigned ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
                 whiteSpace: 'nowrap',
@@ -75,22 +76,27 @@ export const EmployeeRow: React.FC<EmployeeRowProps> = ({
             >
               {employee.fullName}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', gap: 6 }}>
-              <span>{employee.employeeCode}</span>
-              {isResigned && <span style={{ color: 'var(--color-error)' }}>(Đã nghỉ)</span>}
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontWeight: 500 }}>{employee.employeeCode}</span>
+              {isResigned && (
+                <span style={{ color: 'var(--color-error)', fontWeight: 600, fontSize: 10 }}>
+                  (Đã nghỉ)
+                </span>
+              )}
             </div>
           </div>
         </div>
 
         {/* Weekly Progress Bar */}
         {!isResigned && (
-          <div style={{ marginTop: 2 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
-              <span style={{ color: 'var(--color-text-secondary)' }}>Tuần này:</span>
+          <div style={{ marginTop: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+              <span style={{ color: 'var(--color-text-secondary)', fontWeight: 500 }}>Kế hoạch tuần:</span>
               <span
                 style={{
-                  fontWeight: 600,
-                  color: isOverWeeklyLimit ? 'var(--color-error)' : 'var(--color-text-primary)',
+                  fontWeight: 700,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: isOverWeeklyLimit ? '#DC2626' : 'var(--color-text-primary)',
                 }}
               >
                 {weeklyHours.toFixed(1)}h / 48h
@@ -98,9 +104,9 @@ export const EmployeeRow: React.FC<EmployeeRowProps> = ({
             </div>
             <div
               style={{
-                height: 4,
-                backgroundColor: 'var(--color-border-subtle)',
-                borderRadius: varRadiusFull(),
+                height: 5,
+                backgroundColor: '#F1F5F9',
+                borderRadius: '9999px',
                 overflow: 'hidden',
               }}
             >
@@ -108,8 +114,11 @@ export const EmployeeRow: React.FC<EmployeeRowProps> = ({
                 style={{
                   height: '100%',
                   width: `${progressPercent}%`,
-                  backgroundColor: isOverWeeklyLimit ? 'var(--color-error)' : 'var(--color-primary)',
-                  transition: 'width 0.2s ease',
+                  background: isOverWeeklyLimit
+                    ? 'linear-gradient(90deg, #F87171 0%, #EF4444 100%)'
+                    : 'linear-gradient(90deg, #60A5FA 0%, #2563EB 100%)',
+                  borderRadius: '9999px',
+                  transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
               />
             </div>
@@ -148,7 +157,3 @@ export const EmployeeRow: React.FC<EmployeeRowProps> = ({
     </div>
   );
 };
-
-function varRadiusFull(): string {
-  return '9999px';
-}

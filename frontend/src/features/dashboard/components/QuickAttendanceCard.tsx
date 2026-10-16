@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useAttendanceStore } from '@/store/useAttendanceStore';
 import { LogIn, LogOut, CheckCircle, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 
 export const QuickAttendanceCard: React.FC = () => {
   const { currentUser } = useAuthStore();
   const { addToast } = useUIStore();
+  const { checkIn, checkOut, records } = useAttendanceStore();
 
-  const [isCheckedIn, setIsCheckedIn] = useState(true);
-  const [checkInTime, setCheckInTime] = useState('07:55:12');
-  const [elapsedSeconds, setElapsedSeconds] = useState(2 * 3600 + 15 * 60); // 2h 15m
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const todayRecord = records.find((r) => r.employeeId === currentUser.id && r.workDate === today);
+  const isCheckedIn = !!todayRecord?.checkInTime && !todayRecord?.checkOutTime;
+  const checkInTime = todayRecord?.checkInTime ? todayRecord.checkInTime.split('T')[1]?.slice(0, 8) || todayRecord.checkInTime : '08:00:00';
+  const [elapsedSeconds, setElapsedSeconds] = useState(2 * 3600 + 15 * 60);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
@@ -32,22 +37,18 @@ export const QuickAttendanceCard: React.FC = () => {
 
   const handleToggleCheck = () => {
     if (!isCheckedIn) {
-      const now = new Date();
-      const timeStr = now.toTimeString().split(' ')[0];
-      setIsCheckedIn(true);
-      setCheckInTime(timeStr);
-      setElapsedSeconds(0);
+      checkIn(currentUser.id);
       addToast({
         type: 'success',
         title: 'Điểm danh vào ca thành công',
-        message: `Đã ghi nhận check-in lúc ${timeStr}. Chúc bạn một ngày làm việc hiệu quả!`,
+        message: 'Đã ghi nhận check-in và lưu vào CSDL MySQL.',
       });
     } else {
-      setIsCheckedIn(false);
+      checkOut(currentUser.id);
       addToast({
         type: 'info',
         title: 'Check-out hoàn tất',
-        message: `Đã kết thúc ca làm việc. Tổng thời gian: ${formatElapsed(elapsedSeconds)}.`,
+        message: 'Đã ghi nhận check-out ca làm việc vào CSDL MySQL.',
       });
     }
   };

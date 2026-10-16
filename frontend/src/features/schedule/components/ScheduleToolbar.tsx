@@ -11,6 +11,7 @@ import {
   Download,
   History,
   RotateCcw,
+  Sparkles,
 } from 'lucide-react';
 
 interface ScheduleToolbarProps {
@@ -59,78 +60,132 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
 
   return (
     <div
+      className="card"
       style={{
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 'var(--space-md)',
-        padding: '12px 16px',
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-sm)',
+        padding: '12px 18px',
         marginBottom: 'var(--space-md)',
       }}
     >
       {/* Left: Week Navigation Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        {/* Navigation Button Group */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: '#F8FAFC',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-xs)',
+            overflow: 'hidden',
+          }}
+        >
           <button
             type="button"
-            className="btn btn-default"
             onClick={onPrevWeek}
             aria-label="Tuần trước"
             title="Xem tuần trước"
-            style={{ border: 'none', height: 34, padding: '0 10px', borderRadius: 'var(--radius-md) 0 0 var(--radius-md)' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 34,
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: 'var(--color-text-secondary)',
+              cursor: 'pointer',
+              transition: 'background-color var(--transition-fast)',
+            }}
           >
             <ChevronLeft size={16} />
           </button>
           <button
             type="button"
-            className="btn btn-default"
             onClick={onToday}
             style={{
               borderTop: 'none',
               borderBottom: 'none',
               borderLeft: '1px solid var(--color-border)',
               borderRight: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-surface)',
               height: 34,
               padding: '0 12px',
-              fontSize: 'var(--font-caption)',
+              fontSize: '12.5px',
               fontWeight: 600,
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer',
+              transition: 'background-color var(--transition-fast)',
             }}
           >
             Hôm nay
           </button>
           <button
             type="button"
-            className="btn btn-default"
             onClick={onNextWeek}
             aria-label="Tuần sau"
             title="Xem tuần sau"
-            style={{ border: 'none', height: 34, padding: '0 10px', borderRadius: '0 var(--radius-md) var(--radius-md) 0' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 34,
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: 'var(--color-text-secondary)',
+              cursor: 'pointer',
+              transition: 'background-color var(--transition-fast)',
+            }}
           >
             <ChevronRight size={16} />
           </button>
         </div>
 
-        {/* Current Date Display */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 'var(--font-body-md)' }}>
-          <Calendar size={18} color="var(--color-primary)" />
+        {/* Current Date Range Display */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontWeight: 600,
+            fontSize: '13.5px',
+            color: 'var(--color-text-primary)',
+            padding: '4px 10px',
+            backgroundColor: '#F8FAFC',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--color-border-subtle)',
+          }}
+        >
+          <Calendar size={16} color="var(--color-primary)" />
           <span>
-            {formatDateVi(baseMonday)} - {formatDateVi(sunday)}
+            {formatDateVi(baseMonday)} — {formatDateVi(sunday)}
           </span>
         </div>
 
         {/* Status Badge */}
         {scheduleStatus === 'PUBLISHED' ? (
-          <span className="badge badge-success" title="Lịch đã được công bố chính thức cho nhân viên">
-            <span className="badge-dot" /> ĐÃ CÔNG BỐ
+          <span
+            className="badge badge-success"
+            title="Lịch đã được công bố chính thức cho nhân viên"
+            style={{ padding: '4px 10px', fontSize: 11.5 }}
+          >
+            <span className="badge-dot" style={{ backgroundColor: '#10B981' }} />
+            ĐÃ CÔNG BỐ
           </span>
         ) : (
-          <span className="badge badge-warning" title="Lịch đang ở trạng thái bản nháp nội bộ">
-            <span className="badge-dot" /> BẢN NHÁP (DRAFT)
+          <span
+            className="badge badge-warning"
+            title="Lịch đang ở trạng thái bản nháp nội bộ"
+            style={{ padding: '4px 10px', fontSize: 11.5 }}
+          >
+            <span className="badge-dot" style={{ backgroundColor: '#F59E0B' }} />
+            BẢN NHÁP (DRAFT)
           </span>
         )}
       </div>
@@ -142,7 +197,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
           className="input-base"
           value={selectedDeptId}
           onChange={(e) => onSelectDept(Number(e.target.value))}
-          style={{ height: 34, minWidth: 180, fontSize: 'var(--font-caption)' }}
+          style={{ height: 34, minWidth: 190, fontSize: '12.5px', fontWeight: 500 }}
         >
           {departments.map((d) => (
             <option key={d.id} value={d.id}>
@@ -151,27 +206,31 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
           ))}
         </select>
 
-        {/* View Mode Toggle */}
+        {/* View Mode Toggle Pill */}
         <div
           style={{
-            display: 'flex',
-            border: '1px solid var(--color-border)',
+            display: 'inline-flex',
+            padding: 3,
+            backgroundColor: '#F1F5F9',
             borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
+            border: '1px solid var(--color-border-subtle)',
           }}
         >
           <button
             type="button"
             onClick={() => onToggleViewMode('WEEK')}
             style={{
-              height: 32,
+              height: 28,
               padding: '0 12px',
-              fontSize: 'var(--font-caption)',
-              fontWeight: viewMode === 'WEEK' ? 600 : 400,
-              backgroundColor: viewMode === 'WEEK' ? 'var(--color-primary)' : 'var(--color-surface)',
-              color: viewMode === 'WEEK' ? '#fff' : 'var(--color-text-primary)',
+              fontSize: '12px',
+              fontWeight: viewMode === 'WEEK' ? 600 : 500,
+              backgroundColor: viewMode === 'WEEK' ? 'var(--color-surface)' : 'transparent',
+              color: viewMode === 'WEEK' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: viewMode === 'WEEK' ? 'var(--shadow-xs)' : 'none',
               border: 'none',
               cursor: 'pointer',
+              transition: 'all var(--transition-fast)',
             }}
           >
             Tuần
@@ -180,14 +239,17 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
             type="button"
             onClick={() => onToggleViewMode('MONTH')}
             style={{
-              height: 32,
+              height: 28,
               padding: '0 12px',
-              fontSize: 'var(--font-caption)',
-              fontWeight: viewMode === 'MONTH' ? 600 : 400,
-              backgroundColor: viewMode === 'MONTH' ? 'var(--color-primary)' : 'var(--color-surface)',
-              color: viewMode === 'MONTH' ? '#fff' : 'var(--color-text-primary)',
+              fontSize: '12px',
+              fontWeight: viewMode === 'MONTH' ? 600 : 500,
+              backgroundColor: viewMode === 'MONTH' ? 'var(--color-surface)' : 'transparent',
+              color: viewMode === 'MONTH' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: viewMode === 'MONTH' ? 'var(--shadow-xs)' : 'none',
               border: 'none',
               cursor: 'pointer',
+              transition: 'all var(--transition-fast)',
             }}
           >
             Tháng
@@ -195,7 +257,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
         </div>
       </div>
 
-      {/* Right: Action Buttons */}
+      {/* Right: Action Buttons Group */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {/* Export CSV */}
         <button
@@ -203,9 +265,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
           className="btn btn-default"
           onClick={onExportCsv}
           title="Tải bảng lịch tuần dạng file CSV (UTF-8 BOM tương thích Excel)"
-          style={{ height: 34, padding: '0 10px', fontSize: 'var(--font-caption)' }}
+          style={{ height: 34, padding: '0 10px', fontSize: '12.5px' }}
         >
-          <Download size={15} />
+          <Download size={14} />
           Xuất CSV
         </button>
 
@@ -217,9 +279,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               className="btn btn-default"
               onClick={onOpenHistory}
               title="Xem nhật ký kiểm toán thay đổi"
-              style={{ height: 34, padding: '0 10px', fontSize: 'var(--font-caption)' }}
+              style={{ height: 34, padding: '0 10px', fontSize: '12.5px' }}
             >
-              <History size={15} />
+              <History size={14} />
               Lịch sử
             </button>
 
@@ -228,9 +290,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               className="btn btn-default"
               onClick={onOpenCopyWeek}
               title="Sao chép toàn bộ ca từ tuần trước sang tuần này"
-              style={{ height: 34, padding: '0 10px', fontSize: 'var(--font-caption)' }}
+              style={{ height: 34, padding: '0 10px', fontSize: '12.5px' }}
             >
-              <Copy size={15} />
+              <Copy size={14} />
               Sao chép tuần
             </button>
 
@@ -239,9 +301,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               className="btn btn-default"
               onClick={onOpenBulkAssign}
               title="Gán ca đồng loạt cho nhiều người"
-              style={{ height: 34, padding: '0 10px', fontSize: 'var(--font-caption)' }}
+              style={{ height: 34, padding: '0 10px', fontSize: '12.5px' }}
             >
-              <Plus size={15} />
+              <Plus size={14} />
               Gán hàng loạt
             </button>
 
@@ -251,9 +313,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 className="btn btn-primary"
                 onClick={onOpenPublish}
                 title="Công bố lịch chính thức cho nhân viên"
-                style={{ height: 34, padding: '0 14px', fontSize: 'var(--font-caption)' }}
+                style={{ height: 34, padding: '0 14px', fontSize: '12.5px', gap: 6 }}
               >
-                <Send size={15} />
+                <Send size={14} />
                 Công bố lịch
               </button>
             ) : (
@@ -262,8 +324,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 className="btn btn-default"
                 onClick={onOpenPublish}
                 title="Lịch đã công bố, click để xem chi tiết"
-                style={{ height: 34, padding: '0 10px', fontSize: 'var(--font-caption)' }}
+                style={{ height: 34, padding: '0 10px', fontSize: '12.5px', color: '#059669', borderColor: '#A7F3D0' }}
               >
+                <Sparkles size={14} />
                 Đã xuất bản
               </button>
             )}
@@ -276,10 +339,10 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
           className="btn btn-ghost"
           onClick={onResetDemo}
           title="Khôi phục dữ liệu mẫu ban đầu"
-          style={{ height: 34, padding: '0 6px', color: 'var(--color-text-muted)' }}
+          style={{ height: 34, width: 34, padding: 0, color: 'var(--color-text-muted)' }}
           aria-label="Khôi phục dữ liệu demo"
         >
-          <RotateCcw size={16} />
+          <RotateCcw size={15} />
         </button>
       </div>
     </div>

@@ -25,6 +25,8 @@ import {
 import { copyScheduleWeek } from '@/utils/copy-merge.utils';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
 import { useSettingsStore } from './useSettingsStore';
+import { scheduleService } from '@/services/scheduleService';
+import { isMockEnabled } from '@/config/env.config';
 
 const STORAGE_KEY = 'EMS_SCHEDULE_STATE_V1';
 
@@ -58,6 +60,7 @@ interface ScheduleState {
   holidays: CompanyHoliday[];
 
   // Actions
+  fetchWeeklySchedule: (departmentId: number, startDate: string) => Promise<void>;
   setWeek: (mondayDateStr: string) => void;
   setViewMode: (mode: 'WEEK' | 'MONTH') => void;
   setFilters: (filters: Partial<ScheduleFilterOptions>) => void;
@@ -185,6 +188,86 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
     ...initial,
     conflicts: initialConflicts,
 
+    fetchWeeklySchedule: async (departmentId: number, startDate: string) => {
+      if (isMockEnabled()) return;
+      try {
+        const data = await scheduleService.getWeeklySchedule(departmentId, startDate);
+        if (!data) return;
+
+        const assignmentsMap: Record<string, ShiftAssignment> = {};
+        const backendEmployees: Employee[] = [];
+
+        for (const empSchedule of data.employees || []) {
+          backendEmployees.push({
+            id: empSchedule.employee_id,
+            employeeCode: empSchedule.employee_code,
+            fullName: empSchedule.full_name,
+            email: `${empSchedule.employee_code.toLowerCase()}@example.com`,
+            phoneNumber: '',
+            departmentId: data.department_id,
+            positionId: 1,
+            managerId: null,
+            employmentStatus: 'OFFICIAL',
+            employmentType: 'FULL_TIME',
+            hireDate: '2026-01-01',
+            isActive: true,
+          });
+
+          for (const a of empSchedule.assignments || []) {
+            const key = `${a.employee_id}_${a.work_date}`;
+            assignmentsMap[key] = {
+              id: a.id,
+              scheduleId: a.schedule_id,
+              employeeId: a.employee_id,
+              workShiftId: a.work_shift_id,
+              workDate: a.work_date,
+              snapshotShiftName: a.shift_name,
+              snapshotStartTime: a.start_time,
+              snapshotEndTime: a.end_time,
+              snapshotBreakMinutes: a.break_minutes || 30,
+              snapshotCrossMidnight: a.is_cross_midnight || false,
+              snapshotColorCode: a.color_code,
+              plannedStartTime: `${a.work_date}T${a.start_time}`,
+              plannedEndTime: `${a.work_date}T${a.end_time}`,
+              status: (a.status as any) || 'ASSIGNED',
+              overrideRule: a.override_rule ?? null,
+              overrideReason: a.override_reason ?? null,
+              version: a.version || 1,
+            };
+          }
+        }
+
+        const templates: ShiftTemplate[] = (data.shift_templates || []).map((t: any) => ({
+          id: t.id,
+          shiftCode: t.shift_code || t.shiftCode,
+          shiftName: t.shift_name || t.shiftName,
+          startTime: t.start_time || t.startTime,
+          endTime: t.end_time || t.endTime,
+          breakMinutes: t.break_minutes || t.breakMinutes || 30,
+          isCrossMidnight: t.is_cross_midnight || t.isCrossMidnight || false,
+          colorCode: t.color_code || t.colorCode || '#1677FF',
+          textColor: t.text_color || t.textColor || '#FFFFFF',
+          minStaffing: t.min_staffing || t.minStaffing || 1,
+          maxStaffing: t.max_staffing || t.maxStaffing || 10,
+          applicableDays: t.applicable_days || t.applicableDays || '1,2,3,4,5,6,7',
+          isActive: true,
+        }));
+
+        set({
+          scheduleId: data.schedule_id,
+          scheduleStatus: (data.status as ScheduleStatus) || 'DRAFT',
+          scheduleVersion: data.version !== undefined ? data.version : 0,
+          employees: backendEmployees.length > 0 ? backendEmployees : get().employees,
+          shiftTemplates: templates.length > 0 ? templates : get().shiftTemplates,
+          assignments: assignmentsMap,
+        });
+
+        get().recomputeAllConflicts();
+      } catch (err) {
+        console.warn('Could not fetch weekly schedule from API, using fallback:', err);
+      }
+    },
+
     setWeek: (mondayDateStr) => {
       set({ currentStartDate: mondayDateStr });
       get().recomputeAllConflicts();
@@ -283,6 +366,39 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         changeHistory: updatedHistory,
       });
 
+      if (!isMockEnabled()) {
+        scheduleService
+          .assignSingleShift({
+            schedule_id: state.scheduleId,
+            employee_id: payload.employeeId,
+            work_shift_id: payload.workShiftId,
+            work_date: payload.workDate,
+            override_rule: payload.overrideRule || undefined,
+            override_reason: payload.overrideReason || undefined,
+            schedule_version: state.scheduleVersion,
+          })
+          .then((saved) => {
+            if (saved && saved.id) {
+              set((prev) => {
+                const current = prev.assignments[key];
+                if (current) {
+                  return {
+                    assignments: {
+                      ...prev.assignments,
+                      [key]: { ...current, id: saved.id, version: saved.version || current.version },
+                    },
+                    scheduleVersion: (prev.scheduleVersion || 1) + 1,
+                  };
+                }
+                return prev;
+              });
+            }
+          })
+          .catch((err) => {
+            console.warn('Failed to persist shift assignment to backend:', err);
+          });
+      }
+
       return { success: true };
     },
 
@@ -300,6 +416,12 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       }
 
       if (!targetKey || !targetAssignment) return;
+
+      if (!isMockEnabled()) {
+        scheduleService.deleteAssignment(assignmentId, state.scheduleVersion).catch((err) => {
+          console.warn('Failed to delete assignment on backend:', err);
+        });
+      }
 
       let updatedHistory = state.changeHistory;
       if (state.scheduleStatus === 'PUBLISHED') {
@@ -336,6 +458,12 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         conflicts: updatedConflicts,
         changeHistory: updatedHistory,
       });
+
+      if (!isMockEnabled() && targetAssignment && targetAssignment.id) {
+        scheduleService.deleteAssignment(targetAssignment.id, state.scheduleVersion).catch((err: unknown) => {
+          console.warn('Failed to delete shift assignment on backend:', err);
+        });
+      }
     },
 
     bulkAssign: (payload) => {
@@ -454,6 +582,19 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
     },
 
     publishSchedule: () => {
+      const state = get();
+      if (!isMockEnabled()) {
+        scheduleService
+          .publishSchedule(state.scheduleId, state.scheduleVersion)
+          .then((res) => {
+            if (res) {
+              set({ scheduleStatus: 'PUBLISHED', scheduleVersion: res.version });
+            }
+          })
+          .catch((err) => {
+            console.warn('Failed to publish schedule on backend:', err);
+          });
+      }
       set({
         scheduleStatus: 'PUBLISHED',
         publishedAt: new Date().toISOString(),
@@ -461,6 +602,12 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
     },
 
     unpublishSchedule: () => {
+      const state = get();
+      if (!isMockEnabled()) {
+        scheduleService.unpublishSchedule(state.scheduleId).catch((err) => {
+          console.warn('Failed to unpublish schedule on backend:', err);
+        });
+      }
       set({
         scheduleStatus: 'DRAFT',
       });

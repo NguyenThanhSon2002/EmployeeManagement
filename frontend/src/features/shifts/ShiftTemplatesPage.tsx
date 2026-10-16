@@ -64,34 +64,41 @@ export const ShiftTemplatesPage: React.FC = () => {
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 'var(--font-h1)', fontWeight: 700 }}>Danh Mục Mẫu Ca Làm Việc (SCR-10)</h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginTop: 4 }}>
-            Quản lý chuẩn hóa khung giờ ca làm việc, định biên nhân sự tối thiểu/tối đa và mã màu WCAG
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            Danh Mục Mẫu Ca Làm Việc (SCR-10)
+          </h1>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
+            Quản lý chuẩn hóa khung giờ ca làm việc, định biên nhân sự tối thiểu/tối đa và mã màu WCAG AA.
           </p>
         </div>
 
-        <button type="button" className="btn btn-primary" onClick={handleCreateNew}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleCreateNew}
+          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+        >
           <Plus size={16} /> Thêm Mẫu Ca Mới
         </button>
       </div>
 
       {/* Snapshotting Notice Banner */}
       <div
+        className="card"
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
-          padding: '12px 16px',
-          backgroundColor: '#e6f7ff',
-          border: '1px solid #91d5ff',
-          borderRadius: 'var(--radius-md)',
-          color: '#0050b3',
-          fontSize: 'var(--font-body-md)',
+          gap: 14,
+          padding: '14px 18px',
+          background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)',
+          border: '1px solid #BFDBFE',
+          color: '#1D4ED8',
+          fontSize: '13px',
         }}
       >
-        <ShieldAlert size={20} style={{ flexShrink: 0 }} />
+        <ShieldAlert size={22} style={{ flexShrink: 0, color: 'var(--color-primary)' }} />
         <div>
-          <strong>Cơ chế bảo vệ Snapshotting:</strong> Khi điều chỉnh giờ hoặc định biên của mẫu ca, các phân công ca đã tạo trong lịch tuần quá khứ và hiện tại không bị ảnh hưởng hồi tố nhờ cơ chế lưu bản chụp (snapshot).
+          <strong style={{ fontWeight: 700 }}>Cơ chế bảo vệ Snapshotting:</strong> Khi điều chỉnh giờ hoặc định biên của mẫu ca, các phân công ca đã tạo trong lịch tuần quá khứ và hiện tại không bị ảnh hưởng hồi tố nhờ cơ chế lưu bản chụp (snapshot).
         </div>
       </div>
 

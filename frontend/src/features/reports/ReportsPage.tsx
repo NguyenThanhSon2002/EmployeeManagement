@@ -11,79 +11,91 @@ export const ReportsPage: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
       <div>
-        <h1 style={{ fontSize: 'var(--font-h1)', fontWeight: 700 }}>Trung Tâm Báo Cáo & Thống Kê (SCR-15)</h1>
-        <p style={{ color: 'var(--color-text-secondary)', marginTop: 4 }}>
-          Đối soát dữ liệu công ca, phân tích tỷ lệ hoàn thành kế hoạch và xuất báo cáo CSV tiếng Việt (UTF-8 BOM)
+        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+          Trung Tâm Báo Cáo & Thống Kê (SCR-15)
+        </h1>
+        <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
+          Đối soát dữ liệu công ca, phân tích tỷ lệ hoàn thành kế hoạch và xuất báo cáo CSV tiếng Việt (UTF-8 BOM).
         </p>
       </div>
 
-      {/* Tabs navigation */}
+      {/* Modern Tabs Navigation Bar */}
       <div
+        className="card"
         style={{
-          display: 'flex',
-          gap: 10,
-          borderBottom: '1px solid var(--color-border)',
-          paddingBottom: 2,
+          padding: '6px',
+          display: 'inline-flex',
+          gap: 6,
+          backgroundColor: '#F1F5F9',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          alignSelf: 'flex-start',
         }}
       >
         <button
           type="button"
           onClick={() => setActiveTab('MONTHLY')}
           style={{
-            padding: '10px 18px',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'MONTHLY' ? '3px solid var(--color-primary)' : '3px solid transparent',
+            padding: '8px 16px',
+            backgroundColor: activeTab === 'MONTHLY' ? 'var(--color-surface)' : 'transparent',
             color: activeTab === 'MONTHLY' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            fontWeight: 600,
-            fontSize: 14,
+            borderRadius: 'var(--radius-md)',
+            boxShadow: activeTab === 'MONTHLY' ? 'var(--shadow-xs)' : 'none',
+            fontWeight: activeTab === 'MONTHLY' ? 600 : 500,
+            fontSize: '13px',
+            border: 'none',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
+            transition: 'all var(--transition-fast)',
           }}
         >
-          <BarChart3 size={16} /> Báo Cáo Tổng Hợp Công Tháng
+          <BarChart3 size={15} /> Báo Cáo Tổng Hợp Công Tháng
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('SCHEDULED_VS_ACTUAL')}
           style={{
-            padding: '10px 18px',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'SCHEDULED_VS_ACTUAL' ? '3px solid var(--color-primary)' : '3px solid transparent',
+            padding: '8px 16px',
+            backgroundColor: activeTab === 'SCHEDULED_VS_ACTUAL' ? 'var(--color-surface)' : 'transparent',
             color: activeTab === 'SCHEDULED_VS_ACTUAL' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            fontWeight: 600,
-            fontSize: 14,
+            borderRadius: 'var(--radius-md)',
+            boxShadow: activeTab === 'SCHEDULED_VS_ACTUAL' ? 'var(--shadow-xs)' : 'none',
+            fontWeight: activeTab === 'SCHEDULED_VS_ACTUAL' ? 600 : 500,
+            fontSize: '13px',
+            border: 'none',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
+            transition: 'all var(--transition-fast)',
           }}
         >
-          <Clock size={16} /> Đối Chiếu Kế Hoạch vs Thực Tế
+          <Clock size={15} /> Đối Chiếu Kế Hoạch vs Thực Tế
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('VIOLATIONS')}
           style={{
-            padding: '10px 18px',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'VIOLATIONS' ? '3px solid var(--color-primary)' : '3px solid transparent',
+            padding: '8px 16px',
+            backgroundColor: activeTab === 'VIOLATIONS' ? 'var(--color-surface)' : 'transparent',
             color: activeTab === 'VIOLATIONS' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            fontWeight: 600,
-            fontSize: 14,
+            borderRadius: 'var(--radius-md)',
+            boxShadow: activeTab === 'VIOLATIONS' ? 'var(--shadow-xs)' : 'none',
+            fontWeight: activeTab === 'VIOLATIONS' ? 600 : 500,
+            fontSize: '13px',
+            border: 'none',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
+            transition: 'all var(--transition-fast)',
           }}
         >
-          <AlertTriangle size={16} /> Vi Phạm Đi Muộn / Về Sớm
+          <AlertTriangle size={15} /> Vi Phạm Đi Muộn / Về Sớm
         </button>
       </div>
 

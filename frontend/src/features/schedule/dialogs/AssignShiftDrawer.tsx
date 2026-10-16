@@ -400,7 +400,7 @@ export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: '#fafafa',
+            backgroundColor: '#F8FAFC',
           }}
         >
           {existingAssignment ? (

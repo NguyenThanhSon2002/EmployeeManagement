@@ -5,6 +5,8 @@ import { useScheduleStore } from '@/store/useScheduleStore';
 import { useAttendanceStore } from '@/store/useAttendanceStore';
 import { useLeaveStore } from '@/store/useLeaveStore';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
+import { reportService } from '@/services/reportService';
+import { isMockEnabled } from '@/config/env.config';
 import { Download, Search } from 'lucide-react';
 
 export const MonthlyAttendanceReport: React.FC = () => {
@@ -86,12 +88,36 @@ export const MonthlyAttendanceReport: React.FC = () => {
       leaveDays: d.leaveDays.toString(),
     }));
 
+    if (!isMockEnabled()) {
+      reportService.downloadCsv(departmentFilter || undefined, 2026, 10).catch(() => {
+        exportToCsv(
+          'BaoCao_TongHopCong_Thang10_2026.csv',
+          dataRows,
+          columns,
+          'Báo cáo Tổng hợp Công Tháng 10/2026'
+        );
+      });
+      return;
+    }
+
     exportToCsv(
       'BaoCao_TongHopCong_Thang10_2026.csv',
       dataRows,
       columns,
       'Báo cáo Tổng hợp Công Tháng 10/2026'
     );
+  };
+
+  const handleExportExcel = async () => {
+    if (!isMockEnabled()) {
+      try {
+        await reportService.downloadExcel(departmentFilter || undefined, 2026, 10);
+      } catch (err) {
+        console.warn('Backend Excel export failed:', err);
+      }
+    } else {
+      handleExportCsv();
+    }
   };
 
   return (
@@ -136,9 +162,14 @@ export const MonthlyAttendanceReport: React.FC = () => {
           </div>
         </div>
 
-        <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
-          <Download size={16} /> Xuất CSV Báo Cáo (UTF-8 BOM)
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button type="button" className="btn btn-default" onClick={handleExportExcel} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Download size={16} /> Xuất Excel (.xlsx)
+          </button>
+          <button type="button" className="btn btn-primary" onClick={handleExportCsv} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Download size={16} /> Xuất CSV (UTF-8 BOM)
+          </button>
+        </div>
       </div>
 
       {/* Report Table */}

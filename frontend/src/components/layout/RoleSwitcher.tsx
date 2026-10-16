@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useUIStore } from '@/store/useUIStore';
 import type { RoleType } from '@/types/domain.types';
 import { ShieldCheck, UserCheck, User, ChevronDown } from 'lucide-react';
 
@@ -14,25 +15,26 @@ const ROLES: RoleOption[] = [
   {
     role: 'ROLE_ADMIN',
     label: 'Quản Trị Viên (Admin)',
-    badge: 'Toàn quyền',
-    icon: <ShieldCheck size={16} color="#1677FF" />,
+    badge: 'Toàn quyền điều hành',
+    icon: <ShieldCheck size={16} color="#2563EB" />,
   },
   {
     role: 'ROLE_DEPT_MANAGER',
     label: 'Trưởng Nhóm / Quản Lý',
-    badge: 'Duyệt & Phân ca',
-    icon: <UserCheck size={16} color="#52C41A" />,
+    badge: 'Duyệt đơn & Phân ca',
+    icon: <UserCheck size={16} color="#10B981" />,
   },
   {
     role: 'ROLE_EMPLOYEE',
     label: 'Nhân Viên (Employee)',
-    badge: 'Chỉ xem / Điểm danh',
-    icon: <User size={16} color="#FAAD14" />,
+    badge: 'Chỉ xem lịch & Điểm danh',
+    icon: <User size={16} color="#F59E0B" />,
   },
 ];
 
 export const RoleSwitcher: React.FC = () => {
   const { currentRole, setRole } = useAuthStore();
+  const { addToast } = useUIStore();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -60,18 +62,20 @@ export const RoleSwitcher: React.FC = () => {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--space-xs)',
+          gap: 8,
           height: 34,
           padding: '0 12px',
-          borderRadius: 'var(--radius-md)',
+          borderRadius: 'var(--radius-full)',
           backgroundColor: 'var(--color-surface)',
           border: '1px solid var(--color-border)',
-          fontSize: 'var(--font-caption)',
+          fontSize: '12.5px',
+          boxShadow: 'var(--shadow-xs)',
+          transition: 'all var(--transition-fast)',
         }}
       >
         {activeOption.icon}
-        <span style={{ fontWeight: 600 }}>{activeOption.label}</span>
-        <ChevronDown size={14} style={{ opacity: 0.7 }} />
+        <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{activeOption.label}</span>
+        <ChevronDown size={14} style={{ opacity: 0.6 }} />
       </button>
 
       {isOpen && (
@@ -79,22 +83,26 @@ export const RoleSwitcher: React.FC = () => {
           role="listbox"
           style={{
             position: 'absolute',
-            top: 'calc(100% + 4px)',
+            top: 'calc(100% + 6px)',
             right: 0,
-            width: 240,
+            width: 250,
             backgroundColor: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-md)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 'var(--z-dropdown)',
-            padding: 4,
+            padding: 6,
+            animation: 'scale-up 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
           <div
             style={{
               padding: '6px 10px',
-              fontSize: 'var(--font-badge)',
+              fontSize: 10.5,
+              fontWeight: 700,
               color: 'var(--color-text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
               borderBottom: '1px solid var(--color-border-subtle)',
               marginBottom: 4,
             }}
@@ -112,6 +120,11 @@ export const RoleSwitcher: React.FC = () => {
                 onClick={() => {
                   setRole(item.role);
                   setIsOpen(false);
+                  addToast({
+                    type: 'info',
+                    title: 'Chuyển đổi vai trò',
+                    message: `Đang kết nối phiên làm việc với vai trò: ${item.label}`,
+                  });
                 }}
                 style={{
                   width: '100%',
@@ -119,21 +132,23 @@ export const RoleSwitcher: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '8px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: isSelected ? 'var(--color-info-bg)' : 'transparent',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: isSelected ? 'var(--color-primary-light)' : 'transparent',
                   color: isSelected ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                  fontSize: 'var(--font-caption)',
+                  fontSize: '12.5px',
                   textAlign: 'left',
                   cursor: 'pointer',
                   border: 'none',
-                  transition: 'background 0.15s ease',
+                  transition: 'background var(--transition-fast)',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   {item.icon}
                   <div>
                     <div style={{ fontWeight: isSelected ? 600 : 500 }}>{item.label}</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{item.badge}</div>
+                    <div style={{ fontSize: 11, color: isSelected ? 'var(--color-primary)' : 'var(--color-text-muted)', opacity: isSelected ? 0.8 : 1 }}>
+                      {item.badge}
+                    </div>
                   </div>
                 </div>
                 {isSelected && <span style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>✓</span>}

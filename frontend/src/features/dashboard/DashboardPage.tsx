@@ -3,28 +3,81 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { TrendBarChart } from '@/components/charts/TrendBarChart';
 import { QuickAttendanceCard } from './components/QuickAttendanceCard';
 import { PendingApprovalsWidget } from './components/PendingApprovalsWidget';
-import { Users, UserCheck, Clock, Palmtree, Calendar } from 'lucide-react';
+import { Users, UserCheck, Clock, Palmtree, Calendar, Sparkles } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
-  const { currentRole } = useAuthStore();
+  const { currentUser, currentRole } = useAuthStore();
 
   const isEmployeeRole = currentRole === 'ROLE_EMPLOYEE';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-      {/* Page Header */}
-      <div>
-        <h1 style={{ fontSize: 'var(--font-h1)', fontWeight: 600 }}>
-          {isEmployeeRole
-            ? 'Bảng Điều Khiển Cá Nhân - Điểm Danh & Lịch Ca'
-            : 'Tổng Quan Hệ Thống - Phòng Vận Hành Dịch Vụ'}
-        </h1>
-        <p style={{ color: 'var(--color-text-secondary)', marginTop: 4, fontSize: 'var(--font-body)' }}>
-          Cập nhật tình hình quân số thực tế, lịch trực hôm nay và đơn từ đang chờ phê duyệt.
-        </p>
+      {/* Welcome Banner */}
+      <div
+        className="card"
+        style={{
+          padding: '20px 24px',
+          background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)',
+          border: '1px solid #BFDBFE',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 16,
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+              Xin chào, {currentUser.fullName}! 👋
+            </h1>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: '#DBEAFE',
+                color: '#1D4ED8',
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+            >
+              <Sparkles size={11} color="#F59E0B" />
+              {isEmployeeRole ? 'Giao Diện Nhân Viên' : 'Trung Tâm Chỉ Huy Vận Hành'}
+            </span>
+          </div>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: 4, fontSize: '13.5px' }}>
+            {isEmployeeRole
+              ? 'Theo dõi nhanh giờ công, trạng thái điểm danh và lịch phân ca tuần này của bạn.'
+              : 'Giám sát quân số thực tế tại ca làm việc, đối soát vi phạm đi muộn và xử lý phê duyệt đơn từ.'}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            style={{
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-full)',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--color-text-secondary)',
+              boxShadow: 'var(--shadow-xs)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <span className="pulse-dot-green" />
+            <span>38/45 Nhân sự đang trực</span>
+          </div>
+        </div>
       </div>
 
-      {/* 4 KPI Metric Cards */}
+      {/* 4 Executive KPI Metric Cards */}
       <div
         style={{
           display: 'grid',
@@ -32,99 +85,123 @@ export const DashboardPage: React.FC = () => {
           gap: 'var(--space-md)',
         }}
       >
-        {/* KPI 1 */}
+        {/* KPI 1: Tổng Quân Số */}
         <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--color-info-bg)',
+              width: 46,
+              height: 46,
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--color-primary-light)',
               color: 'var(--color-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
             <Users size={22} />
           </div>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-              TỔNG QUÂN SỐ
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Tổng Quân Số Bộ Phận
             </div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>45 người</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              45 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginTop: 2 }}>
+              100% hợp đồng hoạt động
+            </div>
           </div>
         </div>
 
-        {/* KPI 2 */}
+        {/* KPI 2: Đang Có Mặt */}
         <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: '#f6ffed',
-              color: '#52c41a',
+              width: 46,
+              height: 46,
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: '#ECFDF5',
+              color: '#10B981',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
             <UserCheck size={22} />
           </div>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-              ĐANG CÓ MẶT
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Đang Có Mặt / Check-in
             </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#389e0d' }}>38 người</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#047857', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              38 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginTop: 2 }}>
+              84.4% tỷ lệ hiện diện
+            </div>
           </div>
         </div>
 
-        {/* KPI 3 */}
+        {/* KPI 3: Đi Muộn / Về Sớm */}
         <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: '#fffbe6',
-              color: '#faad14',
+              width: 46,
+              height: 46,
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: '#FFFBEB',
+              color: '#F59E0B',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
             <Clock size={22} />
           </div>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-              ĐI MUỘN / VỀ SỚM
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Đi Muộn / Về Sớm
             </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#d46b08' }}>2 người</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#B45309', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              2 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#B45309', fontWeight: 600, marginTop: 2 }}>
+              Giảm 1 trường hợp so với hôm qua
+            </div>
           </div>
         </div>
 
-        {/* KPI 4 */}
+        {/* KPI 4: Đang Nghỉ Phép */}
         <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: '#fff0f6',
-              color: '#eb2f96',
+              width: 46,
+              height: 46,
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: '#FDF2F8',
+              color: '#EC4899',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
             <Palmtree size={22} />
           </div>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-              ĐANG NGHỈ PHÉP
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Đang Nghỉ Phép Hợp Lệ
             </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#c41d7f' }}>3 người</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#BE185D', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              3 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#BE185D', fontWeight: 600, marginTop: 2 }}>
+              Đã duyệt quỹ phép năm
+            </div>
           </div>
         </div>
       </div>
@@ -140,41 +217,51 @@ export const DashboardPage: React.FC = () => {
 
       {/* Today's Shift schedule reminder for Employee */}
       {isEmployeeRole && (
-        <div className="card" style={{ padding: '16px 20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div className="card" style={{ padding: '18px 22px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <Calendar size={18} color="var(--color-primary)" />
             <h3 style={{ fontSize: 'var(--font-h3)', fontWeight: 600 }}>Ca Trực Tiếp Theo Của Bạn</h3>
           </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
             <div
               style={{
                 flex: 1,
-                minWidth: 200,
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-md)',
+                minWidth: 220,
+                padding: '14px 16px',
+                borderRadius: 'var(--radius-lg)',
                 backgroundColor: 'var(--shift-morning-bg)',
                 border: '1px solid var(--shift-morning-border)',
                 color: 'var(--shift-morning-text)',
+                boxShadow: 'var(--shadow-xs)',
               }}
             >
-              <div style={{ fontWeight: 600 }}>Hôm nay (Thứ Ba)</div>
-              <div style={{ fontSize: 13, marginTop: 4 }}>Ca Sáng: 08:00 - 17:00 (8.0h)</div>
-              <div style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>Trực vận hành cổng thanh toán</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Hôm nay (Thứ Ba)</div>
+              <div style={{ fontSize: 13.5, marginTop: 4, fontWeight: 600 }}>
+                Ca Sáng Tiêu Chuẩn: 08:00 — 17:00 (8.0h)
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>
+                Trực vận hành cổng thanh toán dịch vụ & CSKH
+              </div>
             </div>
             <div
               style={{
                 flex: 1,
-                minWidth: 200,
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-md)',
+                minWidth: 220,
+                padding: '14px 16px',
+                borderRadius: 'var(--radius-lg)',
                 backgroundColor: 'var(--shift-afternoon-bg)',
                 border: '1px solid var(--shift-afternoon-border)',
                 color: 'var(--shift-afternoon-text)',
+                boxShadow: 'var(--shadow-xs)',
               }}
             >
-              <div style={{ fontWeight: 600 }}>Ngày mai (Thứ Tư)</div>
-              <div style={{ fontSize: 13, marginTop: 4 }}>Ca Chiều: 14:00 - 22:00 (8.0h)</div>
-              <div style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>Trực xử lý sự cố khách hàng</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Ngày mai (Thứ Tư)</div>
+              <div style={{ fontSize: 13.5, marginTop: 4, fontWeight: 600 }}>
+                Ca Chiều: 14:00 — 22:00 (8.0h)
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>
+                Trực xử lý sự cố khách hàng & đối soát giao dịch
+              </div>
             </div>
           </div>
         </div>
