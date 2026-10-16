@@ -25,3 +25,8 @@ Thumbs.db
 target/
 *.class
 .gradle/
+
+# AI planning & temporary brainstorm notes
+plans/
+docs/brainstorms/
+docs/archive/

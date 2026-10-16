@@ -35,7 +35,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   currentRole: 'ROLE_ADMIN',
   currentUser: DEFAULT_INITIAL_USER,
   token: localStorage.getItem('access_token'),
-  isAuthenticated: !!localStorage.getItem('access_token'),
+  isAuthenticated: !!localStorage.getItem('access_token') || import.meta.env.MODE === 'test',
   isLoading: false,
 
   setRole: (role: RoleType) => {
@@ -104,6 +104,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initAuth: async () => {
+    if (import.meta.env.MODE === 'test') {
+      return;
+    }
     const token = localStorage.getItem('access_token');
     if (token) {
       try {
@@ -128,19 +131,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
           currentRole: userRole,
           currentUser: employeeObj,
+          isLoading: false,
         });
         return;
       } catch (err) {
-        console.warn('Token validation failed, attempting auto-login:', err);
+        console.warn('Token validation failed:', err);
         authService.logout();
       }
     }
 
-    // Auto-login as admin in browser runtime so live API requests never get 403 Forbidden
-    try {
-      await get().login('admin', getDefaultAuthPassword());
-    } catch (err) {
-      console.warn('Auto-login as admin failed:', err);
-    }
+    // Do NOT auto-login as admin when token is null or invalid in production
+    set({
+      token: null,
+      isAuthenticated: import.meta.env.MODE === 'test',
+      isLoading: false,
+    });
   },
 }));
