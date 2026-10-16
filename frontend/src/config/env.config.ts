@@ -15,3 +15,7 @@ export const isMockEnabled = (): boolean => {
 export const getApiBaseUrl = (): string => {
   return import.meta.env.VITE_API_BASE_URL || '/api/v1';
 };
+
+export const getDefaultAuthPassword = (): string => {
+  return import.meta.env.VITE_DEFAULT_AUTH_PASSWORD || 'Admin@123';
+};

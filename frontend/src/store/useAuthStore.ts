@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { Employee, RoleType } from '@/types/domain.types';
 import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
 import { authService } from '@/services/authService';
-import { isMockEnabled } from '@/config/env.config';
+import { isMockEnabled, getDefaultAuthPassword } from '@/config/env.config';
 
 interface AuthState {
   currentRole: RoleType;
@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ currentRole: role, currentUser: defaultUser });
 
     if (!isMockEnabled()) {
-      get().login(username, 'Admin@123').catch((err) => {
+      get().login(username, getDefaultAuthPassword()).catch((err) => {
         console.warn(`Live login switch for ${username} failed:`, err);
       });
     }
@@ -129,7 +129,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Auto-login as admin in browser runtime so live API requests never get 403 Forbidden
     try {
-      await get().login('admin', 'Admin@123');
+      await get().login('admin', getDefaultAuthPassword());
     } catch (err) {
       console.warn('Auto-login as admin failed:', err);
     }
