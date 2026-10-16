@@ -5,7 +5,7 @@ import { useScheduleStore } from './store/useScheduleStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useSettingsStore } from '@/features/settings/store/useSettingsStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { ScheduleToolbar } from './components/ScheduleToolbar';
 import { ScheduleSummaryCards } from './components/ScheduleSummaryCards';
 import { ScheduleFiltersBar } from './components/ScheduleFiltersBar';
@@ -51,6 +51,7 @@ export const SchedulePage: React.FC = () => {
   const { currentRole } = useAuthStore();
   const { settings } = useSettingsStore();
   const { addToast } = useUIStore();
+  const { departments } = useDirectoryStore();
   const isMobile = useIsMobile(768);
 
   // Auto-fetch weekly schedule from backend if real API mode is active
@@ -254,7 +255,7 @@ export const SchedulePage: React.FC = () => {
 
   // CSV Export Handler
   const handleExportCsv = () => {
-    const dept = MOCK_DEPARTMENTS.find((d) => d.id === filterOptions.departmentId) || null;
+    const dept = departments.find((d) => d.id === filterOptions.departmentId) || null;
     const csvContent = buildWeeklyRosterCsv({
       monday: baseMonday,
       department: dept,
@@ -297,7 +298,7 @@ export const SchedulePage: React.FC = () => {
       {/* 1. Schedule Toolbar */}
       <ScheduleToolbar
         baseMonday={baseMonday}
-        departments={MOCK_DEPARTMENTS}
+        departments={departments}
         selectedDeptId={filterOptions.departmentId}
         scheduleStatus={scheduleStatus}
         viewMode={viewMode}

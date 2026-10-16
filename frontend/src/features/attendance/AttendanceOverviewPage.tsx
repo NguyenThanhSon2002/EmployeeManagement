@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAttendanceStore } from './store/useAttendanceStore';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { AttendanceCorrectionModal } from './components/AttendanceCorrectionModal';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
 import type { AttendanceRecord } from '@/types/domain.types';
@@ -24,6 +23,7 @@ export const AttendanceOverviewPage: React.FC = () => {
     setDepartmentFilter,
     fetchRecords,
   } = useAttendanceStore();
+  const { employees, departments } = useDirectoryStore();
 
   React.useEffect(() => {
     fetchRecords?.(selectedDate, departmentFilter || undefined);
@@ -35,7 +35,7 @@ export const AttendanceOverviewPage: React.FC = () => {
 
   // Filtered records
   const filteredRecords = records.filter((rec) => {
-    const emp = MOCK_EMPLOYEES.find((e) => e.id === rec.employeeId);
+    const emp = employees.find((e) => e.id === rec.employeeId);
     if (!emp) return false;
 
     if (departmentFilter && emp.departmentId !== departmentFilter) return false;
@@ -82,8 +82,8 @@ export const AttendanceOverviewPage: React.FC = () => {
     ];
 
     const dataRows = filteredRecords.map((r) => {
-      const emp = MOCK_EMPLOYEES.find((e) => e.id === r.employeeId);
-      const dept = MOCK_DEPARTMENTS.find((d) => d.id === emp?.departmentId);
+      const emp = employees.find((e) => e.id === r.employeeId);
+      const dept = departments.find((d) => d.id === emp?.departmentId);
       return {
         employeeCode: emp?.employeeCode || '',
         fullName: emp?.fullName || '',
@@ -283,7 +283,7 @@ export const AttendanceOverviewPage: React.FC = () => {
             onChange={(e) => setDepartmentFilter(e.target.value ? Number(e.target.value) : null)}
           >
             <option value="">-- Tất cả phòng ban --</option>
-            {MOCK_DEPARTMENTS.map((d) => (
+            {departments.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.departmentName}
               </option>
@@ -330,8 +330,8 @@ export const AttendanceOverviewPage: React.FC = () => {
               </tr>
             ) : (
               filteredRecords.map((r) => {
-                const emp = MOCK_EMPLOYEES.find((e) => e.id === r.employeeId);
-                const dept = MOCK_DEPARTMENTS.find((d) => d.id === emp?.departmentId);
+                const emp = employees.find((e) => e.id === r.employeeId);
+                const dept = departments.find((d) => d.id === emp?.departmentId);
 
                 const inStr = r.checkInTime ? r.checkInTime.split('T')[1]?.substring(0, 5) : '--:--';
                 const outStr = r.checkOutTime ? r.checkOutTime.split('T')[1]?.substring(0, 5) : '--:--';

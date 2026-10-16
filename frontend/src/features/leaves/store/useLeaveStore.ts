@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { LeaveRequest } from '@/types/domain.types';
-import { getMockLeaves } from '@/mocks/leaves.mock';
+import { getMockLeaves } from '@/test/fixtures';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { leaveService } from '../api/leaveService';
 import { isMockEnabled } from '@/config/env.config';
@@ -26,18 +26,18 @@ interface LeaveState {
 }
 
 export const useLeaveStore = create<LeaveState>((set, get) => {
-  // Use today's date anchor
-  const initialLeaves = getMockLeaves(new Date());
-
-  // Default quota is 12 days per year
-  const initialBalances: Record<number, LeaveBalance> = {
-    1: { annualQuota: 12, usedDays: 2 },
-    2: { annualQuota: 12, usedDays: 3.5 },
-    3: { annualQuota: 12, usedDays: 1 },
-    4: { annualQuota: 12, usedDays: 4 },
-    5: { annualQuota: 12, usedDays: 2 },
-    7: { annualQuota: 12, usedDays: 1 },
-  };
+  const isTestMode = import.meta.env.MODE === 'test';
+  const initialLeaves = isTestMode ? getMockLeaves(new Date()) : [];
+  const initialBalances: Record<number, LeaveBalance> = isTestMode
+    ? {
+        1: { annualQuota: 12, usedDays: 2 },
+        2: { annualQuota: 12, usedDays: 3.5 },
+        3: { annualQuota: 12, usedDays: 1 },
+        4: { annualQuota: 12, usedDays: 4 },
+        5: { annualQuota: 12, usedDays: 2 },
+        7: { annualQuota: 12, usedDays: 1 },
+      }
+    : {};
 
   return {
     leaves: initialLeaves,

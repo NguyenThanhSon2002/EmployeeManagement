@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
 import { Download, Search } from 'lucide-react';
 
 export const LateEarlyReport: React.FC = () => {
   const { records } = useAttendanceStore();
+  const { employees, departments } = useDirectoryStore();
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -16,7 +16,7 @@ export const LateEarlyReport: React.FC = () => {
   );
 
   const filteredViolations = violationRecords.filter((r) => {
-    const emp = MOCK_EMPLOYEES.find((e) => e.id === r.employeeId);
+    const emp = employees.find((e) => e.id === r.employeeId);
     if (!emp) return false;
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
@@ -39,8 +39,8 @@ export const LateEarlyReport: React.FC = () => {
     ];
 
     const dataRows = filteredViolations.map((r) => {
-      const emp = MOCK_EMPLOYEES.find((e) => e.id === r.employeeId);
-      const dept = MOCK_DEPARTMENTS.find((d) => d.id === emp?.departmentId);
+      const emp = employees.find((e) => e.id === r.employeeId);
+      const dept = departments.find((d) => d.id === emp?.departmentId);
 
       let vType = 'Đi muộn';
       let mins = r.lateMinutes;
@@ -128,8 +128,8 @@ export const LateEarlyReport: React.FC = () => {
               </tr>
             ) : (
               filteredViolations.map((r) => {
-                const emp = MOCK_EMPLOYEES.find((e) => e.id === r.employeeId);
-                const dept = MOCK_DEPARTMENTS.find((d) => d.id === emp?.departmentId);
+                const emp = employees.find((e) => e.id === r.employeeId);
+                const dept = departments.find((d) => d.id === emp?.departmentId);
 
                 const inStr = r.checkInTime ? r.checkInTime.split('T')[1]?.substring(0, 5) : '--:--';
                 const outStr = r.checkOutTime ? r.checkOutTime.split('T')[1]?.substring(0, 5) : '--:--';

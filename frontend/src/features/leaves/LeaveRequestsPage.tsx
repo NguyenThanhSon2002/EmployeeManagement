@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLeaveStore } from './store/useLeaveStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import type { LeaveRequest } from '@/types/domain.types';
 import { LeaveRequestModal } from './components/LeaveRequestModal';
 import { LeaveApprovalModal } from './components/LeaveApprovalModal';
@@ -17,6 +17,7 @@ export const LeaveRequestsPage: React.FC = () => {
   const { leaves, getBalance, cancelLeave, fetchLeaves } = useLeaveStore();
   const { currentUser, currentRole } = useAuthStore();
   const { addToast } = useUIStore();
+  const { employees } = useDirectoryStore();
 
   React.useEffect(() => {
     fetchLeaves?.();
@@ -36,7 +37,7 @@ export const LeaveRequestsPage: React.FC = () => {
 
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
-      const emp = MOCK_EMPLOYEES.find((e) => e.id === leave.employeeId);
+      const emp = employees.find((e) => e.id === leave.employeeId);
       const matchName = emp?.fullName.toLowerCase().includes(q);
       const matchCode = emp?.employeeCode.toLowerCase().includes(q);
       const matchReason = leave.reason.toLowerCase().includes(q);
@@ -203,7 +204,7 @@ export const LeaveRequestsPage: React.FC = () => {
               </tr>
             ) : (
               filteredLeaves.map((leave) => {
-                const emp = MOCK_EMPLOYEES.find((e) => e.id === leave.employeeId);
+                const emp = employees.find((e) => e.id === leave.employeeId);
                 const isPending = leave.status === 'SUBMITTED';
 
                 return (

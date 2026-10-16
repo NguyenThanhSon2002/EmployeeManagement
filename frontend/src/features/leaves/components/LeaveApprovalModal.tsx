@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLeaveStore } from '../store/useLeaveStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import type { LeaveRequest } from '@/types/domain.types';
 import { X, CheckCircle, XCircle, Calendar } from 'lucide-react';
 
@@ -20,13 +20,14 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
   const { approveLeave, rejectLeave, getBalance } = useLeaveStore();
   const { currentUser } = useAuthStore();
   const { addToast } = useUIStore();
+  const { employees } = useDirectoryStore();
 
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
 
   if (!isOpen || !leaveRequest) return null;
 
-  const emp = MOCK_EMPLOYEES.find((e) => e.id === leaveRequest.employeeId);
+  const emp = employees.find((e) => e.id === leaveRequest.employeeId);
   const balance = getBalance(leaveRequest.employeeId);
 
   const handleApprove = () => {

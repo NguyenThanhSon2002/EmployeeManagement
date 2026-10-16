@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { format } from 'date-fns';
 import type { AttendanceRecord, AttendanceCorrection } from '@/types/domain.types';
-import { getMockAttendanceRecords, MOCK_ATTENDANCE_CORRECTIONS } from '@/mocks/attendance.mock';
+import { getMockAttendanceRecords, MOCK_ATTENDANCE_CORRECTIONS } from '@/test/fixtures';
 import { attendanceService } from '../api/attendanceService';
 import { isMockEnabled } from '@/config/env.config';
 
@@ -26,13 +26,15 @@ interface AttendanceState {
 }
 
 export const useAttendanceStore = create<AttendanceState>((set, get) => {
+  const isTestMode = import.meta.env.MODE === 'test';
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
-  const initialRecords = getMockAttendanceRecords(today);
+  const initialRecords = isTestMode ? getMockAttendanceRecords(today) : [];
+  const initialCorrections = isTestMode ? MOCK_ATTENDANCE_CORRECTIONS : [];
 
   return {
     records: initialRecords,
-    corrections: MOCK_ATTENDANCE_CORRECTIONS,
+    corrections: initialCorrections,
     selectedDate: todayStr,
     departmentFilter: null,
 

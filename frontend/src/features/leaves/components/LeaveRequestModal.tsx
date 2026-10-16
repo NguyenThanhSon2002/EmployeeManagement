@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLeaveStore } from '../store/useLeaveStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { format, differenceInCalendarDays, parseISO } from 'date-fns';
 import { X, Calendar, AlertCircle } from 'lucide-react';
 
@@ -22,6 +22,7 @@ export const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ isOpen, on
   const { submitLeave, getBalance } = useLeaveStore();
   const { currentUser, currentRole } = useAuthStore();
   const { addToast } = useUIStore();
+  const { employees } = useDirectoryStore();
 
   const isManagerOrAdmin = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER' || currentRole === 'ROLE_DEPT_MANAGER';
 
@@ -128,7 +129,7 @@ export const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ isOpen, on
                   setError(null);
                 }}
               >
-                {MOCK_EMPLOYEES.map((emp) => (
+                {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
                     {emp.fullName} ({emp.employeeCode})
                   </option>
