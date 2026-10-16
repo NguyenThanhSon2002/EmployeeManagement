@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
 import { formatDateVi } from '@/utils/date.utils';
-import { useScheduleStore } from '@/store/useScheduleStore';
+import { useScheduleStore } from './store/useScheduleStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
-import { useSettingsStore } from '@/store/useSettingsStore';
+import { useSettingsStore } from '@/features/settings/store/useSettingsStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
 import { ScheduleToolbar } from './components/ScheduleToolbar';

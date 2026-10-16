@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from '@/App';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
-import { useScheduleStore } from '@/store/useScheduleStore';
+import { useScheduleStore } from '../store/useScheduleStore';
 
 describe('Phase 03: Core Weekly Schedule Grid & Drawer Integration', () => {
   beforeEach(() => {

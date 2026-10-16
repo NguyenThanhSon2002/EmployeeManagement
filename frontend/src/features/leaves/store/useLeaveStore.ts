@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import type { LeaveRequest } from '@/types/domain.types';
 import { getMockLeaves } from '@/data/mock/leaves.mock';
-import { useScheduleStore } from './useScheduleStore';
-import { leaveService } from '@/services/leaveService';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
+import { leaveService } from '../api/leaveService';
 import { isMockEnabled } from '@/config/env.config';
 
 interface LeaveBalance {

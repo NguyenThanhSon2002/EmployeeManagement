@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
 import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
-import { useAttendanceStore } from '@/store/useAttendanceStore';
+import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
 import { Download, Search } from 'lucide-react';
 

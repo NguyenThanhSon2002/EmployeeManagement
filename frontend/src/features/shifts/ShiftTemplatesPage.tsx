@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useScheduleStore } from '@/store/useScheduleStore';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import type { ShiftTemplate } from '@/types/domain.types';
 import { ShiftTemplateCard } from './components/ShiftTemplateCard';

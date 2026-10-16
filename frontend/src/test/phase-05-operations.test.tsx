@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useScheduleStore } from '@/store/useScheduleStore';
-import { useLeaveStore } from '@/store/useLeaveStore';
-import { useAttendanceStore } from '@/store/useAttendanceStore';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
+import { useLeaveStore } from '@/features/leaves/store/useLeaveStore';
+import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 
 describe('Phase 05: Operational Features Integration Verification', () => {
   beforeEach(() => {

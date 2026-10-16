@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLeaveStore } from '@/store/useLeaveStore';
+import { useLeaveStore } from '../store/useLeaveStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';

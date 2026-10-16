@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { format } from 'date-fns';
 import type { AttendanceRecord, AttendanceCorrection } from '@/types/domain.types';
 import { getMockAttendanceRecords, MOCK_ATTENDANCE_CORRECTIONS } from '@/data/mock/attendance.mock';
-import { attendanceService } from '@/services/attendanceService';
+import { attendanceService } from '../api/attendanceService';
 import { isMockEnabled } from '@/config/env.config';
 
 interface AttendanceState {

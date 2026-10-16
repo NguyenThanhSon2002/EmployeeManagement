@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
 import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
-import { useScheduleStore } from '@/store/useScheduleStore';
-import { useAttendanceStore } from '@/store/useAttendanceStore';
-import { useLeaveStore } from '@/store/useLeaveStore';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
+import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
+import { useLeaveStore } from '@/features/leaves/store/useLeaveStore';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
-import { reportService } from '@/services/reportService';
+import { reportService } from '../api/reportService';
 import { isMockEnabled } from '@/config/env.config';
 import { Download, Search } from 'lucide-react';
 

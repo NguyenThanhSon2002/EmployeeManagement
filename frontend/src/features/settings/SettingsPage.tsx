@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useSettingsStore } from '@/store/useSettingsStore';
-import { useScheduleStore } from '@/store/useScheduleStore';
+import { useSettingsStore } from './store/useSettingsStore';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { Sliders, RotateCcw, Check, ShieldAlert } from 'lucide-react';
 

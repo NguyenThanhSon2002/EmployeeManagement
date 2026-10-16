@@ -24,8 +24,8 @@ import {
 } from '@/utils/conflict-detector.utils';
 import { copyScheduleWeek } from '@/utils/copy-merge.utils';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
-import { useSettingsStore } from './useSettingsStore';
-import { scheduleService } from '@/services/scheduleService';
+import { useSettingsStore } from '@/features/settings/store/useSettingsStore';
+import { scheduleService } from '../api/scheduleService';
 import { isMockEnabled } from '@/config/env.config';
 
 const STORAGE_KEY = 'EMS_SCHEDULE_STATE_V1';

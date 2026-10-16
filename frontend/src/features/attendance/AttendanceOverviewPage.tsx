@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAttendanceStore } from '@/store/useAttendanceStore';
+import { useAttendanceStore } from './store/useAttendanceStore';
 import { MOCK_EMPLOYEES } from '@/data/mock/employees.mock';
 import { MOCK_DEPARTMENTS } from '@/data/mock/departments.mock';
 import { AttendanceCorrectionModal } from './components/AttendanceCorrectionModal';

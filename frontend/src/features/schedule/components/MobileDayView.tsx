@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format, addDays } from 'date-fns';
-import { useScheduleStore } from '@/store/useScheduleStore';
+import { useScheduleStore } from '../store/useScheduleStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { formatDateVi } from '@/utils/date.utils';
