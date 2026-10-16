@@ -226,15 +226,15 @@ export const SchedulePage: React.FC = () => {
     if (res.success) {
       addToast({
         type: 'success',
-        title: 'PhÃ¢n ca thÃ nh cÃ´ng',
-        message: `ÄÃ£ lÆ°u ca lÃ m viá»‡c ngÃ y ${formatDateVi(selectedCell.workDate)} vÃ o CSDL MySQL.`,
+        title: 'Phân ca thành công',
+        message: `Đã lưu ca làm việc ngày ${formatDateVi(selectedCell.workDate)} vào CSDL MySQL.`,
       });
       handleCloseDrawer();
     } else {
       addToast({
         type: 'error',
-        title: 'KhÃ´ng thá»ƒ phÃ¢n ca',
-        message: res.error || 'ÄÃ£ cÃ³ lá»—i xáº£y ra',
+        title: 'Không thể phân ca',
+        message: res.error || 'Đã có lỗi xảy ra',
       });
     }
   };
@@ -246,8 +246,8 @@ export const SchedulePage: React.FC = () => {
     deleteAssignment(activeAssignment.id, changeReason, currentRole);
     addToast({
       type: 'info',
-      title: 'ÄÃ£ xÃ³a phÃ¢n ca',
-      message: `ÄÃ£ há»§y phÃ¢n ca ngÃ y ${formatDateVi(activeAssignment.workDate)} khá»i CSDL MySQL.`,
+      title: 'Đã xóa phân ca',
+      message: `Đã hủy phân ca ngày ${formatDateVi(activeAssignment.workDate)} khỏi CSDL MySQL.`,
     });
     handleCloseDrawer();
   };
@@ -267,8 +267,8 @@ export const SchedulePage: React.FC = () => {
 
     addToast({
       type: 'success',
-      title: 'ÄÃ£ xuáº¥t file CSV',
-      message: `File ${filename} Ä‘Ã£ Ä‘Æ°á»£c táº£i vá» mÃ¡y tÃ­nh (chuáº©n UTF-8 BOM).`,
+      title: 'Đã xuất file CSV',
+      message: `File ${filename} đã được tải về máy tính (chuẩn UTF-8 BOM).`,
     });
   };
 
@@ -277,8 +277,8 @@ export const SchedulePage: React.FC = () => {
     const res = copyWeek(mode);
     addToast({
       type: 'success',
-      title: 'Sao chÃ©p tuáº§n hoÃ n táº¥t',
-      message: `ÄÃ£ sao chÃ©p ${res.copiedCount} ca, bá» qua ${res.skippedCount} ca Ä‘Ã£ cÃ³.`,
+      title: 'Sao chép tuần hoàn tất',
+      message: `Đã sao chép ${res.copiedCount} ca, bỏ qua ${res.skippedCount} ca đã có.`,
     });
   };
 
@@ -287,8 +287,8 @@ export const SchedulePage: React.FC = () => {
     publishSchedule();
     addToast({
       type: 'success',
-      title: 'CÃ´ng bá»‘ lá»‹ch thÃ nh cÃ´ng',
-      message: 'Lá»‹ch tuáº§n Ä‘Ã£ Ä‘Æ°á»£c chuyá»ƒn sang tráº¡ng thÃ¡i PUBLISHED vÃ  lÆ°u vÃ o CSDL MySQL.',
+      title: 'Công bố lịch thành công',
+      message: 'Lịch tuần đã được chuyển sang trạng thái PUBLISHED và lưu vào CSDL MySQL.',
     });
   };
 
@@ -316,8 +316,8 @@ export const SchedulePage: React.FC = () => {
           resetDemoData();
           addToast({
             type: 'info',
-            title: 'KhÃ´i phá»¥c dá»¯ liá»‡u demo',
-            message: 'ToÃ n bá»™ dá»¯ liá»‡u phÃ¢n ca Ä‘Ã£ Ä‘Æ°á»£c tráº£ vá» tráº¡ng thÃ¡i háº¡t giá»‘ng ban Ä‘áº§u.',
+            title: 'Khôi phục dữ liệu demo',
+            message: 'Toàn bộ dữ liệu phân ca đã được trả về trạng thái hạt giống ban đầu.',
           });
         }}
       />
@@ -417,8 +417,8 @@ export const SchedulePage: React.FC = () => {
           });
           addToast({
             type: 'success',
-            title: 'GÃ¡n hÃ ng loáº¡t hoÃ n táº¥t',
-            message: `ÄÃ£ phÃ¢n ca cho ${payload.employeeIds.length} nhÃ¢n viÃªn.`,
+            title: 'Gán hàng loạt hoàn tất',
+            message: `Đã phân ca cho ${payload.employeeIds.length} nhân viên.`,
           });
         }}
       />

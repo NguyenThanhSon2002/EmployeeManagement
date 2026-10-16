@@ -27,28 +27,28 @@ export const LateEarlyReport: React.FC = () => {
 
   const handleExportCsv = () => {
     const columns = [
-      { key: 'employeeCode', header: 'MÃ£ NV' },
-      { key: 'fullName', header: 'Há» vÃ  tÃªn' },
-      { key: 'departmentName', header: 'PhÃ²ng ban' },
-      { key: 'workDate', header: 'NgÃ y vi pháº¡m' },
-      { key: 'violationType', header: 'HÃ nh vi vi pháº¡m' },
-      { key: 'minutes', header: 'Thá»i lÆ°á»£ng (phÃºt)' },
-      { key: 'checkIn', header: 'Giá» vÃ o' },
-      { key: 'checkOut', header: 'Giá» ra' },
-      { key: 'isResolved', header: 'Tráº¡ng thÃ¡i giáº£i trÃ¬nh' },
+      { key: 'employeeCode', header: 'Mã NV' },
+      { key: 'fullName', header: 'Họ và tên' },
+      { key: 'departmentName', header: 'Phòng ban' },
+      { key: 'workDate', header: 'Ngày vi phạm' },
+      { key: 'violationType', header: 'Hành vi vi phạm' },
+      { key: 'minutes', header: 'Thời lượng (phút)' },
+      { key: 'checkIn', header: 'Giờ vào' },
+      { key: 'checkOut', header: 'Giờ ra' },
+      { key: 'isResolved', header: 'Trạng thái giải trình' },
     ];
 
     const dataRows = filteredViolations.map((r) => {
       const emp = MOCK_EMPLOYEES.find((e) => e.id === r.employeeId);
       const dept = MOCK_DEPARTMENTS.find((d) => d.id === emp?.departmentId);
 
-      let vType = 'Äi muá»™n';
+      let vType = 'Đi muộn';
       let mins = r.lateMinutes;
       if (r.status === 'MISSING_CHECKOUT') {
-        vType = 'Thiáº¿u Check-out';
+        vType = 'Thiếu Check-out';
         mins = 0;
       } else if (r.earlyLeaveMinutes > 0) {
-        vType = 'Vá» sá»›m';
+        vType = 'Về sớm';
         mins = r.earlyLeaveMinutes;
       }
 
@@ -61,7 +61,7 @@ export const LateEarlyReport: React.FC = () => {
         minutes: mins > 0 ? mins.toString() : '-',
         checkIn: r.checkInTime ? r.checkInTime.split('T')[1]?.substring(0, 5) || '' : '',
         checkOut: r.checkOutTime ? r.checkOutTime.split('T')[1]?.substring(0, 5) || '' : '',
-        isResolved: r.isManuallyCorrected ? 'ÄÃ£ giáº£i trÃ¬nh há»£p lá»‡' : 'ChÆ°a giáº£i trÃ¬nh',
+        isResolved: r.isManuallyCorrected ? 'Đã giải trình hợp lệ' : 'Chưa giải trình',
       };
     });
 
@@ -69,7 +69,7 @@ export const LateEarlyReport: React.FC = () => {
       'BaoCao_ViPham_DiMuon_VeSom.csv',
       dataRows,
       columns,
-      'BÃ¡o cÃ¡o Vi pháº¡m Thá»i gian Lao Ä‘á»™ng (Äi muá»™n / Vá» sá»›m / Thiáº¿u quÃ©t tháº»)'
+      'Báo cáo Vi phạm Thời gian Lao động (Đi muộn / Về sớm / Thiếu quét thẻ)'
     );
   };
 
@@ -92,7 +92,7 @@ export const LateEarlyReport: React.FC = () => {
           <input
             type="text"
             className="input"
-            placeholder="TÃ¬m theo tÃªn hoáº·c mÃ£ NV..."
+            placeholder="Tìm theo tên hoặc mã NV..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ paddingLeft: 34, width: '100%' }}
@@ -100,7 +100,7 @@ export const LateEarlyReport: React.FC = () => {
         </div>
 
         <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
-          <Download size={16} /> Xuáº¥t CSV Vi Pháº¡m (UTF-8 BOM)
+          <Download size={16} /> Xuất CSV Vi Phạm (UTF-8 BOM)
         </button>
       </div>
 
@@ -109,21 +109,21 @@ export const LateEarlyReport: React.FC = () => {
         <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th>MÃ£ NV</th>
-              <th>Há» vÃ  tÃªn</th>
-              <th>PhÃ²ng ban</th>
-              <th>NgÃ y</th>
-              <th>Giá» vÃ o / ra</th>
-              <th>HÃ nh vi</th>
-              <th style={{ textAlign: 'right' }}>Thá»i lÆ°á»£ng</th>
-              <th>Tráº¡ng thÃ¡i giáº£i trÃ¬nh</th>
+              <th>Mã NV</th>
+              <th>Họ và tên</th>
+              <th>Phòng ban</th>
+              <th>Ngày</th>
+              <th>Giờ vào / ra</th>
+              <th>Hành vi</th>
+              <th style={{ textAlign: 'right' }}>Thời lượng</th>
+              <th>Trạng thái giải trình</th>
             </tr>
           </thead>
           <tbody>
             {filteredViolations.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-secondary)' }}>
-                  KhÃ´ng cÃ³ trÆ°á»ng há»£p vi pháº¡m Ä‘i muá»™n hoáº·c thiáº¿u check-out nÃ o.
+                  Không có trường hợp vi phạm đi muộn hoặc thiếu check-out nào.
                 </td>
               </tr>
             ) : (
@@ -149,17 +149,17 @@ export const LateEarlyReport: React.FC = () => {
                     </td>
                     <td>
                       <span className={`badge ${isMissing ? 'badge-danger' : 'badge-warning'}`}>
-                        {isMissing ? 'Thiáº¿u Check-out' : r.lateMinutes > 0 ? 'Äi muá»™n' : 'Vá» sá»›m'}
+                        {isMissing ? 'Thiếu Check-out' : r.lateMinutes > 0 ? 'Đi muộn' : 'Về sớm'}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: '#cf1322' }}>
-                      {r.lateMinutes > 0 ? `+${r.lateMinutes} phÃºt` : r.earlyLeaveMinutes > 0 ? `-${r.earlyLeaveMinutes} phÃºt` : '-'}
+                      {r.lateMinutes > 0 ? `+${r.lateMinutes} phút` : r.earlyLeaveMinutes > 0 ? `-${r.earlyLeaveMinutes} phút` : '-'}
                     </td>
                     <td>
                       {r.isManuallyCorrected ? (
-                        <span className="badge badge-success">ÄÃ£ giáº£i trÃ¬nh</span>
+                        <span className="badge badge-success">Đã giải trình</span>
                       ) : (
-                        <span className="badge badge-warning">Chá» giáº£i trÃ¬nh</span>
+                        <span className="badge badge-warning">Chờ giải trình</span>
                       )}
                     </td>
                   </tr>

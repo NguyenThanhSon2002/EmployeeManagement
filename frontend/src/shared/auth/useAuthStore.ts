@@ -20,7 +20,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   currentRole: 'ROLE_ADMIN',
-  currentUser: MOCK_EMPLOYEES[0], // Nguyá»…n VÄƒn An (EMP-001)
+  currentUser: MOCK_EMPLOYEES[0], // Nguyễn Văn An (EMP-001)
   token: localStorage.getItem('access_token'),
   isAuthenticated: !!localStorage.getItem('access_token'),
   isLoading: false,

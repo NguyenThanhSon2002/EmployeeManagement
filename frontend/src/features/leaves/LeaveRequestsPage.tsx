@@ -50,8 +50,8 @@ export const LeaveRequestsPage: React.FC = () => {
     cancelLeave(leaveId);
     addToast({
       type: 'info',
-      title: 'ÄÃ£ há»§y Ä‘Æ¡n nghá»‰ phÃ©p',
-      message: 'ÄÆ¡n xin nghá»‰ phÃ©p Ä‘Ã£ Ä‘Æ°á»£c chuyá»ƒn sang tráº¡ng thÃ¡i ÄÃƒ Há»¦Y.',
+      title: 'Đã hủy đơn nghỉ phép',
+      message: 'Đơn xin nghỉ phép đã được chuyển sang trạng thái ĐÃ HỦY.',
     });
   };
 
@@ -61,10 +61,10 @@ export const LeaveRequestsPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            Quáº£n LÃ½ ÄÆ¡n Xin Nghá»‰ PhÃ©p (SCR-13)
+            Quản Lý Đơn Xin Nghỉ Phép (SCR-13)
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-            Tiáº¿p nháº­n, tháº©m tra quá»¹ phÃ©p nÄƒm vÃ  phÃª duyá»‡t phÃ¢n cáº¥p Ä‘á»“ng bá»™ trá»±c tiáº¿p sang Báº£ng Lá»‹ch Tuáº§n.
+            Tiếp nhận, thẩm tra quỹ phép năm và phê duyệt phân cấp đồng bộ trực tiếp sang Bảng Lịch Tuần.
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export const LeaveRequestsPage: React.FC = () => {
           onClick={() => setIsCreateModalOpen(true)}
           style={{ display: 'flex', alignItems: 'center', gap: 8 }}
         >
-          <Plus size={16} /> Ná»™p ÄÆ¡n Xin Nghá»‰ Má»›i
+          <Plus size={16} /> Nộp Đơn Xin Nghỉ Mới
         </button>
       </div>
 
@@ -110,20 +110,20 @@ export const LeaveRequestsPage: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: 13, color: '#047857', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-              Quá»¹ PhÃ©p NÄƒm 2026 â€¢ {currentUser.fullName}
+              Quỹ Phép Năm 2026 • {currentUser.fullName}
             </div>
             <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-              Äá»‹nh má»©c: <strong>{myBalance.annualQuota} ngÃ y</strong> | ÄÃ£ nghá»‰: <strong>{myBalance.usedDays} ngÃ y</strong>
+              Định mức: <strong>{myBalance.annualQuota} ngày</strong> | Đã nghỉ: <strong>{myBalance.usedDays} ngày</strong>
             </div>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 13.5, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-            Sá»‘ ngÃ y phÃ©p cÃ²n láº¡i:
+            Số ngày phép còn lại:
           </span>
           <span style={{ fontSize: 26, fontWeight: 700, color: '#047857', fontVariantNumeric: 'tabular-nums' }}>
-            {myBalance.remainingDays} ngÃ y
+            {myBalance.remainingDays} ngày
           </span>
         </div>
       </div>
@@ -141,10 +141,10 @@ export const LeaveRequestsPage: React.FC = () => {
       >
         <div style={{ display: 'flex', gap: 6, backgroundColor: '#F1F5F9', padding: 3, borderRadius: 'var(--radius-md)' }}>
           {[
-            { id: 'ALL', label: 'Táº¥t cáº£ Ä‘Æ¡n' },
-            { id: 'SUBMITTED', label: 'Chá» duyá»‡t' },
-            { id: 'APPROVED', label: 'ÄÃ£ cháº¥p thuáº­n' },
-            { id: 'REJECTED', label: 'Tá»« chá»‘i' },
+            { id: 'ALL', label: 'Tất cả đơn' },
+            { id: 'SUBMITTED', label: 'Chờ duyệt' },
+            { id: 'APPROVED', label: 'Đã chấp thuận' },
+            { id: 'REJECTED', label: 'Từ chối' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -171,7 +171,7 @@ export const LeaveRequestsPage: React.FC = () => {
           <input
             type="text"
             className="input-base"
-            placeholder="TÃ¬m theo tÃªn nhÃ¢n viÃªn, mÃ£ hoáº·c lÃ½ do..."
+            placeholder="Tìm theo tên nhân viên, mã hoặc lý do..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ paddingLeft: 34, width: '100%', height: 36, fontSize: '12.5px' }}
@@ -184,21 +184,21 @@ export const LeaveRequestsPage: React.FC = () => {
         <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th>MÃ£ Ä‘Æ¡n</th>
-              <th>NhÃ¢n viÃªn</th>
-              <th>Loáº¡i phÃ©p</th>
-              <th>Khoáº£ng thá»i gian</th>
-              <th>Sá»‘ ngÃ y</th>
-              <th>LÃ½ do</th>
-              <th>Tráº¡ng thÃ¡i</th>
-              <th style={{ textAlign: 'right' }}>Thao tÃ¡c</th>
+              <th>Mã đơn</th>
+              <th>Nhân viên</th>
+              <th>Loại phép</th>
+              <th>Khoảng thời gian</th>
+              <th>Số ngày</th>
+              <th>Lý do</th>
+              <th>Trạng thái</th>
+              <th style={{ textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {filteredLeaves.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: '36px 0', color: 'var(--color-text-muted)' }}>
-                  KhÃ´ng cÃ³ Ä‘Æ¡n xin nghá»‰ phÃ©p nÃ o phÃ¹ há»£p bá»™ lá»c hiá»‡n táº¡i.
+                  Không có đơn xin nghỉ phép nào phù hợp bộ lọc hiện tại.
                 </td>
               </tr>
             ) : (
@@ -236,7 +236,7 @@ export const LeaveRequestsPage: React.FC = () => {
                     </td>
                     <td>
                       <span style={{ fontWeight: 700, color: 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                        {leave.totalDays} ngÃ y
+                        {leave.totalDays} ngày
                       </span>
                     </td>
                     <td>
@@ -258,12 +258,12 @@ export const LeaveRequestsPage: React.FC = () => {
                       >
                         <span className="badge-dot" />
                         {isPending
-                          ? 'Chá» duyá»‡t'
+                          ? 'Chờ duyệt'
                           : leave.status === 'APPROVED'
-                          ? 'ÄÃ£ duyá»‡t'
+                          ? 'Đã duyệt'
                           : leave.status === 'REJECTED'
-                          ? 'Tá»« chá»‘i'
-                          : 'ÄÃ£ há»§y'}
+                          ? 'Từ chối'
+                          : 'Đã hủy'}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -274,7 +274,7 @@ export const LeaveRequestsPage: React.FC = () => {
                           style={{ height: 30, padding: '0 12px', fontSize: 12, background: 'linear-gradient(180deg, #10B981 0%, #059669 100%)', borderColor: '#059669' }}
                           onClick={() => setApprovalModalLeave(leave)}
                         >
-                          <CheckCircle size={13} /> Duyá»‡t Ä‘Æ¡n
+                          <CheckCircle size={13} /> Duyệt đơn
                         </button>
                       ) : isPending && leave.employeeId === currentUser.id ? (
                         <button
@@ -283,7 +283,7 @@ export const LeaveRequestsPage: React.FC = () => {
                           style={{ height: 30, padding: '0 10px', fontSize: 12 }}
                           onClick={() => handleCancel(leave.id)}
                         >
-                          Há»§y Ä‘Æ¡n
+                          Hủy đơn
                         </button>
                       ) : (
                         <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>-</span>

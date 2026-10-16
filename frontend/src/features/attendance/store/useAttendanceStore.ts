@@ -185,7 +185,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
       }
 
       if (!isMockEnabled()) {
-        attendanceService.checkIn('Äiá»ƒm danh vÃ o ca qua Web', today)
+        attendanceService.checkIn('Điểm danh vào ca qua Web', today)
           .then((saved) => {
             if (saved && saved.id) {
               set((curr) => ({
@@ -226,7 +226,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
       set({ records: updated });
 
       if (!isMockEnabled()) {
-        attendanceService.checkOut('Äiá»ƒm danh tan ca qua Web', today)
+        attendanceService.checkOut('Điểm danh tan ca qua Web', today)
           .then((saved) => {
             if (saved && saved.id) {
               set((curr) => ({

@@ -287,14 +287,14 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       const template = state.shiftTemplates.find((t) => t.id === payload.workShiftId);
 
       if (!emp || !template) {
-        return { success: false, error: 'NhÃ¢n viÃªn hoáº·c Ca lÃ m viá»‡c khÃ´ng tá»“n táº¡i' };
+        return { success: false, error: 'Nhân viên hoặc Ca làm việc không tồn tại' };
       }
 
       // Check BR-002: Inactive employee
       if (!emp.isActive || emp.employmentStatus === 'RESIGNED') {
         return {
           success: false,
-          error: 'NhÃ¢n viÃªn Ä‘Ã£ thÃ´i viá»‡c hoáº·c Ä‘ang bá»‹ vÃ´ hiá»‡u hÃ³a, khÃ´ng Ä‘Æ°á»£c phÃ¢n ca.',
+          error: 'Nhân viên đã thôi việc hoặc đang bị vô hiệu hóa, không được phân ca.',
         };
       }
 
@@ -341,7 +341,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           actionType: existing ? 'MODIFIED' : 'ADDED',
           oldValue: existing ? { ...existing } : null,
           newValue: { ...newAssignment },
-          changeReason: payload.changeReason || 'Äiá»u chá»‰nh phÃ¢n ca tuáº§n Ä‘Ã£ cÃ´ng bá»‘',
+          changeReason: payload.changeReason || 'Điều chỉnh phân ca tuần đã công bố',
           changedByRole: payload.actorRole,
           changedAt: new Date().toISOString(),
         };
@@ -431,12 +431,12 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           scheduleId: state.scheduleId,
           shiftAssignmentId: targetAssignment.id,
           employeeId: targetAssignment.employeeId,
-          employeeName: emp ? emp.fullName : 'NhÃ¢n viÃªn',
+          employeeName: emp ? emp.fullName : 'Nhân viên',
           workDate: targetAssignment.workDate,
           actionType: 'DELETED',
           oldValue: { ...targetAssignment },
           newValue: null,
-          changeReason: changeReason || 'XÃ³a phÃ¢n ca lÃ m viá»‡c',
+          changeReason: changeReason || 'Xóa phân ca làm việc',
           changedByRole: actorRole,
           changedAt: new Date().toISOString(),
         };
@@ -661,7 +661,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       const state = get();
       const isUsed = Object.values(state.assignments).some((a) => a.workShiftId === id && a.status === 'ASSIGNED');
       if (isUsed) {
-        return { success: false, error: 'KhÃ´ng thá»ƒ xÃ³a máº«u ca Ä‘ang cÃ³ nhÃ¢n viÃªn Ä‘Æ°á»£c phÃ¢n cÃ´ng lÃ m viá»‡c.' };
+        return { success: false, error: 'Không thể xóa mẫu ca đang có nhân viên được phân công làm việc.' };
       }
       set({
         shiftTemplates: state.shiftTemplates.filter((t) => t.id !== id),

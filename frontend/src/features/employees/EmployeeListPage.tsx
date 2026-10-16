@@ -11,12 +11,20 @@ import { departmentService } from '@/shared/department/departmentService';
 import { isMockEnabled } from '@/config/env.config';
 import { Search, Plus, Eye, Edit2, ChevronLeft, ChevronRight, X, Phone, Mail } from 'lucide-react';
 
+const toArray = (res: any): any[] => {
+  if (Array.isArray(res)) return res;
+  if (res && Array.isArray(res.content)) return res.content;
+  if (res && Array.isArray(res.items)) return res.items;
+  if (res && Array.isArray(res.data)) return res.data;
+  return [];
+};
+
 export const EmployeeListPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useUIStore();
 
-  const [employeesList, setEmployeesList] = useState<Employee[]>(MOCK_EMPLOYEES);
-  const [departmentsList, setDepartmentsList] = useState<Department[]>(MOCK_DEPARTMENTS);
+  const [employeesList, setEmployeesList] = useState<Employee[]>(isMockEnabled() ? MOCK_EMPLOYEES : []);
+  const [departmentsList, setDepartmentsList] = useState<Department[]>(isMockEnabled() ? MOCK_DEPARTMENTS : []);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDeptId, setSelectedDeptId] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,12 +39,15 @@ export const EmployeeListPage: React.FC = () => {
     let isMounted = true;
     const loadData = async () => {
       try {
-        const [empData, deptData] = await Promise.all([
-          employeeService.getEmployees({ page: 1, size: 100 }).catch(() => null),
-          departmentService.getAllDepartments().catch(() => null),
+        const [empRes, deptRes] = await Promise.all([
+          employeeService.getEmployees({ page: 1, size: 100 }),
+          departmentService.getAllDepartments(),
         ]);
 
         if (!isMounted) return;
+
+        const empData = toArray(empRes);
+        const deptData = toArray(deptRes);
 
         if (deptData && Array.isArray(deptData) && deptData.length > 0) {
           const mappedDepts: Department[] = deptData.map((d: any) => ({
@@ -71,7 +82,13 @@ export const EmployeeListPage: React.FC = () => {
           setEmployeesList(mappedEmps);
         }
       } catch (err) {
-        console.warn('Could not load employees from real API, using fallback:', err);
+        if (!isMounted) return;
+        console.error('Không tải được dữ liệu nhân sự:', err);
+        addToast({
+          type: 'error',
+          title: 'Không tải được dữ liệu',
+          message: 'Không kết nối được máy chủ. Hãy kiểm tra backend đã chạy chưa.',
+        });
       }
     };
 
@@ -79,7 +96,7 @@ export const EmployeeListPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [addToast]);
 
   // Filtered List
   const filteredEmployees = useMemo(() => {
@@ -117,66 +134,55 @@ export const EmployeeListPage: React.FC = () => {
   };
 
   const handleSaveEmployee = async (data: Omit<Employee, 'id'> & { id?: number }) => {
-    if (data.id) {
-      // Edit
-      if (!isMockEnabled()) {
-        try {
-          await employeeService.updateEmployee(data.id, {
-            employee_code: data.employeeCode,
-            full_name: data.fullName,
-            email: data.email,
-            phone_number: data.phoneNumber,
-            department_id: data.departmentId,
-            position_id: data.positionId,
-            employment_status: data.employmentStatus,
-            hire_date: data.hireDate,
-            is_active: data.isActive,
-          } as any);
-        } catch (err) {
-          console.warn('API update failed, updating local state:', err);
+    const payload = {
+      employee_code: data.employeeCode,
+      full_name: data.fullName,
+      email: data.email,
+      phone_number: data.phoneNumber,
+      department_id: data.departmentId,
+      position_id: data.positionId,
+      employment_status: data.employmentStatus,
+      hire_date: data.hireDate,
+      is_active: data.isActive,
+    } as any;
+
+    let savedId = data.id ?? Math.max(0, ...employeesList.map((e) => e.id)) + 1;
+
+    if (!isMockEnabled()) {
+      try {
+        if (data.id) {
+          await employeeService.updateEmployee(data.id, payload);
+        } else {
+          const res = await employeeService.createEmployee({ ...payload, employment_type: 'FULL_TIME' });
+          if (res && res.id) savedId = res.id;
         }
+      } catch (err) {
+        console.error('Lưu nhân viên thất bại:', err);
+        addToast({
+          type: 'error',
+          title: 'Lưu thất bại',
+          message: 'Không lưu được vào máy chủ. Dữ liệu chưa được thay đổi.',
+        });
+        return;
       }
+    }
+
+    if (data.id) {
       setEmployeesList((prev) =>
-        prev.map((e) => (e.id === data.id ? ({ ...e, ...data } as Employee) : e))
+          prev.map((e) => (e.id === data.id ? ({ ...e, ...data } as Employee) : e))
       );
       addToast({
         type: 'success',
-        title: 'Cáº­p nháº­t thÃ nh cÃ´ng',
-        message: `ÄÃ£ lÆ°u thÃ´ng tin nhÃ¢n viÃªn ${data.fullName} vÃ o CSDL MySQL.`,
+        title: 'Cập nhật thành công',
+        message: `Đã lưu thông tin nhân viên ${data.fullName}.`,
       });
     } else {
-      // Add
-      let newId = Math.max(0, ...employeesList.map((e) => e.id)) + 1;
-      if (!isMockEnabled()) {
-        try {
-          const res = await employeeService.createEmployee({
-            employee_code: data.employeeCode,
-            full_name: data.fullName,
-            email: data.email,
-            phone_number: data.phoneNumber,
-            department_id: data.departmentId,
-            position_id: data.positionId,
-            employment_status: data.employmentStatus,
-            employment_type: 'FULL_TIME',
-            hire_date: data.hireDate,
-            is_active: data.isActive,
-          } as any);
-          if (res && res.id) {
-            newId = res.id;
-          }
-        } catch (err) {
-          console.warn('API create failed, saving to local state:', err);
-        }
-      }
-      const newEmp: Employee = {
-        ...data,
-        id: newId,
-      };
+      const newEmp: Employee = { ...data, id: savedId };
       setEmployeesList((prev) => [newEmp, ...prev]);
       addToast({
         type: 'success',
-        title: 'ThÃªm má»›i thÃ nh cÃ´ng',
-        message: `ÄÃ£ thÃªm nhÃ¢n viÃªn ${newEmp.fullName} (${newEmp.employeeCode}) vÃ o CSDL MySQL.`,
+        title: 'Thêm mới thành công',
+        message: `Đã thêm nhân viên ${newEmp.fullName} (${newEmp.employeeCode}).`,
       });
     }
   };
@@ -195,10 +201,10 @@ export const EmployeeListPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            Quáº£n LÃ½ Há»“ SÆ¡ NhÃ¢n Sá»±
+            Quản Lý Hồ Sơ Nhân Sự
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-            Danh má»¥c há»“ sÆ¡ nhÃ¢n viÃªn, chá»©c danh, phÃ²ng ban vÃ  tiáº¿n Ä‘á»™ kÃ½ káº¿t há»£p Ä‘á»“ng.
+            Danh mục hồ sơ nhân viên, chức danh, phòng ban và tiến độ ký kết hợp đồng.
           </p>
         </div>
         <button
@@ -207,7 +213,7 @@ export const EmployeeListPage: React.FC = () => {
           onClick={handleOpenAdd}
           style={{ display: 'flex', alignItems: 'center', gap: 8 }}
         >
-          <Plus size={16} /> ThÃªm nhÃ¢n viÃªn má»›i
+          <Plus size={16} /> Thêm nhân viên mới
         </button>
       </div>
 
@@ -234,7 +240,7 @@ export const EmployeeListPage: React.FC = () => {
             <input
               type="text"
               className="input-base"
-              placeholder="TÃ¬m theo há» tÃªn, mÃ£ NV, email, SÄT..."
+              placeholder="Tìm theo họ tên, mã NV, email, SĐT..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -281,8 +287,8 @@ export const EmployeeListPage: React.FC = () => {
             }}
             style={{ height: 36, fontSize: '12.5px', minWidth: 200, fontWeight: 500 }}
           >
-            <option value={0}>Táº¥t cáº£ phÃ²ng ban</option>
-            {MOCK_DEPARTMENTS.map((d) => (
+            <option value={0}>Tất cả phòng ban</option>
+            {departmentsList.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.departmentName}
               </option>
@@ -300,7 +306,7 @@ export const EmployeeListPage: React.FC = () => {
             border: '1px solid var(--color-border-subtle)',
           }}
         >
-          Hiá»ƒn thá»‹ <strong style={{ color: 'var(--color-primary)' }}>{filteredEmployees.length}</strong> káº¿t quáº£
+          Hiển thị <strong style={{ color: 'var(--color-primary)' }}>{filteredEmployees.length}</strong> kết quả
         </div>
       </div>
 
@@ -318,45 +324,45 @@ export const EmployeeListPage: React.FC = () => {
                 letterSpacing: '0.02em',
               }}
             >
-              <th style={{ padding: '12px 16px' }}>MÃ£ NV</th>
-              <th style={{ padding: '12px 16px' }}>Há» vÃ  TÃªn</th>
-              <th style={{ padding: '12px 16px' }}>PhÃ²ng Ban</th>
-              <th style={{ padding: '12px 16px' }}>Chá»©c Danh</th>
-              <th style={{ padding: '12px 16px' }}>LiÃªn Há»‡</th>
-              <th style={{ padding: '12px 16px' }}>Tráº¡ng ThÃ¡i</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center' }}>Thao TÃ¡c</th>
+              <th style={{ padding: '12px 16px' }}>Mã NV</th>
+              <th style={{ padding: '12px 16px' }}>Họ và Tên</th>
+              <th style={{ padding: '12px 16px' }}>Phòng Ban</th>
+              <th style={{ padding: '12px 16px' }}>Chức Danh</th>
+              <th style={{ padding: '12px 16px' }}>Liên Hệ</th>
+              <th style={{ padding: '12px 16px' }}>Trạng Thái</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center' }}>Thao Tác</th>
             </tr>
           </thead>
           <tbody>
             {paginatedEmployees.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                  KhÃ´ng tÃ¬m tháº¥y nhÃ¢n viÃªn nÃ o phÃ¹ há»£p vá»›i bá»™ lá»c hiá»‡n táº¡i.
+                  Không tìm thấy nhân viên nào phù hợp với bộ lọc hiện tại.
                 </td>
               </tr>
             ) : (
               paginatedEmployees.map((emp) => {
                 let badge = (
                   <span className="badge badge-success">
-                    <span className="badge-dot" /> ChÃ­nh thá»©c
+                    <span className="badge-dot" /> Chính thức
                   </span>
                 );
                 if (emp.employmentStatus === 'PROBATION') {
                   badge = (
                     <span className="badge badge-warning">
-                      <span className="badge-dot" /> Thá»­ viá»‡c
+                      <span className="badge-dot" /> Thử việc
                     </span>
                   );
                 } else if (emp.employmentStatus === 'RESIGNED' || !emp.isActive) {
                   badge = (
                     <span className="badge badge-error">
-                      <span className="badge-dot" /> ÄÃ£ nghá»‰ viá»‡c
+                      <span className="badge-dot" /> Đã nghỉ việc
                     </span>
                   );
                 } else if (emp.employmentStatus === 'ON_LEAVE') {
                   badge = (
                     <span className="badge badge-info">
-                      <span className="badge-dot" /> Nghá»‰ cháº¿ Ä‘á»™
+                      <span className="badge-dot" /> Nghỉ chế độ
                     </span>
                   );
                 }
@@ -425,8 +431,8 @@ export const EmployeeListPage: React.FC = () => {
                           className="btn btn-default"
                           onClick={() => navigate(`/employees/${emp.id}`)}
                           style={{ padding: '0 8px', height: 32 }}
-                          title="Xem chi tiáº¿t há»“ sÆ¡ 360 Ä‘á»™"
-                          aria-label={`Xem chi tiáº¿t ${emp.fullName}`}
+                          title="Xem chi tiết hồ sơ 360 độ"
+                          aria-label={`Xem chi tiết ${emp.fullName}`}
                         >
                           <Eye size={15} />
                         </button>
@@ -435,8 +441,8 @@ export const EmployeeListPage: React.FC = () => {
                           className="btn btn-default"
                           onClick={() => handleOpenEdit(emp)}
                           style={{ padding: '0 8px', height: 32 }}
-                          title="Sá»­a thÃ´ng tin"
-                          aria-label={`Sá»­a ${emp.fullName}`}
+                          title="Sửa thông tin"
+                          aria-label={`Sửa ${emp.fullName}`}
                         >
                           <Edit2 size={15} />
                         </button>
@@ -473,7 +479,7 @@ export const EmployeeListPage: React.FC = () => {
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               style={{ height: 32, padding: '0 10px' }}
             >
-              <ChevronLeft size={15} /> TrÆ°á»›c
+              <ChevronLeft size={15} /> Trước
             </button>
             <button
               type="button"

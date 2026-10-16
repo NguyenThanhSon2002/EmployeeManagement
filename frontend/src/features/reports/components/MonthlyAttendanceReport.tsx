@@ -63,16 +63,16 @@ export const MonthlyAttendanceReport: React.FC = () => {
 
   const handleExportCsv = () => {
     const columns = [
-      { key: 'employeeCode', header: 'MÃ£ NV' },
-      { key: 'fullName', header: 'Há» vÃ  tÃªn' },
-      { key: 'departmentName', header: 'PhÃ²ng ban' },
-      { key: 'scheduledShifts', header: 'Sá»‘ ca káº¿ hoáº¡ch' },
-      { key: 'actualHours', header: 'Giá» lÃ m thá»±c táº¿' },
-      { key: 'otHours', header: 'Giá» lÃ m thÃªm (OT)' },
-      { key: 'nightHours', header: 'Giá» lÃ m Ä‘Ãªm' },
-      { key: 'lateCount', header: 'Sá»‘ láº§n Ä‘i muá»™n' },
-      { key: 'earlyCount', header: 'Sá»‘ láº§n vá» sá»›m' },
-      { key: 'leaveDays', header: 'Nghá»‰ phÃ©p (ngÃ y)' },
+      { key: 'employeeCode', header: 'Mã NV' },
+      { key: 'fullName', header: 'Họ và tên' },
+      { key: 'departmentName', header: 'Phòng ban' },
+      { key: 'scheduledShifts', header: 'Số ca kế hoạch' },
+      { key: 'actualHours', header: 'Giờ làm thực tế' },
+      { key: 'otHours', header: 'Giờ làm thêm (OT)' },
+      { key: 'nightHours', header: 'Giờ làm đêm' },
+      { key: 'lateCount', header: 'Số lần đi muộn' },
+      { key: 'earlyCount', header: 'Số lần về sớm' },
+      { key: 'leaveDays', header: 'Nghỉ phép (ngày)' },
     ];
 
     const dataRows = reportData.map((d) => ({
@@ -94,7 +94,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
           'BaoCao_TongHopCong_Thang10_2026.csv',
           dataRows,
           columns,
-          'BÃ¡o cÃ¡o Tá»•ng há»£p CÃ´ng ThÃ¡ng 10/2026'
+          'Báo cáo Tổng hợp Công Tháng 10/2026'
         );
       });
       return;
@@ -104,7 +104,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
       'BaoCao_TongHopCong_Thang10_2026.csv',
       dataRows,
       columns,
-      'BÃ¡o cÃ¡o Tá»•ng há»£p CÃ´ng ThÃ¡ng 10/2026'
+      'Báo cáo Tổng hợp Công Tháng 10/2026'
     );
   };
 
@@ -141,7 +141,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
             value={departmentFilter || ''}
             onChange={(e) => setDepartmentFilter(e.target.value ? Number(e.target.value) : null)}
           >
-            <option value="">-- Táº¥t cáº£ phÃ²ng ban --</option>
+            <option value="">-- Tất cả phòng ban --</option>
             {MOCK_DEPARTMENTS.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.departmentName}
@@ -154,7 +154,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
             <input
               type="text"
               className="input"
-              placeholder="TÃ¬m theo tÃªn hoáº·c mÃ£ NV..."
+              placeholder="Tìm theo tên hoặc mã NV..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ paddingLeft: 34, width: '100%' }}
@@ -164,10 +164,10 @@ export const MonthlyAttendanceReport: React.FC = () => {
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button type="button" className="btn btn-default" onClick={handleExportExcel} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Download size={16} /> Xuáº¥t Excel (.xlsx)
+            <Download size={16} /> Xuất Excel (.xlsx)
           </button>
           <button type="button" className="btn btn-primary" onClick={handleExportCsv} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Download size={16} /> Xuáº¥t CSV (UTF-8 BOM)
+            <Download size={16} /> Xuất CSV (UTF-8 BOM)
           </button>
         </div>
       </div>
@@ -177,15 +177,15 @@ export const MonthlyAttendanceReport: React.FC = () => {
         <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th>MÃ£ NV</th>
-              <th>Há» vÃ  tÃªn</th>
-              <th>PhÃ²ng ban</th>
-              <th style={{ textAlign: 'right' }}>Sá»‘ ca chuáº©n</th>
-              <th style={{ textAlign: 'right' }}>Giá» thá»±c táº¿</th>
-              <th style={{ textAlign: 'right' }}>TÄƒng ca (OT)</th>
-              <th style={{ textAlign: 'right' }}>Giá» Ä‘Ãªm</th>
-              <th style={{ textAlign: 'center' }}>Äi muá»™n/sá»›m</th>
-              <th style={{ textAlign: 'center' }}>Nghá»‰ phÃ©p</th>
+              <th>Mã NV</th>
+              <th>Họ và tên</th>
+              <th>Phòng ban</th>
+              <th style={{ textAlign: 'right' }}>Số ca chuẩn</th>
+              <th style={{ textAlign: 'right' }}>Giờ thực tế</th>
+              <th style={{ textAlign: 'right' }}>Tăng ca (OT)</th>
+              <th style={{ textAlign: 'right' }}>Giờ đêm</th>
+              <th style={{ textAlign: 'center' }}>Đi muộn/sớm</th>
+              <th style={{ textAlign: 'center' }}>Nghỉ phép</th>
             </tr>
           </thead>
           <tbody>
@@ -205,7 +205,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
                 <td style={{ textAlign: 'center' }}>
                   {d.lateCount > 0 || d.earlyCount > 0 ? (
                     <span style={{ color: '#cf1322', fontWeight: 600 }}>
-                      {d.lateCount + d.earlyCount} láº§n
+                      {d.lateCount + d.earlyCount} lần
                     </span>
                   ) : (
                     <span style={{ color: '#52c41a' }}>0</span>
@@ -213,7 +213,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
                 </td>
                 <td style={{ textAlign: 'center' }}>
                   {d.leaveDays > 0 ? (
-                    <span className="badge badge-success">{d.leaveDays} ngÃ y</span>
+                    <span className="badge badge-success">{d.leaveDays} ngày</span>
                   ) : (
                     '-'
                   )}
