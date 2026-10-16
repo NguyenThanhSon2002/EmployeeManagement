@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Employee, Department } from '@/types/domain.types';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
-import { MOCK_POSITIONS } from '@/mocks/positions.mock';
+import { DeleteConfirmModal } from './components/DeleteConfirmModal';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 import { employeeService } from './api/employeeService';
 import { departmentService } from '@/shared/department/departmentService';
 import { isMockEnabled } from '@/config/env.config';
@@ -19,6 +20,7 @@ import {
   Phone,
   Briefcase,
   Building,
+  Trash2,
 } from 'lucide-react';
 
 export const EmployeeDetailPage: React.FC = () => {
@@ -27,12 +29,32 @@ export const EmployeeDetailPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'PROFILE' | 'SCHEDULE' | 'ATTENDANCE' | 'LEAVE'>('PROFILE');
 
-  const { assignments, approvedLeaves } = useScheduleStore();
+  const { currentRole } = useAuthStore();
+  const { addToast } = useUIStore();
+  const canDelete = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER';
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const [employee, setEmployee] = useState<Employee>(() => {
-    return MOCK_EMPLOYEES.find((e) => e.id === Number(id)) || MOCK_EMPLOYEES[0];
-  });
-  const [departmentsList, setDepartmentsList] = useState<Department[]>(MOCK_DEPARTMENTS);
+  const { assignments, approvedLeaves } = useScheduleStore();
+  const { getEmployeeById, departments, positions } = useDirectoryStore();
+  const cachedEmployee = id ? getEmployeeById(Number(id)) : undefined;
+
+  const fallbackEmp: Employee = {
+    id: Number(id) || 1,
+    employeeCode: `EMP-${id || '001'}`,
+    fullName: 'Đang tải thông tin...',
+    email: '',
+    phoneNumber: '',
+    departmentId: 1,
+    positionId: 1,
+    managerId: null,
+    employmentStatus: 'OFFICIAL',
+    hireDate: '2026-01-01',
+    isActive: true,
+  };
+
+  const [employee, setEmployee] = useState<Employee>(cachedEmployee || fallbackEmp);
+  const [departmentsList, setDepartmentsList] = useState<Department[]>(departments);
 
   useEffect(() => {
     if (isMockEnabled() || !id) return;
@@ -89,8 +111,8 @@ export const EmployeeDetailPage: React.FC = () => {
     };
   }, [id]);
 
-  const dept = departmentsList.find((d) => d.id === employee.departmentId);
-  const position = MOCK_POSITIONS.find((p) => p.id === employee.positionId);
+  const dept = (departmentsList.length > 0 ? departmentsList : departments).find((d) => d.id === employee.departmentId);
+  const position = positions.find((p) => p.id === employee.positionId);
 
   // Shifts of this employee
   const employeeShifts = Object.values(assignments).filter(
@@ -99,6 +121,41 @@ export const EmployeeDetailPage: React.FC = () => {
 
   // Leaves of this employee
   const employeeLeaves = approvedLeaves.filter((l) => l.employeeId === employee.id);
+
+  const handleConfirmDelete = async () => {
+    if (!employee || !employee.id) return;
+    setIsDeleting(true);
+    try {
+      if (!isMockEnabled()) {
+        await employeeService.deleteEmployee(employee.id);
+      }
+      useDirectoryStore.getState().removeEmployeeFromDirectory(employee.id);
+      if (!isMockEnabled()) {
+        useDirectoryStore.getState().refreshEmployees();
+      }
+      addToast({
+        type: 'success',
+        title: 'Xóa nhân viên thành công',
+        message: `Đã xóa hồ sơ nhân viên ${employee.fullName} (${employee.employeeCode}).`,
+      });
+      setIsDeleteModalOpen(false);
+      navigate('/employees');
+    } catch (err: any) {
+      console.error('Xóa nhân viên thất bại:', err);
+      const errorMsg =
+        err?.response?.data?.error?.message ||
+        err?.data?.error?.message ||
+        err?.message ||
+        'Không thể xóa nhân viên. Vui lòng kiểm tra lại quyền hạn hoặc ràng buộc.';
+      addToast({
+        type: 'error',
+        title: 'Xóa nhân viên thất bại',
+        message: errorMsg,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
@@ -172,6 +229,31 @@ export const EmployeeDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {canDelete && (
+          <button
+            type="button"
+            onClick={() => setIsDeleteModalOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 14px',
+              backgroundColor: '#FEF2F2',
+              color: '#DC2626',
+              border: '1px solid #FECACA',
+              borderRadius: 'var(--radius-md, 6px)',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Xóa hồ sơ nhân viên"
+            aria-label={`Xóa hồ sơ ${employee.fullName}`}
+          >
+            <Trash2 size={15} /> Xóa hồ sơ
+          </button>
+        )}
       </div>
 
       {/* 4 Tabs Bar */}
@@ -416,6 +498,16 @@ export const EmployeeDetailPage: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        employee={employee}
+        departmentName={dept?.departmentName}
+        isDeleting={isDeleting}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 };

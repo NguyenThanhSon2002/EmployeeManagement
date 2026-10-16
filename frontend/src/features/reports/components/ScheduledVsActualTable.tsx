@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
@@ -10,12 +9,13 @@ import { Download, Search } from 'lucide-react';
 export const ScheduledVsActualTable: React.FC = () => {
   const { assignments } = useScheduleStore();
   const { records } = useAttendanceStore();
+  const { employees, departments } = useDirectoryStore();
 
   const [departmentFilter, setDepartmentFilter] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const comparisonData = MOCK_EMPLOYEES.map((emp) => {
-    const dept = MOCK_DEPARTMENTS.find((d) => d.id === emp.departmentId);
+  const comparisonData = employees.map((emp) => {
+    const dept = departments.find((d) => d.id === emp.departmentId);
 
     // Sum scheduled hours
     const empAssignments = Object.values(assignments).filter(
@@ -113,7 +113,7 @@ export const ScheduledVsActualTable: React.FC = () => {
             onChange={(e) => setDepartmentFilter(e.target.value ? Number(e.target.value) : null)}
           >
             <option value="">-- Tất cả phòng ban --</option>
-            {MOCK_DEPARTMENTS.map((d) => (
+            {departments.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.departmentName}
               </option>

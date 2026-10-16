@@ -1,15 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Employee, Department } from '@/types/domain.types';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
-import { MOCK_DEPARTMENTS } from '@/mocks/departments.mock';
-import { MOCK_POSITIONS } from '@/mocks/positions.mock';
 import { EmployeeFormModal } from './components/EmployeeFormModal';
+import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { useUIStore } from '@/shared/store/useUIStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { employeeService } from './api/employeeService';
 import { departmentService } from '@/shared/department/departmentService';
 import { isMockEnabled } from '@/config/env.config';
-import { Search, Plus, Eye, Edit2, ChevronLeft, ChevronRight, X, Phone, Mail } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail } from 'lucide-react';
 
 const toArray = (res: any): any[] => {
   if (Array.isArray(res)) return res;
@@ -22,16 +22,27 @@ const toArray = (res: any): any[] => {
 export const EmployeeListPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useUIStore();
+  const { employees, departments, positions } = useDirectoryStore();
 
-  const [employeesList, setEmployeesList] = useState<Employee[]>(isMockEnabled() ? MOCK_EMPLOYEES : []);
-  const [departmentsList, setDepartmentsList] = useState<Department[]>(isMockEnabled() ? MOCK_DEPARTMENTS : []);
+  const [employeesList, setEmployeesList] = useState<Employee[]>(employees);
+  const [departmentsList, setDepartmentsList] = useState<Department[]>(departments);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDeptId, setSelectedDeptId] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
+  useEffect(() => {
+    if (employees.length > 0) setEmployeesList(employees);
+    if (departments.length > 0) setDepartmentsList(departments);
+  }, [employees, departments]);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+
+  const { currentRole } = useAuthStore();
+  const canDelete = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER';
+  const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (isMockEnabled()) return;
@@ -192,7 +203,42 @@ export const EmployeeListPage: React.FC = () => {
   };
 
   const getPositionName = (id: number) => {
-    return MOCK_POSITIONS.find((p) => p.id === id)?.positionName || '---';
+    return positions.find((p) => p.id === id)?.positionName || '---';
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingEmployee) return;
+    setIsDeleting(true);
+    try {
+      if (!isMockEnabled()) {
+        await employeeService.deleteEmployee(deletingEmployee.id);
+      }
+      setEmployeesList((prev) => prev.filter((e) => e.id !== deletingEmployee.id));
+      useDirectoryStore.getState().removeEmployeeFromDirectory(deletingEmployee.id);
+      if (!isMockEnabled()) {
+        useDirectoryStore.getState().refreshEmployees();
+      }
+      addToast({
+        type: 'success',
+        title: 'Xóa nhân viên thành công',
+        message: `Đã xóa hồ sơ nhân viên ${deletingEmployee.fullName} (${deletingEmployee.employeeCode}).`,
+      });
+      setDeletingEmployee(null);
+    } catch (err: any) {
+      console.error('Xóa nhân viên thất bại:', err);
+      const errorMsg =
+        err?.response?.data?.error?.message ||
+        err?.data?.error?.message ||
+        err?.message ||
+        'Không thể xóa nhân viên. Vui lòng kiểm tra lại quyền hạn hoặc ràng buộc.';
+      addToast({
+        type: 'error',
+        title: 'Xóa nhân viên thất bại',
+        message: errorMsg,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -446,6 +492,23 @@ export const EmployeeListPage: React.FC = () => {
                         >
                           <Edit2 size={15} />
                         </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            className="btn btn-default"
+                            onClick={() => setDeletingEmployee(emp)}
+                            style={{
+                              padding: '0 8px',
+                              height: 32,
+                              color: '#DC2626',
+                              borderColor: '#FECACA',
+                            }}
+                            title="Xóa hồ sơ nhân viên"
+                            aria-label={`Xóa ${emp.fullName}`}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -499,9 +562,19 @@ export const EmployeeListPage: React.FC = () => {
         isOpen={modalOpen}
         initialData={editingEmployee}
         departments={departmentsList}
-        positions={MOCK_POSITIONS}
+        positions={positions}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSaveEmployee}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={!!deletingEmployee}
+        employee={deletingEmployee}
+        departmentName={deletingEmployee ? getDeptName(deletingEmployee.departmentId) : undefined}
+        isDeleting={isDeleting}
+        onClose={() => setDeletingEmployee(null)}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   );

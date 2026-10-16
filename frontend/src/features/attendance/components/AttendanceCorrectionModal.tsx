@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import type { AttendanceRecord } from '@/types/domain.types';
 import { X, CheckCircle, XCircle } from 'lucide-react';
 
@@ -21,6 +21,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
     useAttendanceStore();
   const { currentUser, currentRole } = useAuthStore();
   const { addToast } = useUIStore();
+  const { employees } = useDirectoryStore();
 
   const [activeTab, setActiveTab] = useState<'NEW' | 'PENDING'>(
     targetRecord ? 'NEW' : 'PENDING'
@@ -226,7 +227,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
               </div>
             ) : (
               corrections.map((corr) => {
-                const emp = MOCK_EMPLOYEES.find((e) => e.id === corr.employeeId);
+                const emp = employees.find((e) => e.id === corr.employeeId);
                 const isPending = corr.status === 'PENDING';
 
                 return (

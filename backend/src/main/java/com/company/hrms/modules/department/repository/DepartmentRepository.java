@@ -17,4 +17,6 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     Optional<Department> findByDepartmentCodeAndDeletedAtIsNull(String departmentCode);
 
     boolean existsByDepartmentCodeAndDeletedAtIsNull(String departmentCode);
+
+    List<Department> findAllByManagerIdAndDeletedAtIsNull(Long managerId);
 }

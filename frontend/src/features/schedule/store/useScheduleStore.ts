@@ -12,11 +12,14 @@ import type {
   RoleType,
 } from '@/types/domain.types';
 import type { ScheduleFilterOptions } from '@/types/schedule.types';
-import { MOCK_EMPLOYEES } from '@/mocks/employees.mock';
-import { MOCK_SHIFT_TEMPLATES } from '@/mocks/shift-templates.mock';
-import { getMockLeaves } from '@/mocks/leaves.mock';
-import { getMockHolidays } from '@/mocks/holidays.mock';
-import { generateDeterministicSeedData } from '@/mocks/seed-data';
+import {
+  MOCK_EMPLOYEES,
+  MOCK_SHIFT_TEMPLATES,
+  getMockLeaves,
+  getMockHolidays,
+  generateDeterministicSeedData,
+} from '@/test/fixtures';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import {
   validateAllShiftConflicts,
   getShiftAbsoluteTimeRange,
@@ -89,36 +92,68 @@ interface ScheduleState {
 }
 
 function initializeStateFromSeed() {
-  const seed = generateDeterministicSeedData(new Date());
-  const currentMondayStr = format(seed.baseMonday, 'yyyy-MM-dd');
-  const leaves = getMockLeaves(seed.baseMonday);
-  const holidays = getMockHolidays(seed.baseMonday);
+  const isTestMode = import.meta.env.MODE === 'test';
+  if (isTestMode) {
+    const seed = generateDeterministicSeedData(new Date());
+    const currentMondayStr = format(seed.baseMonday, 'yyyy-MM-dd');
+    const leaves = getMockLeaves(seed.baseMonday);
+    const holidays = getMockHolidays(seed.baseMonday);
 
-  const assignmentsMap: Record<string, ShiftAssignment> = {};
-  for (const a of seed.assignments) {
-    assignmentsMap[`${a.employeeId}_${a.workDate}`] = a;
+    const assignmentsMap: Record<string, ShiftAssignment> = {};
+    for (const a of seed.assignments) {
+      assignmentsMap[`${a.employeeId}_${a.workDate}`] = a;
+    }
+
+    return {
+      currentStartDate: currentMondayStr,
+      scheduleId: 102,
+      scheduleStatus: 'DRAFT' as ScheduleStatus,
+      scheduleVersion: 1,
+      publishedAt: null as string | null,
+      assignments: assignmentsMap,
+      conflicts: {} as Record<string, ScheduleConflict[]>,
+      changeHistory: [] as ChangeHistoryEntry[],
+      viewMode: 'WEEK' as const,
+      filterOptions: {
+        departmentId: 2, // OPS
+        searchTerm: '',
+        shiftCodeFilter: '',
+        onlyShowConflicts: false,
+      },
+      employees: MOCK_EMPLOYEES,
+      shiftTemplates: MOCK_SHIFT_TEMPLATES,
+      approvedLeaves: leaves,
+      holidays: holidays,
+    };
   }
+
+  // Pure live mode in browser runtime
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = addDays(today, diffToMonday);
+  const currentMondayStr = format(monday, 'yyyy-MM-dd');
 
   return {
     currentStartDate: currentMondayStr,
-    scheduleId: 102,
+    scheduleId: 0,
     scheduleStatus: 'DRAFT' as ScheduleStatus,
     scheduleVersion: 1,
     publishedAt: null as string | null,
-    assignments: assignmentsMap,
+    assignments: {} as Record<string, ShiftAssignment>,
     conflicts: {} as Record<string, ScheduleConflict[]>,
     changeHistory: [] as ChangeHistoryEntry[],
     viewMode: 'WEEK' as const,
     filterOptions: {
-      departmentId: 2, // OPS
+      departmentId: 1,
       searchTerm: '',
       shiftCodeFilter: '',
       onlyShowConflicts: false,
     },
-    employees: MOCK_EMPLOYEES,
-    shiftTemplates: MOCK_SHIFT_TEMPLATES,
-    approvedLeaves: leaves,
-    holidays: holidays,
+    employees: [] as Employee[],
+    shiftTemplates: [] as ShiftTemplate[],
+    approvedLeaves: [] as LeaveRequest[],
+    holidays: [] as CompanyHoliday[],
   };
 }
 
@@ -253,11 +288,12 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           isActive: true,
         }));
 
+        const fallbackEmployees = useDirectoryStore.getState().employees.filter((e) => e.departmentId === departmentId);
         set({
           scheduleId: data.schedule_id,
           scheduleStatus: (data.status as ScheduleStatus) || 'DRAFT',
           scheduleVersion: data.version !== undefined ? data.version : 0,
-          employees: backendEmployees.length > 0 ? backendEmployees : get().employees,
+          employees: backendEmployees.length > 0 ? backendEmployees : (fallbackEmployees.length > 0 ? fallbackEmployees : get().employees),
           shiftTemplates: templates.length > 0 ? templates : get().shiftTemplates,
           assignments: assignmentsMap,
         });
