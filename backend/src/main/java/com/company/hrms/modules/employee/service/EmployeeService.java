@@ -2,6 +2,8 @@ package com.company.hrms.modules.employee.service;
 
 import com.company.hrms.common.exception.ResourceConflictException;
 import com.company.hrms.common.exception.ResourceNotFoundException;
+import com.company.hrms.modules.department.domain.Department;
+import com.company.hrms.modules.department.repository.DepartmentRepository;
 import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.dto.EmployeeDto;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
@@ -18,9 +20,11 @@ import java.util.stream.Collectors;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final DepartmentRepository departmentRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, DepartmentRepository departmentRepository) {
         this.employeeRepository = employeeRepository;
+        this.departmentRepository = departmentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -87,6 +91,15 @@ public class EmployeeService {
     public void deleteEmployee(Long id) {
         Employee employee = employeeRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", id));
+
+        List<Department> managedDepartments = departmentRepository.findAllByManagerIdAndDeletedAtIsNull(id);
+        if (!managedDepartments.isEmpty()) {
+            String deptNames = managedDepartments.stream()
+                    .map(Department::getDepartmentName)
+                    .collect(Collectors.joining(", "));
+            throw new ResourceConflictException("Không thể xóa nhân viên đang giữ vị trí Trưởng phòng (" + deptNames + "). Vui lòng chuyển giao chức vụ trước khi xóa.");
+        }
+
         employee.softDelete();
         employeeRepository.save(employee);
     }

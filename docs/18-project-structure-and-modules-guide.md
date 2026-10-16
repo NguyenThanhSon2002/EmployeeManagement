@@ -2,8 +2,8 @@
 *(Human Resource Management & Shift Scheduling System)*
 
 **Tài liệu mã số:** `DOC-18`  
-**Ngày lập:** 16/10/2026  
-**Phiên bản:** 1.0 (Full-Stack Integrated)  
+**Ngày cập nhật:** 16/10/2026  
+**Phiên bản:** 2.0 (Synchronized Feature-Driven Architecture)  
 **Trạng thái:** Chính thức (Official Architecture Reference)  
 
 ---
@@ -14,8 +14,10 @@ Dự án **Employee Management & Shift Scheduling System** là giải pháp ph�
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       CLIENT: REACT 19 + VITE + ZUSTAND                     │
+│                    CLIENT: REACT 19 + TYPESCRIPT + VITE                     │
+│  - Feature-Driven Architecture (Collocation: Component, API, Store)        │
 │  - Dual-Mode: Browser (Real REST API Proxy) | Test (Isolated Memory Mock)   │
+│  - State: Zustand (Micro-stores per feature + Shared Auth & UI)             │
 │  - UI: Vanilla CSS Tokens, Lucide Icons, WCAG 2.1 AA Accessibility          │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │ HTTP / JSON (JWT Bearer Auth)
@@ -43,299 +45,247 @@ Dự án **Employee Management & Shift Scheduling System** là giải pháp ph�
 
 ```text
 D:\Project\Employee Management\
-├── backend/                       # Phân hệ Máy chủ Backend (Spring Boot 3.3.4, Java 21)
-│   ├── pom.xml                    # Cấu hình Maven dependencies và build plugins
+├── backend/                       # Phân hệ Máy chủ Backend (Spring Boot 3.3.4, Java 21 LTS)
+│   ├── Dockerfile                 # Multi-stage build Maven + Eclipse Temurin 21 JRE
+│   ├── pom.xml                    # Quản lý Maven dependencies và build plugins
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/com/company/hrms/
 │   │   │   │   ├── HrmsApplication.java     # Lớp khởi chạy chính (Spring Boot Entry Point)
-│   │   │   │   ├── common/                  # Kiến trúc hạ tầng chung (Cross-cutting Concerns)
-│   │   │   │   │   ├── audit/               # Tự động ghi nhận created_by, updated_by
-│   │   │   │   │   ├── entity/              # BaseAuditableEntity (@Version, Soft Delete)
-│   │   │   │   │   ├── exception/           # BusinessException, GlobalExceptionHandler
-│   │   │   │   │   ├── response/            # ApiResponse, PageResponse, ErrorResponse
-│   │   │   │   │   └── utils/               # DateTimeUtils (chuẩn hóa múi giờ, định dạng)
-│   │   │   │   ├── security/                # Phân hệ An ninh & Xác thực JWT
-│   │   │   │   │   ├── config/              # SecurityConfig (Filter Chain, CORS, BCrypt)
+│   │   │   │   ├── common/                  # Kiến trúc hạ tầng dùng chung (Cross-cutting Concerns)
+│   │   │   │   │   ├── audit/               # Tự động ghi nhận created_by, updated_by (AuditAwareImpl)
+│   │   │   │   │   ├── entity/              # BaseAuditableEntity (@Version, Soft Delete, Timestamps)
+│   │   │   │   │   ├── exception/           # BusinessException, ResourceNotFoundException, GlobalExceptionHandler
+│   │   │   │   │   ├── response/            # ApiResponse<T>, PageResponse<T> chuẩn hóa REST payload
+│   │   │   │   │   └── util/                # DateTimeUtils (chuẩn hóa múi giờ, định dạng ngày giờ)
+│   │   │   │   ├── security/                # Phân hệ An ninh & Xác thực Stateless JWT
+│   │   │   │   │   ├── config/              # SecurityConfig (SecurityFilterChain, CORS, BCrypt)
 │   │   │   │   │   ├── jwt/                 # JwtTokenProvider, JwtAuthenticationFilter
 │   │   │   │   │   └── service/             # UserPrincipal, CustomUserDetailsService
 │   │   │   │   └── modules/                 # 10 Module nghiệp vụ chính (Package-by-Feature)
-│   │   │   │       ├── auth/                # Xác thực, đăng nhập, cấp phát Token
-│   │   │   │       ├── department/          # Danh mục phòng ban & cây tổ chức
+│   │   │   │       ├── auth/                # Xác thực, cấp phát Access Token & Refresh Token
+│   │   │   │       ├── department/          # Danh mục phòng ban & cây phân cấp tổ chức
 │   │   │   │       ├── position/            # Danh mục chức danh, vị trí việc làm
-│   │   │   │       ├── employee/            # Quản lý hồ sơ nhân viên
-│   │   │   │       ├── shift/               # Danh mục mẫu ca làm việc
-│   │   │   │       ├── schedule/            # Xếp ca tuần & Conflict Detection Engine
-│   │   │   │       ├── attendance/          # Chấm công & giải trình giờ công
-│   │   │   │       ├── leave/               # Quản lý nghỉ phép & quỹ phép năm
-│   │   │   │       ├── setting/             # Tham số cấu hình luật lao động
-│   │   │   │       └── report/              # Xuất báo cáo Excel POI & CSV UTF-8
+│   │   │   │       ├── employee/            # Quản lý hồ sơ nhân sự, phân trang, Optimistic Lock
+│   │   │   │       ├── shift/               # Danh mục mẫu ca làm việc chuẩn & cờ qua đêm
+│   │   │   │       ├── schedule/            # Xếp ca tuần & Conflict Detection Engine (8 rules BLLĐ)
+│   │   │   │       ├── attendance/          # Chấm công, tính giờ công đêm & giải trình quẹt thẻ
+│   │   │   │       ├── leave/               # Quản lý danh mục phép, sổ cái quỹ phép & duyệt đơn
+│   │   │   │       ├── setting/             # Cấu hình tham số động hệ thống theo luật lao động
+│   │   │   │       └── report/              # Xuất báo cáo Excel Apache POI & CSV UTF-8 BOM
 │   │   │   └── resources/
-│   │   │       ├── application.yml          # Cấu hình CSDL MySQL, JWT, JPA, Logging
-│   │   │       ├── application-dev.yml      # Cấu hình mở rộng môi trường phát triển
+│   │   │       ├── application.yml          # Cấu hình CSDL MySQL, JPA Hibernate, JWT, Port 8080
+│   │   │       ├── application-dev.yml      # Cấu hình profile môi trường phát triển
 │   │   │       └── db/migration/            # Quản lý phiên bản CSDL Flyway
-│   │   │           ├── V1__init_schema.sql  # Khởi tạo toàn bộ 17 bảng và ràng buộc FK
-│   │   │           ├── V2__seed_master_data.sql # Dữ liệu mẫu ban đầu (ca, phòng ban, ngày lễ)
+│   │   │           ├── V1__init_schema.sql  # Khởi tạo toàn bộ 17 bảng quan hệ và khóa ngoại FK
+│   │   │           ├── V2__seed_master_data.sql # Dữ liệu mẫu (ca làm, phòng ban, ngày lễ công ty)
 │   │   │           └── V3__seed_admin_user.sql  # Tài khoản mẫu admin, manager, employee
-│   │   └── test/java/com/company/hrms/      # Toàn bộ 36 bài kiểm thử tích hợp (100% Pass)
-│   └── target/                              # Thư mục build đầu ra và JAR artifact
+│   │   └── test/java/com/company/hrms/      # 36 bài kiểm thử tích hợp (Spring Boot Test, 100% Pass)
+│   └── target/                              # Thư mục build artifact (JAR)
 │
 ├── frontend/                      # Phân hệ Giao diện Người dùng (React 19, TypeScript, Vite)
-│   ├── package.json               # Khai báo thư viện: React, Zustand, Date-fns, Lucide
-│   ├── vite.config.ts             # Cấu hình Vite & Reverse Proxy (/api -> localhost:8080)
+│   ├── Dockerfile                 # Multi-stage build Node 20 + Nginx Alpine
+│   ├── nginx.conf                 # Cấu hình reverse proxy /api/ và SPA fallback
+│   ├── package.json               # Khai báo dependencies (React 19, Zustand, Lucide, Vitest)
+│   ├── vite.config.ts             # Thiết lập Vite server & Proxy reverse (/api -> localhost:8080)
 │   ├── tsconfig.json              # Thiết lập TypeScript Strict Mode
 │   ├── .env.development           # Biến môi trường dev (VITE_USE_MOCK=false)
 │   ├── .env.production            # Biến môi trường production
-│   ├── index.html                 # Template HTML gốc tải phông Be Vietnam Pro & Inter
+│   ├── index.html                 # HTML template tải phông chữ Be Vietnam Pro & Inter
 │   └── src/
 │       ├── main.tsx               # Entry point gắn kết React DOM
-│       ├── App.tsx                # App component khởi tạo Auth & Router
+│       ├── App.tsx                # Khởi tạo Auth State, Router & Theme
 │       ├── config/                # Cấu hình môi trường (env.config.ts Dual-Mode)
-│       ├── types/                 # Toàn bộ định nghĩa kiểu TypeScript (domain.types.ts)
-│       ├── routes/                # Định tuyến ứng dụng (AppRoutes.tsx, route-paths.ts)
-│       ├── components/layout/     # Khung giao diện dùng chung
-│       │   ├── AppLayout.tsx      # Khung layout tổng thể (Sidebar + Topbar + Content)
-│       │   ├── Sidebar.tsx        # Thanh menu điều hướng chính
-│       │   ├── Topbar.tsx         # Thanh tiêu đề, thông báo, tài khoản
-│       │   └── RoleSwitcher.tsx   # Menu chuyển đổi vai trò trực tiếp (Admin/Manager/NV)
-│       ├── services/              # Tầng gọi API kết nối với Spring Boot
-│       │   ├── apiClient.ts       # Axios/Fetch wrapper tự động gắn Bearer Token & tải Blob
-│       │   ├── authService.ts     # Gọi API đăng nhập, làm mới token, lấy user /me
-│       │   ├── departmentService.ts # Gọi API danh mục phòng ban
-│       │   ├── employeeService.ts # Gọi API hồ sơ nhân sự (CRUD, filter, paginate)
-│       │   ├── scheduleService.ts # Gọi API ma trận lịch tuần, gán ca, xóa ca, công bố
-│       │   ├── attendanceService.ts # Gọi API check-in, check-out, bản ghi chấm công
-│       │   ├── leaveService.ts    # Gọi API đơn phép, quỹ phép, phê duyệt đơn
-│       │   └── reportService.ts   # Gọi API xuất báo cáo Excel .xlsx & CSV
-│       ├── store/                 # Quản lý trạng thái toàn cục bằng Zustand
-│       │   ├── useAuthStore.ts    # Quản lý phiên đăng nhập, JWT token, vai trò người dùng
-│       │   ├── useScheduleStore.ts # Quản lý lịch tuần, danh sách ca gán, kiểm tra xung đột
-│       │   ├── useAttendanceStore.ts # Quản lý dữ liệu chấm công, check-in/out, giải trình
-│       │   ├── useLeaveStore.ts   # Quản lý danh sách đơn xin nghỉ phép, duyệt đơn
-│       │   ├── useSettingsStore.ts# Quản lý các tham số luật lao động
-│       │   └── useUIStore.ts      # Quản lý thông báo Toast, theme, drawer trạng thái
-│       ├── features/              # 8 Phân hệ giao diện chức năng chính
-│       │   ├── schedule/          # Ma trận xếp ca tuần trực quan (SCR-11, SCR-12)
-│       │   ├── dashboard/         # Bảng điều khiển KPI & Thẻ điểm danh nhanh hôm nay
-│       │   ├── employees/         # Danh sách nhân viên & Trang hồ sơ chi tiết (SCR-04, 05)
-│       │   ├── attendance/        # Theo dõi chấm công & Modal giải trình giờ công
-│       │   ├── leaves/            # Quản lý đơn nghỉ phép & Modal phê duyệt phân cấp
-│       │   ├── shifts/            # Quản lý danh mục mẫu ca làm việc (SCR-10)
-│       │   ├── reports/           # Trung tâm báo cáo xuất dữ liệu Excel/CSV (SCR-15)
-│       │   └── settings/          # Cài đặt tham số hệ thống & ngưỡng luật lao động
-│       ├── utils/                 # Các hàm tiện ích thuần túy (date, csv, conflict calc)
-│       ├── styles/                # Hệ thống CSS Design Tokens (global.css, tokens.css)
-│       └── test/                  # Toàn bộ 35 bài kiểm thử Vitest (100% Pass)
+│       ├── routes/                # Định tuyến SPA (AppRoutes.tsx, route-paths.ts)
+│       ├── types/                 # Kiểu TypeScript chuẩn hóa domain (domain.types.ts, schedule.types.ts)
+│       ├── shared/                # Module dùng chung toàn hệ thống (Shared Infrastructure)
+│       │   ├── api/
+│       │   │   └── apiClient.ts   # Axios/Fetch client: tự gán Bearer Token, unwrap ApiResponse, Blob download
+│       │   ├── auth/
+│       │   │   ├── authService.ts # Gọi API đăng nhập, làm mới token, lấy user /me
+│       │   │   └── useAuthStore.ts# Zustand store quản lý JWT, user principal, auto-bootstrap, switch role
+│       │   ├── department/
+│       │   │   └── departmentService.ts # Gọi API danh mục phòng ban toàn cục
+│       │   ├── directory/
+│       │   │   └── useDirectoryStore.ts # Zustand store nạp & đồng bộ danh mục thực tế từ MySQL (Employees, Departments, Positions)
+│       │   └── store/
+│       │       └── useUIStore.ts  # Quản lý Toast notification và trạng thái UI toàn cục
+│       ├── components/            # UI components tái sử dụng dùng chung
+│       │   ├── layout/            # Khung sườn (AppLayout, Sidebar, Topbar, RoleSwitcher)
+│       │   ├── ui/                # Nguyên tử UI (Button, Input, Modal, Badge, Card,...)
+│       │   ├── feedback/          # Thông báo Toast, Spinner, Empty State
+│       │   └── charts/            # Biểu đồ KPI thống kê
+│       ├── features/              # 8 Phân hệ màn hình chức năng tự chứa (Feature-Driven Architecture)
+│       │   ├── schedule/          # Ma trận xếp ca tuần & kiểm tra xung đột trực quan (Core Feature)
+│       │   │   ├── SchedulePage.tsx       # Màn hình chính ma trận xếp ca tuần
+│       │   │   ├── schedule.css           # Bảng style riêng biệt cho WeeklyGrid
+│       │   │   ├── api/scheduleService.ts # Gọi API lấy lịch tuần, gán ca, xóa ca, công bố
+│       │   │   ├── store/useScheduleStore.ts # Quản lý lịch tuần, assignmentsMap, tính vi phạm
+│       │   │   ├── components/            # WeeklyGrid, ShiftCell, ShiftBadge, ConflictIndicator,...
+│       │   │   ├── dialogs/               # AssignShiftDrawer, BulkAssignDialog, CopyWeekDialog,...
+│       │   │   └── __tests__/             # Unit tests cho xếp ca
+│       │   ├── dashboard/         # Bảng điều khiển KPI & Thẻ điểm danh nhanh
+│       │   │   ├── DashboardPage.tsx      # Bảng điều khiển tổng quan
+│       │   │   └── components/            # QuickAttendanceCard, KpiOverview,...
+│       │   ├── employees/         # Quản lý danh sách & Hồ sơ nhân sự chi tiết
+│       │   │   ├── EmployeeListPage.tsx   # Danh sách nhân viên, lọc phòng ban, phân trang
+│       │   │   ├── EmployeeDetailPage.tsx # Hồ sơ chi tiết (tab lý lịch, lịch làm, chấm công, phép)
+│       │   │   ├── api/employeeService.ts # Gọi API CRUD hồ sơ nhân viên
+│       │   │   ├── components/            # EmployeeTable, EmployeeFormModal, DeleteConfirmModal,...
+│       │   │   └── __tests__/             # Unit tests xóa nhân viên & nghiệp vụ hồ sơ
+│       │   ├── attendance/        # Giám sát chấm công & Giải trình giờ công
+│       │   │   ├── AttendanceOverviewPage.tsx # Màn hình theo dõi chấm công ngày
+│       │   │   ├── api/attendanceService.ts   # Gọi API check-in, check-out, bản ghi chấm công
+│       │   │   ├── store/useAttendanceStore.ts# Lưu trữ dữ liệu chấm công, trạng thái quẹt thẻ
+│       │   │   ├── components/            # AttendanceTable, AttendanceCorrectionModal,...
+│       │   │   └── __tests__/
+│       │   ├── leaves/            # Quản lý đơn nghỉ phép & Phê duyệt phân cấp
+│       │   │   ├── LeaveRequestsPage.tsx  # Danh sách đơn phép & Sổ cái quỹ phép cá nhân
+│       │   │   ├── api/leaveService.ts    # Gọi API đơn phép, quỹ phép, duyệt đơn
+│       │   │   ├── store/useLeaveStore.ts # Quản lý trạng thái phép, trigger sync sang lịch
+│       │   │   ├── components/            # LeaveRequestModal, LeaveApprovalModal,...
+│       │   │   └── __tests__/
+│       │   ├── shifts/            # Quản lý danh mục mẫu ca làm việc
+│       │   │   ├── ShiftTemplatesPage.tsx # Màn hình quản trị ca mẫu
+│       │   │   ├── components/            # ShiftTemplateModal, ShiftColorPicker,...
+│       │   │   └── __tests__/
+│       │   ├── reports/           # Trung tâm xuất báo cáo & Dữ liệu
+│       │   │   ├── ReportsPage.tsx        # Bảng điều khiển xuất báo cáo
+│       │   │   ├── api/reportService.ts   # Gọi API tải file Excel .xlsx & CSV UTF-8
+│       │   │   └── components/            # MonthlyAttendanceReport,...
+│       │   └── settings/          # Cài đặt tham số hệ thống & Ngưỡng luật lao động
+│       │       ├── SettingsPage.tsx       # Màn hình cấu hình tham số
+│       │       ├── store/useSettingsStore.ts # Quản lý tham số cấu hình
+│       │       └── components/            # SettingRuleForm,...
+│       ├── hooks/                 # Custom React Hooks (useMediaQuery, useModalFocusTrap)
+│       ├── utils/                 # Hàm tiện ích thuần túy (date.utils, conflict-detector, copy-merge, csv-exporter)
+│       ├── styles/                # Hệ thống CSS Design Tokens (tokens.css, global.css, reset.css)
+│       └── test/                  # Thiết lập Vitest (setupTests.ts, vitest.config, fixtures/ cho test cô lập)
 │
-├── docs/                          # Kho tài liệu kỹ thuật chuẩn mực của dự án (19 files)
-└── plans/                         # Kế hoạch triển khai & nhật ký thực thi qua các giai đoạn
+├── docs/                          # Kho 19 tài liệu kỹ thuật chuẩn mực của dự án (DOC-00 -> DOC-18)
+├── plans/                         # Kế hoạch phát triển và nhật ký kiểm toán qua các phase
+├── docker-compose.yml             # Điều phối 3 container: MySQL 8.0, Backend Spring Boot, Frontend React
+└── .env.example                   # Mẫu cấu hình biến môi trường toàn hệ thống
 ```
 
 ---
 
-## 3. PHÂN TÍCH CHI TIẾT 10 MODULE BACKEND (`com.company.hrms.modules`)
+## 3. PHÂN TÍCH CHI TIẾT 10 MODULE BACKEND (`backend/src/main/java/com/company/hrms`)
 
-Toàn bộ Backend được tổ chức theo kiến trúc **Package-by-Feature**. Mỗi module là một đơn vị độc lập chứa đầy đủ các tầng: **Domain Entity**, **Repository**, **DTO**, **Service**, và **Controller**.
+Hệ thống Backend áp dụng triệt để kiến trúc **Package-by-Feature**. Thay vì gom toàn bộ Controller hay Service vào một chỗ (Package-by-Layer), mỗi module là một đơn vị ranh giới nghiệp vụ độc lập, bao gồm đầy đủ các tầng từ giao diện API tới ánh xạ cơ sở dữ liệu.
 
 ```
-[Client Request] ──> [Controller] ──> [Service] ──> [Repository] ──> [MySQL Entity]
-                          │               │
-                     (Validates DTO)  (Business Logic & Transactions)
+[HTTP Request] ──> [Controller] ──> [Service] ──> [Repository] ──> [MySQL Entity]
+                        │               │
+                   (DTO Validation) (Business Logic & Transactions)
 ```
 
-### Module 1: `auth` (Xác Thực & Phân Quyền Bảo Mật)
-- **Đường dẫn:** [`com/company/hrms/modules/auth`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/auth)
-- **Các thành phần chính:**
-  - `User.java`, `Role.java`: Thực thể tài khoản người dùng, bảng liên kết `user_roles`.
-  - `AuthService.java`: Xử lý đăng nhập, đối soát mật khẩu BCrypt, kiểm tra trạng thái khóa tài khoản (`locked_until`), cấp phát cặp Access Token (sống 24 giờ) và Refresh Token (sống 7 ngày).
-  - `AuthController.java`: Cung cấp các endpoint:
-    - `POST /api/v1/auth/login`: Xác thực và trả về Token cùng thông tin User.
-    - `POST /api/v1/auth/refresh`: Cấp mới Access Token bằng Refresh Token.
-    - `GET /api/v1/auth/me`: Lấy thông tin tài khoản đang đăng nhập kèm quyền hạn.
+### 1. Phân hệ dùng chung (`com.company.hrms.common`)
+- **`audit/AuditAwareImpl.java`**: Tự động trích xuất username hiện tại từ `SecurityContextHolder` để nạp vào trường `created_by` và `updated_by`.
+- **`entity/BaseAuditableEntity.java`**: Lớp cơ sở cung cấp `id` (UUID hoặc Long), `created_at`, `updated_at`, `created_by`, `updated_by`, `@Version` (Optimistic Locking chống xung đột ghi đồng thời), và cờ xóa mềm `is_deleted`.
+- **`exception/`**: 
+  - `BusinessException.java`: Lớp ngoại lệ nghiệp vụ tùy biến kèm mã lỗi `ErrorCode`.
+  - `ResourceNotFoundException.java`: Ngoại lệ khi không tìm thấy tài nguyên (HTTP 404).
+  - `GlobalExceptionHandler.java`: Bắt mọi lỗi ngoại lệ và định dạng về cấu trúc phản hồi `ErrorResponse` chuẩn.
+- **`response/`**: `ApiResponse<T>` (bọc kết quả API kèm timestamp, status code, message) và `PageResponse<T>` (bọc danh sách phân trang chuẩn 1-based).
+- **`util/DateTimeUtils.java`**: Tiện ích chuyển đổi `LocalDate`, `LocalTime`, `LocalDateTime`, tính khoảng cách phút, chuẩn hóa múi giờ `Asia/Ho_Chi_Minh`.
 
-### Module 2: `department` (Quản Lý Phòng Ban & Cơ Cấu Tổ Chức)
-- **Đường dẫn:** [`com/company/hrms/modules/department`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/department)
-- **Nghiệp vụ cốt lõi:**
-  - `Department.java`: Mô hình hóa phòng ban hỗ trợ cấu trúc cây phân cấp (`parent_department_id`) và chỉ định Trưởng phòng (`manager_id`).
-  - Hỗ trợ kiểm tra tránh xóa phòng ban đang có nhân viên trực thuộc.
+### 2. Phân hệ an ninh bảo mật (`com.company.hrms.security`)
+- **`config/SecurityConfig.java`**: Khai báo `SecurityFilterChain`, tắt CSRF vì hệ thống Stateless, kích hoạt CORS, phân quyền đường dẫn, quản lý phiên `SessionCreationPolicy.STATELESS`, thiết lập bộ mã hóa mật khẩu `BCryptPasswordEncoder`.
+- **`jwt/JwtTokenProvider.java`**: Ký và thẩm tra JWT Token sử dụng thuật toán HMAC-SHA512 với secret key an toàn.
+- **`jwt/JwtAuthenticationFilter.java`**: Chặn bắt mọi HTTP request, bóc tách header `Authorization: Bearer <token>`, giải mã và tiêm `UsernamePasswordAuthenticationToken` vào `SecurityContext`.
+- **`service/`**: `CustomUserDetailsService` và `UserPrincipal` cầu nối giữa Spring Security và bảng người dùng `users` trong CSDL.
 
-### Module 3: `position` (Danh Mục Chức Danh & Vị Trí Công Việc)
-- **Đường dẫn:** [`com/company/hrms/modules/position`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/position)
-- **Nghiệp vụ cốt lõi:**
-  - `Position.java`: Quản lý các chức danh chuẩn trong doanh nghiệp (ví dụ: *Lập trình viên Senior*, *Trưởng nhóm Kinh doanh*, *Chuyên viên Tuyển dụng*).
+### 3. Chi tiết 10 Module nghiệp vụ (`com.company.hrms.modules.*`)
 
-### Module 4: `employee` (Quản Lý Hồ Sơ Nhân Sự)
-- **Đường dẫn:** [`com/company/hrms/modules/employee`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/employee)
-- **Nghiệp vụ cốt lõi:**
-  - `Employee.java`: Quản lý toàn bộ thông tin nhân viên: Mã NV (`employee_code`), Họ tên, CCCD/CMND, Ngày sinh, Giới tính, Email, SĐT, Ngày vào làm, Trạng thái làm việc (`PROBATION`, `OFFICIAL`, `ON_LEAVE`, `RESIGNED`).
-  - **Khóa lạc quan (Optimistic Locking):** Áp dụng `@Version` để ngăn chặn lỗi ghi đè dữ liệu khi 2 người cùng chỉnh sửa một hồ sơ đồng thời (ném ra HTTP 409 Conflict).
-  - Tích hợp tìm kiếm đa điều kiện (Search Specification), lọc theo phòng ban, phân trang chuẩn 1-based.
-
-### Module 5: `shift` (Danh Mục Mẫu Ca Làm Việc)
-- **Đường dẫn:** [`com/company/hrms/modules/shift`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/shift)
-- **Nghiệp vụ cốt lõi:**
-  - `WorkShift.java`: Quản lý các mẫu ca chuẩn: Ca Sáng (`06:00 - 14:00`), Ca Hành Chính (`08:00 - 17:00`), Ca Chiều (`14:00 - 22:00`), Ca Đêm (`22:00 - 06:00` - cờ `is_cross_midnight = true`).
-  - Cấu hình số phút nghỉ giữa ca, định mức nhân sự tối thiểu/tối đa (`min_staffing`, `max_staffing`), và mã màu nhận diện trên lưới lịch.
-
-### Module 6: `schedule` (Ma Trận Xếp Ca & Engine Phát Hiện Xung Đột)
-- **Đường dẫn:** [`com/company/hrms/modules/schedule`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/schedule)
-- **Nghiệp vụ cốt lõi:**
-  - `Schedule.java`, `ShiftAssignment.java`: Quản lý lịch tuần theo phòng ban từ Thứ 2 đến Chủ nhật.
-  - **Đóng băng mẫu ca (Snapshot Isolation):** Khi ca được gán, toàn bộ thông số thời gian, tên ca và màu sắc được copy trực tiếp vào bản ghi `shift_assignments`. Nhờ đó, việc sửa mẫu ca gốc trong tương lai không làm sai lệch lịch sử làm việc trong quá khứ.
-  - **Conflict Detection Engine:** Thẩm tra trực tiếp 8 quy tắc luật lao động:
-    - `BR-001`: Trùng lặp ca làm việc của cùng một nhân viên trong ngày.
-    - `BR-002`: Phân ca cho nhân viên đã nghỉ việc (`RESIGNED`) hoặc bị vô hiệu hóa.
-    - `BR-003`: Vi phạm thời gian nghỉ giữa 2 ca liên tiếp (nghỉ < 11 giờ theo Luật Lao Động 2019).
-    - `BR-004`: Vượt quá trần 48 giờ làm việc theo kế hoạch trong tuần.
-    - `BR-005`: Vượt quá trần 12 giờ làm việc trong một ngày.
-    - `BR-006`: Phân ca trùng vào ngày đã được duyệt Nghỉ phép năm.
-    - `BR-007`: Cảnh báo làm việc vào ngày Lễ, Tết của công ty.
-    - `BR-008`: Cảnh báo thiếu hụt định mức nhân sự tối thiểu (`min_staffing`).
-  - **Nhật ký thay đổi (`ScheduleChangeHistory`):** Tự động ghi lại lịch sử thêm/sửa/xóa ca sau khi lịch đã được Công bố (`PUBLISHED`).
-
-### Module 7: `attendance` (Chấm Công & Giải Trình Giờ Công)
-- **Đường dẫn:** [`com/company/hrms/modules/attendance`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/attendance)
-- **Nghiệp vụ cốt lõi:**
-  - `AttendanceRecord.java`: Ghi nhận dữ liệu check-in, check-out thời gian thực.
-  - `AttendanceCalculationService.java`: Tự động tính toán số phút đi muộn (áp dụng thời gian ân hạn 5 phút), về sớm, tách bạch số giờ làm việc ban ngày và số giờ làm việc ban đêm trong khung giờ `22:00 - 06:00` (hưởng phụ cấp ca đêm).
-  - `AttendanceCorrection.java`: Cho phép nhân viên nộp đơn giải trình quên quẹt thẻ, đính kèm lý do để cấp trên xem xét phê duyệt.
-
-### Module 8: `leave` (Quản Lý Nghỉ Phép & Quỹ Phép Năm)
-- **Đường dẫn:** [`com/company/hrms/modules/leave`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/leave)
-- **Nghiệp vụ cốt lõi:**
-  - `LeaveType.java`: Danh mục các loại nghỉ phép (Phép năm hưởng lương, Việc riêng, Ốm đau/BHXH, Nghỉ không lương).
-  - `LeaveBalance.java`: Sổ cái quản lý quỹ phép theo năm: Số ngày được cấp, Số ngày đã dùng, Số ngày đang chờ duyệt, Số ngày còn lại.
-  - `LeaveRequest.java`: Xử lý nộp đơn xin nghỉ, quy tắc `BR-009` ngăn chặn nộp trùng khoảng thời gian, và quy trình phê duyệt phân cấp của Quản lý.
-
-### Module 9: `setting` (Cấu Hình Tham Số Hệ Thống)
-- **Đường dẫn:** [`com/company/hrms/modules/setting`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/setting)
-- **Nghiệp vụ cốt lõi:**
-  - `SystemSetting.java`: Lưu trữ và cho phép quản trị viên tùy biến các tham số hoạt động (ngưỡng nghỉ giữa 2 ca 11h hoặc 12h, trần giờ tuần 48h, độ nghiêm ngặt của cảnh báo trùng phép).
-
-### Module 10: `report` (Tổng Hợp Công & Xuất File Dữ Liệu)
-- **Đường dẫn:** [`com/company/hrms/modules/report`](file:///D:/Project/Employee%20Management/backend/src/main/java/com/company/hrms/modules/report)
-- **Nghiệp vụ cốt lõi:**
-  - `ExcelExportService.java`: Sử dụng **Apache POI** sinh file Microsoft Excel `.xlsx` nguyên bản, hỗ trợ định dạng kẻ viền bảng, căn lề, tô màu header nhận diện thương hiệu.
-  - `CsvExportService.java`: Xuất file `.csv` chuẩn RFC-4180 được chèn tiền tố **UTF-8 BOM (`\uFEFF`)**, giúp Microsoft Excel mở trực tiếp file tiếng Việt mà không bao giờ bị lỗi font.
+| Module | Đường dẫn gói | Thành phần chính & Thực thể JPA | Nghiệp vụ cốt lõi |
+| :--- | :--- | :--- | :--- |
+| **`auth`** | `modules.auth` | `User`, `Role`, `AuthController`, `AuthService` | Đăng nhập tài khoản, cấp phát cặp Access Token (24h) và Refresh Token (7 ngày), endpoint `/api/v1/auth/login`, `/refresh`, `/me`. |
+| **`department`** | `modules.department` | `Department`, `DepartmentController`, `DepartmentService` | Quản lý danh mục phòng ban, mô hình cây phân cấp (`parent_department_id`), chỉ định trưởng phòng (`manager_id`), ngăn xóa phòng ban còn nhân viên. |
+| **`position`** | `modules.position` | `Position`, `PositionController`, `PositionService` | Quản lý danh mục chức danh, vị trí công việc chuyên môn trong doanh nghiệp. |
+| **`employee`** | `modules.employee` | `Employee`, `EmployeeController`, `EmployeeService` | Quản lý toàn diện hồ sơ nhân viên (Mã NV, CCCD, thông tin liên lạc, hợp đồng, trạng thái). Hỗ trợ tìm kiếm động (Search Specification), phân trang, khóa lạc quan `@Version`. |
+| **`shift`** | `modules.shift` | `WorkShift`, `ShiftController`, `ShiftService` | Quản lý danh mục mẫu ca chuẩn (Sáng, Hành chính, Chiều, Đêm). Hỗ trợ ca qua đêm (`is_cross_midnight`), định mức quân số (`min_staffing`, `max_staffing`), mã màu hiển thị. |
+| **`schedule`** | `modules.schedule` | `Schedule`, `ShiftAssignment`, `ScheduleChangeHistory`, `ScheduleConflictEngine` | Xếp ca tuần phòng ban. **Snapshot Isolation** đóng băng ca vào bản ghi gán ca. **Conflict Engine** kiểm tra 8 quy tắc Luật Lao Động 2019 (BR-001 -> BR-008). Kiểm toán lịch sử thay đổi sau khi công bố (`PUBLISHED`). |
+| **`attendance`** | `modules.attendance` | `AttendanceRecord`, `AttendanceCorrection`, `AttendanceService` | Ghi nhận chấm công quẹt thẻ vào/ra. Tự động tính phút đi muộn (ân hạn 5p), về sớm, tách bạch giờ làm ban đêm (`22:00 - 06:00`). Xử lý đơn giải trình quên quẹt thẻ. |
+| **`leave`** | `modules.leave` | `LeaveType`, `LeaveBalance`, `LeaveRequest`, `LeaveService` | Quản lý loại nghỉ phép, sổ cái quỹ phép năm cá nhân, quy trình nộp đơn, chặn trùng ngày (`BR-009`) và phê duyệt phân cấp của Quản lý. |
+| **`setting`** | `modules.setting` | `SystemSetting`, `SettingController`, `SettingService` | Lưu trữ cấu hình tham số động hệ thống (ngưỡng nghỉ giữa ca 11h/12h, trần 48h tuần, mức độ cảnh báo vi phạm). |
+| **`report`** | `modules.report` | `ReportController`, `ExcelExportService`, `CsvExportService` | Tổng hợp bảng công tháng. Xuất file Microsoft Excel `.xlsx` nguyên bản bằng **Apache POI** và file `.csv` chuẩn RFC-4180 có tiền tố **UTF-8 BOM (`\uFEFF`)** chống lỗi font tiếng Việt. |
 
 ---
 
-## 4. PHÂN TÍCH CHI TIẾT 8 PHÂN HỆ FRONTEND (`frontend/src/features`)
+## 4. PHÂN TÍCH CHI TIẾT PHÂN HỆ FRONTEND (`frontend/src`)
 
-Giao diện được xây dựng trên nền tảng **React 19 + TypeScript + Vite**, sử dụng kiến trúc phân cụm theo tính năng (**Feature-driven structure**).
+Frontend áp dụng triết lý **Feature-Driven Architecture** kết hợp mô hình **Collocation** (tất cả những gì thuộc về một tính năng thì nằm cùng trong thư mục tính năng đó: Component, API Service, Zustand Store, Tests).
+
+### 1. Phân tầng Hạ tầng Dùng chung (`src/shared`)
+- **`shared/api/apiClient.ts`**:
+  - Tự động lấy JWT token từ `localStorage` để tiêm vào header `Authorization: Bearer <token>`.
+  - Tự động giải nén phong bì `ApiResponse<T>` để trả về trực tiếp dữ liệu `data` cho UI.
+  - Tự động phát hiện kiểu `Content-Type` nhị phân (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `text/csv`) để chuyển thành `Blob` và kích hoạt tải file tự động trên trình duyệt.
+- **`shared/auth/`**:
+  - `authService.ts`: Các phương thức gọi API xác thực (`login`, `refreshToken`, `getCurrentUser`).
+  - `useAuthStore.ts`: Zustand store quản lý trạng thái đăng nhập, lưu token, tự động đăng nhập mẫu (Auto-Auth Bootstrap) và hỗ trợ đổi vai trò người dùng trực tiếp (`RoleSwitcher`).
+- **`shared/department/departmentService.ts`**: Cung cấp hàm nạp danh mục phòng ban toàn cục dùng chung cho bộ lọc ca, bảng nhân sự và báo cáo.
+- **`shared/directory/useDirectoryStore.ts`**: Zustand store quản lý bộ nhớ đệm danh mục toàn hệ thống (Nhân viên, Phòng ban, Vị trí chức danh). Tự động nạp trực tiếp 100% từ API MySQL khi ứng dụng khởi động và cung cấp tra cứu O(1) theo ID cho toàn bộ các màn hình nghiệp vụ.
+- **`shared/store/useUIStore.ts`**: Quản lý hàng đợi thông báo Toast toàn cục (Success, Warning, Error, Info).
+
+### 2. Chi tiết 8 Phân hệ Giao diện (`src/features/*`)
 
 ```
-[UI Component / View] ──> [Zustand Store] ──> [Domain Service] ──> [apiClient (Bearer Token)]
-          │                       │
-     (React Hooks)           (Local State & Optimistic UI)
+src/features/<feature-name>/
+├── <Feature>Page.tsx        # Container Page component kết nối State & Route
+├── api/                     # Service gọi API riêng của phân hệ (gọi qua apiClient)
+├── store/                   # Zustand store chuyên biệt quản lý state phân hệ
+├── components/              # Các UI components nội bộ của phân hệ
+├── dialogs/ / modals/       # Các hộp thoại Drawer / Modal thao tác nghiệp vụ
+└── __tests__/               # Bài kiểm thử Vitest cho phân hệ
 ```
 
-### Feature 1: `schedule` (Ma Trận Phân Ca Tuần Thông Minh - Core Feature)
-- **Tập tin chính:** [`SchedulePage.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/schedule/SchedulePage.tsx), [`WeeklyGrid.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/schedule/components/WeeklyGrid.tsx), [`AssignShiftDrawer.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/schedule/dialogs/AssignShiftDrawer.tsx)
-- **Chức năng:**
-  - Lưới ma trận 8 cột (Cột cố định Nhân viên + 7 ngày trong tuần từ Thứ 2 đến Chủ nhật).
-  - Hiển thị trực quan thẻ ca làm việc, thẻ nghỉ phép `[🏖️ PHÉP NĂM]`, biểu tượng ca đêm, huy hiệu cảnh báo xung đột (chấm vàng/đỏ).
-  - Thanh tiến độ giờ công tuần hiển thị cảnh báo đỏ khi nhân viên được xếp vượt quá 48h.
-  - Drawer bên phải gán ca làm việc: Cho phép chọn ca, kiểm tra vi phạm thời gian thực, nhập lý do ghi đè đối với cảnh báo vàng hoặc lý do điều chỉnh khi lịch đã công bố.
-  - Bộ lọc linh hoạt: Lọc theo phòng ban, lọc chỉ xem nhân viên có xung đột ca, tìm kiếm theo tên/mã NV.
-  - Các hộp thoại chức năng: Phân ca hàng loạt (`BulkAssignDialog`), Sao chép lịch tuần trước (`CopyWeekDialog`), Công bố lịch (`PublishConfirmDialog`), Xem lịch sử chỉnh sửa (`ChangeHistoryDrawer`).
-
-### Feature 2: `dashboard` (Bảng Điều Khiển Tổng Quan)
-- **Tập tin chính:** [`DashboardPage.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/dashboard/DashboardPage.tsx), [`QuickAttendanceCard.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/dashboard/components/QuickAttendanceCard.tsx)
-- **Chức năng:**
-  - Tổng hợp các chỉ số KPI vận hành: Tổng số nhân sự, Số người đang đi làm hôm nay, Số ca trực đêm, Tỷ lệ đi làm đúng giờ.
-  - Thẻ **Điểm Danh Nhanh**: Cho phép nhân viên bấm nút *Check-in vào ca* hoặc *Check-out kết thúc ca* chỉ với 1 click, hiển thị đồng hồ đếm thời gian làm việc trong ngày.
-
-### Feature 3: `employees` (Quản Lý Danh Sách & Chi Tiết Nhân Sự)
-- **Tập tin chính:** [`EmployeeListPage.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/employees/EmployeeListPage.tsx), [`EmployeeDetailPage.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/employees/EmployeeDetailPage.tsx)
-- **Chức năng:**
-  - Danh sách nhân sự dạng bảng trực quan: Tìm kiếm thời gian thực, lọc theo phòng ban, phân trang.
-  - Modal thêm mới và chỉnh sửa thông tin nhân sự.
-  - Trang chi tiết hồ sơ: Xem thông tin lý lịch cá nhân, lịch sử phân ca các tuần, bảng chấm công gần nhất và các đơn xin nghỉ phép đã nộp.
-
-### Feature 4: `attendance` (Giám Sát Chấm Công & Điểm Danh)
-- **Tập tin chính:** [`AttendanceOverviewPage.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/attendance/AttendanceOverviewPage.tsx), [`AttendanceCorrectionModal.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/attendance/components/AttendanceCorrectionModal.tsx)
-- **Chức năng:**
-  - Giám sát toàn bộ trạng thái quẹt thẻ của toàn bộ nhân viên theo ngày: Có mặt, Đi muộn, Về sớm, Quên quẹt thẻ ra (`MISSING_CHECKOUT`).
-  - Modal nộp và duyệt đơn giải trình giờ công.
-
-### Feature 5: `leaves` (Quản Lý & Phê Duyệt Đơn Nghỉ Phép)
-- **Tập tin chính:** [`LeaveRequestsPage.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/leaves/LeaveRequestsPage.tsx), [`LeaveRequestModal.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/leaves/components/LeaveRequestModal.tsx), [`LeaveApprovalModal.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/leaves/components/LeaveApprovalModal.tsx)
-- **Chức năng:**
-  - Bảng tổng hợp quỹ phép năm của cá nhân: Định mức, Đã nghỉ, Đang chờ duyệt, Số ngày phép còn lại.
-  - Nộp đơn xin nghỉ mới: Tự động tính số ngày xin nghỉ, chặn nộp nếu vượt quá quỹ phép hoặc trùng thời gian.
-  - Phê duyệt phân cấp dành cho Quản lý: Chấp thuận đơn (tự động trừ quỹ phép và gán thẻ phép sang bảng xếp ca tuần) hoặc Từ chối đơn có kèm lý do.
-
-### Feature 6: `shifts` (Quản Lý Danh Mục Mẫu Ca Làm Việc)
-- **Tập tin chính:** [`ShiftTemplatesPage.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/shifts/ShiftTemplatesPage.tsx), [`ShiftTemplateModal.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/shifts/components/ShiftTemplateModal.tsx)
-- **Chức năng:**
-  - Quản lý các mẫu ca chuẩn: Tên ca, Giờ bắt đầu, Giờ kết thúc, Thời gian nghỉ, Định mức quân số, Bảng chọn màu sắc trực quan (Color Picker).
-
-### Feature 7: `reports` (Trung Tâm Xuất Báo Cáo & Dữ Liệu)
-- **Tập tin chính:** [`ReportsPage.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/reports/ReportsPage.tsx), [`MonthlyAttendanceReport.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/reports/components/MonthlyAttendanceReport.tsx)
-- **Chức năng:**
-  - Xem bảng tổng hợp công tháng theo phòng ban.
-  - Bấm nút **"Xuất file Excel (.xlsx)"**: Tải trực tiếp file Excel kẻ bảng đẹp mắt sinh từ Apache POI backend.
-  - Bấm nút **"Xuất file CSV (.csv)"**: Tải file CSV định dạng UTF-8 BOM hiển thị chuẩn tiếng Việt trên máy tính người dùng.
-
-### Feature 8: `settings` (Cấu Hình Quy Tắc & Luật Lao Động)
-- **Tập tin chính:** [`SettingsPage.tsx`](file:///D:/Project/Employee%20Management/frontend/src/features/settings/SettingsPage.tsx)
-- **Chức năng:**
-  - Điều chỉnh các thông số vận hành: Chuyển đổi thời gian nghỉ tối thiểu giữa 2 ca liên tiếp (11h hoặc 12h), thay đổi thời gian ân hạn điểm danh, cấu hình mức độ cảnh báo vi phạm.
+| Phân hệ (Feature) | Thư mục | Các file then chốt | Chức năng nghiệp vụ & Trải nghiệm UI |
+| :--- | :--- | :--- | :--- |
+| **`schedule`** *(Trọng tâm)* | `features/schedule` | `SchedulePage.tsx`, `WeeklyGrid.tsx`, `scheduleService.ts`, `useScheduleStore.ts`, `AssignShiftDrawer.tsx` | - Ma trận 8 cột (Nhân viên + 7 ngày trong tuần).<br>- Hiển thị thẻ ca có mã màu, biểu tượng ca đêm, thẻ phép `[🏖️ PHÉP NĂM]`.<br>- Thanh tiến độ tổng giờ công tuần cảnh báo đỏ khi chạm/vượt trần 48h.<br>- Drawer gán ca kiểm tra vi phạm luật lao động realtime.<br>- Bộ lọc phòng ban, lọc nhân viên có xung đột, tìm kiếm.<br>- Hộp thoại phân ca hàng loạt, sao chép lịch tuần, công bố lịch, xem lịch sử thay đổi. |
+| **`dashboard`** | `features/dashboard` | `DashboardPage.tsx`, `QuickAttendanceCard.tsx` | - Tổng hợp KPI vận hành: Tổng quân số, nhân sự đang làm hôm nay, ca trực đêm, tỷ lệ đúng giờ.<br>- Thẻ Điểm Danh Nhanh: Nút 1-click Check-in/Check-out và đồng hồ bấm giờ công làm việc. |
+| **`employees`** | `features/employees` | `EmployeeListPage.tsx`, `EmployeeDetailPage.tsx`, `employeeService.ts` | - Bảng danh sách nhân viên: Tìm kiếm realtime, lọc theo phòng ban, phân trang chuẩn.<br>- Modal thêm mới/sửa thông tin nhân sự có xác thực trường.<br>- Trang hồ sơ chi tiết gồm 4 tab: Lý lịch cá nhân, Lịch sử phân ca, Bảng chấm công, Đơn xin nghỉ phép. |
+| **`attendance`** | `features/attendance` | `AttendanceOverviewPage.tsx`, `attendanceService.ts`, `useAttendanceStore.ts`, `AttendanceCorrectionModal.tsx` | - Bảng giám sát chấm công toàn công ty theo ngày: Có mặt, Đi muộn, Về sớm, Quên quẹt thẻ ra.<br>- Modal nộp đơn và duyệt giải trình giờ công của nhân viên. |
+| **`leaves`** | `features/leaves` | `LeaveRequestsPage.tsx`, `leaveService.ts`, `useLeaveStore.ts`, `LeaveApprovalModal.tsx` | - Sổ cái quỹ phép cá nhân: Hạn mức, Đã dùng, Đang chờ, Còn lại.<br>- Nộp đơn xin nghỉ tự động tính số ngày và chặn trùng lịch.<br>- Phê duyệt đơn phép phân cấp: Duyệt đơn tự động trừ quỹ phép và đồng bộ sang lưới xếp ca. |
+| **`shifts`** | `features/shifts` | `ShiftTemplatesPage.tsx`, `ShiftTemplateModal.tsx` | - Quản lý mẫu ca chuẩn: Giờ bắt đầu/kết thúc, thời gian nghỉ, định mức nhân sự tối thiểu/tối đa, bảng chọn màu trực quan (Color Picker). |
+| **`reports`** | `features/reports` | `ReportsPage.tsx`, `reportService.ts`, `MonthlyAttendanceReport.tsx` | - Xem bảng chấm công tổng hợp tháng.<br>- Nút tải file Excel `.xlsx` nguyên bản kẻ bảng định dạng đẹp.<br>- Nút tải file CSV UTF-8 BOM hiển thị chuẩn tiếng Việt trên mọi hệ điều hành. |
+| **`settings`** | `features/settings` | `SettingsPage.tsx`, `useSettingsStore.ts` | - Cấu hình linh hoạt: Thời gian nghỉ tối thiểu giữa 2 ca liên tiếp (11h hoặc 12h), thời gian ân hạn điểm danh, trần giờ làm việc tối đa trong tuần. |
 
 ---
 
-## 5. CƠ CHẾ QUẢN LÝ TRẠNG THÁI & DỊCH VỤ (STORE & SERVICE LAYER)
+## 5. MÔ HÌNH CƠ SỞ DỮ LIỆU MYSQL 8.0 (`hrms_db`)
 
-### 1. Quản lý trạng thái (Zustand Stores)
-Frontend sử dụng **Zustand** làm kho lưu trữ trạng thái tập trung thay vì Redux cồng kềnh, mang lại hiệu năng tối đa và mã nguồn ngắn gọn:
-- [`useAuthStore.ts`](file:///D:/Project/Employee%20Management/frontend/src/store/useAuthStore.ts): Tự động cấp Token ban đầu qua Auto-Auth Bootstrap, lưu `access_token` vào `localStorage`, quản lý vai trò hiện tại và tự động đăng nhập khi đổi vai trò qua `RoleSwitcher`.
-- [`useScheduleStore.ts`](file:///D:/Project/Employee%20Management/frontend/src/store/useScheduleStore.ts): Quản lý toàn bộ vòng đời của lịch tuần, đồng bộ `scheduleId` và version JPA từ MySQL, quản lý bản đồ ca `assignmentsMap`, lưu trữ ca trực tiếp vào CSDL.
-- [`useAttendanceStore.ts`](file:///D:/Project/Employee%20Management/frontend/src/store/useAttendanceStore.ts): Lưu trữ danh sách chấm công, phát lệnh Check-in / Check-out đến máy chủ.
-- [`useLeaveStore.ts`](file:///D:/Project/Employee%20Management/frontend/src/store/useLeaveStore.ts): Quản lý sổ cái nghỉ phép, duyệt đơn và kích hoạt đồng bộ thẻ phép sang ma trận lịch.
-- [`useUIStore.ts`](file:///D:/Project/Employee%20Management/frontend/src/store/useUIStore.ts): Quản lý danh sách thông báo Toast (thành công, cảnh báo, lỗi) hiển thị góc màn hình.
-
-### 2. Tầng Dịch vụ (Service Layer & apiClient)
-- [`apiClient.ts`](file:///D:/Project/Employee%20Management/frontend/src/services/apiClient.ts):
-  - Tự động lấy JWT token từ `localStorage` và tiêm vào header `Authorization: Bearer <token>`.
-  - Làm phẳng phong bì dữ liệu chuẩn (`ApiResponse<T>` -> trả về trực tiếp `data`).
-  - Tự động nhận diện `Content-Type` nhị phân (`spreadsheetml`, `text/csv`) để chuyển thành `Blob` và kích hoạt trình tải file của trình duyệt.
-- **7 Dịch vụ miền:** [`authService`](file:///D:/Project/Employee%20Management/frontend/src/services/authService.ts), [`departmentService`](file:///D:/Project/Employee%20Management/frontend/src/services/departmentService.ts), [`employeeService`](file:///D:/Project/Employee%20Management/frontend/src/services/employeeService.ts), [`scheduleService`](file:///D:/Project/Employee%20Management/frontend/src/services/scheduleService.ts), [`attendanceService`](file:///D:/Project/Employee%20Management/frontend/src/services/attendanceService.ts), [`leaveService`](file:///D:/Project/Employee%20Management/frontend/src/services/leaveService.ts), [`reportService`](file:///D:/Project/Employee%20Management/frontend/src/services/reportService.ts).
-
----
-
-## 6. MÔ HÌNH CƠ SỞ DỮ LIỆU MYSQL (`hrms_db`)
-
-Hệ thống cơ sở dữ liệu được quản lý tự động bằng **Flyway Migrations** qua 3 tệp kịch bản:
+Cơ sở dữ liệu được quản lý tự động thông qua **Flyway Migrations** tại thư mục [`backend/src/main/resources/db/migration`](file:///D:/Project/Employee%20Management/backend/src/main/resources/db/migration):
 
 ```
 [V1__init_schema.sql] ──> [V2__seed_master_data.sql] ──> [V3__seed_admin_user.sql]
-   (Tạo 17 bảng)               (Dữ liệu mẫu ca, phòng ban)       (Tài khoản & phân quyền)
+  (Khởi tạo 17 bảng)         (Ca mẫu, phòng ban, ngày lễ)        (Tài khoản & phân quyền)
 ```
 
-| Tên Bảng (Table) | Mô tả Nghiệp Vụ | Quan Hệ Khóa Ngoại (Foreign Keys) |
+| Tên Bảng (Table) | Mô tả Nghiệp Vụ | Ràng Buộc Khóa Ngoại (Foreign Keys) |
 | :--- | :--- | :--- |
-| `users` | Tài khoản đăng nhập hệ thống, mật khẩu hash BCrypt | - |
+| `users` | Tài khoản đăng nhập hệ thống, mật khẩu mã hóa BCrypt | - |
 | `roles` | Danh mục vai trò: ADMIN, HR_MANAGER, DEPT_MANAGER, EMPLOYEE | - |
-| `user_roles` | Bảng liên kết đa-đa giữa Người dùng và Vai trò | `user_id -> users`, `role_id -> roles` |
-| `departments` | Danh mục phòng ban, hỗ trợ cây phân cấp | `parent_department_id -> departments`, `manager_id -> employees` |
-| `positions` | Danh mục chức danh, vị trí việc làm | - |
-| `employees` | Hồ sơ nhân sự, trạng thái hợp đồng, khóa `@Version` | `department_id -> departments`, `position_id -> positions`, `manager_id -> employees`, `user_id -> users` |
-| `work_shifts` | Danh mục mẫu ca làm việc, cờ qua đêm, màu sắc | - |
-| `schedules` | Quản lý kỳ lịch theo tuần và phòng ban, trạng thái DRAFT/PUBLISHED | `department_id -> departments` |
-| `shift_assignments` | Bản ghi phân ca cụ thể của nhân viên, chứa dữ liệu đóng băng Snapshot | `schedule_id -> schedules`, `employee_id -> employees`, `work_shift_id -> work_shifts` |
+| `user_roles` | Bảng liên kết nhiều - nhiều giữa Tài khoản và Vai trò | `user_id -> users`, `role_id -> roles` |
+| `departments` | Danh mục phòng ban, hỗ trợ cây phân cấp cha - con | `parent_department_id -> departments`, `manager_id -> employees` |
+| `positions` | Danh mục chức danh, vị trí việc làm chuyên môn | - |
+| `employees` | Hồ sơ nhân sự, trạng thái làm việc, trường khóa `@Version` | `department_id -> departments`, `position_id -> positions`, `manager_id -> employees`, `user_id -> users` |
+| `work_shifts` | Danh mục mẫu ca làm việc, cờ qua đêm, định mức quân số, mã màu | - |
+| `schedules` | Quản lý kỳ lịch theo tuần và phòng ban, trạng thái DRAFT / PUBLISHED | `department_id -> departments` |
+| `shift_assignments` | Bản ghi phân ca nhân viên, chứa dữ liệu Snapshot đóng băng | `schedule_id -> schedules`, `employee_id -> employees`, `work_shift_id -> work_shifts` |
 | `schedule_change_history` | Nhật ký kiểm toán các thay đổi ca sau khi lịch đã công bố | `schedule_id -> schedules`, `shift_assignment_id -> shift_assignments`, `employee_id -> employees` |
-| `attendance_records` | Bản ghi chấm công quẹt thẻ vào/ra, số phút muộn, giờ đêm, giờ OT | `employee_id -> employees`, `shift_assignment_id -> shift_assignments` |
-| `attendance_corrections` | Đơn giải trình giờ công của nhân viên và lịch sử phê duyệt | `attendance_record_id -> attendance_records`, `employee_id -> employees`, `reviewed_by -> users` |
+| `attendance_records` | Bản ghi chấm công quẹt thẻ vào/ra, số phút muộn, giờ làm đêm | `employee_id -> employees`, `shift_assignment_id -> shift_assignments` |
+| `attendance_corrections` | Đơn giải trình giờ công quên quẹt thẻ và lịch sử xét duyệt | `attendance_record_id -> attendance_records`, `employee_id -> employees`, `reviewed_by -> users` |
 | `leave_types` | Danh mục loại nghỉ phép (phép năm, việc riêng, ốm đau, không lương) | - |
-| `leave_balances` | Sổ cái quỹ phép năm của từng nhân viên theo từng năm | `employee_id -> employees`, `leave_type_id -> leave_types` |
-| `leave_requests` | Đơn xin nghỉ phép và trạng thái phê duyệt | `employee_id -> employees`, `leave_type_id -> leave_types`, `tier1_reviewed_by -> users` |
-| `company_holidays` | Lịch nghỉ Lễ, Tết chính thức của công ty | - |
+| `leave_balances` | Sổ cái theo dõi quỹ phép năm của từng nhân viên theo từng năm | `employee_id -> employees`, `leave_type_id -> leave_types` |
+| `leave_requests` | Đơn xin nghỉ phép và quy trình phê duyệt phân cấp | `employee_id -> employees`, `leave_type_id -> leave_types`, `tier1_reviewed_by -> users` |
+| `company_holidays` | Lịch ngày nghỉ Lễ, Tết chính thức của công ty | - |
 | `system_settings` | Bảng cấu hình các tham số động theo Luật Lao Động 2019 | - |
 
 ---
 
-## 7. HƯỚNG DẪN VẬN HÀNH DÀNH CHO DEVELOPER
+## 6. HƯỚNG DẪN VẬN HÀNH DÀNH CHO DEVELOPER
 
 ### 1. Khởi động CSDL MySQL & Phân hệ Backend
 Yêu cầu: Đã cài MySQL 8.0 lắng nghe cổng 3306 (database `hrms_db`, user `root`, password `123456`).
@@ -343,8 +293,8 @@ Yêu cầu: Đã cài MySQL 8.0 lắng nghe cổng 3306 (database `hrms_db`, use
 cd "D:\Project\Employee Management\backend"
 mvn spring-boot:run
 ```
-- Máy chủ Spring Boot sẽ chạy tại: `http://localhost:8080`.
-- Tài liệu API tương tác trực tiếp Swagger UI: `http://localhost:8080/swagger-ui.html`.
+- Máy chủ Spring Boot chạy tại: `http://localhost:8080`.
+- Tài liệu tương tác API Swagger UI: `http://localhost:8080/swagger-ui.html`.
 
 ### 2. Khởi động Phân hệ Frontend
 ```powershell
@@ -352,25 +302,25 @@ cd "D:\Project\Employee Management\frontend"
 npm run dev
 ```
 - Ứng dụng web mở tại: `http://localhost:5173`.
-- Tự động gọi API thực tế tới Backend qua Reverse Proxy mà không gặp bất kỳ lỗi CORS nào.
+- Proxy reverse tự động chuyển tiếp request `/api/*` tới backend cổng 8080.
 
-### 3. Kiểm tra chất lượng & Chạy tự động kiểm thử
+### 3. Chạy Toàn Bộ Kiểm Thử Tự Động (Automated Testing)
 ```powershell
-# Kiểm thử Frontend (35 tests):
+# Chạy 35 bài kiểm thử Frontend Vitest:
 cd "D:\Project\Employee Management\frontend"
 npm test -- --run
 
-# Biên dịch Production Frontend:
+# Biên dịch kiểm tra lỗi TypeScript & Build Production:
 npm run build
 
-# Kiểm thử Backend (36 tests):
+# Chạy 36 bài kiểm thử Backend JUnit 5 & Spring Boot Test:
 cd "D:\Project\Employee Management\backend"
 mvn test
 ```
 
-### 4. Tài khoản Đăng nhập & Thử nghiệm Mẫu
+### 4. Tài Khoản Khởi Tạo Mẫu (Seed Accounts)
 | Tài khoản (Username) | Mật khẩu (Password) | Vai trò (Role) | Nhân viên đại diện | Quyền hạn chính |
 | :--- | :--- | :--- | :--- | :--- |
-| `admin` | `Admin@123` | **ROLE_ADMIN** | Đinh Thị Uyên (EMP-021) | Toàn quyền quản trị, cấu hình, xuất báo cáo, duyệt lịch |
-| `manager` | `Admin@123` | **ROLE_DEPT_MANAGER** | Nguyễn Văn An (EMP-001) | Quản lý phòng ban, xếp ca tuần, duyệt đơn phép |
-| `employee` | `Admin@123` | **ROLE_EMPLOYEE** | Trần Thị Bích (EMP-002) | Xem lịch làm việc cá nhân, chấm công, nộp đơn nghỉ |
+| `admin` | `Admin@123` | **ROLE_ADMIN** | Đinh Thị Uyên (EMP-021) | Toàn quyền quản trị hệ thống, cấu hình tham số, xuất báo cáo, phân quyền |
+| `manager` | `Admin@123` | **ROLE_DEPT_MANAGER** | Nguyễn Văn An (EMP-001) | Quản lý phòng ban, xếp ca tuần, phê duyệt đơn phép và giải trình chấm công |
+| `employee` | `Admin@123` | **ROLE_EMPLOYEE** | Trần Thị Bích (EMP-002) | Xem lịch cá nhân, bấm điểm danh nhanh vào/ra ca, nộp đơn xin nghỉ phép |

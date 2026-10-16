@@ -129,6 +129,16 @@ class EmployeeControllerTest {
     }
 
     @Test
+    void testDeleteEmployee_DepartmentManager_Conflict() throws Exception {
+        // Employee ID 1 (Nguyễn Văn An) is manager of department 1
+        mockMvc.perform(delete("/api/v1/employees/1")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.error.message", containsString("Trưởng phòng")));
+    }
+
+    @Test
     void testUpdateEmployee_OptimisticLockFailure() throws Exception {
         // 1. Get employee 1
         String empRes = mockMvc.perform(get("/api/v1/employees/1")

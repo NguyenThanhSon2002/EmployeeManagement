@@ -65,7 +65,7 @@ public class EmployeeController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER')")
     @Operation(summary = "Xóa mềm hồ sơ nhân viên")
     public ApiResponse<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
