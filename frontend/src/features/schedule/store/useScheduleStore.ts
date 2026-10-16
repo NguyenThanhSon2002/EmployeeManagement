@@ -12,13 +12,6 @@ import type {
   RoleType,
 } from '@/types/domain.types';
 import type { ScheduleFilterOptions } from '@/types/schedule.types';
-import {
-  MOCK_EMPLOYEES,
-  MOCK_SHIFT_TEMPLATES,
-  getMockLeaves,
-  getMockHolidays,
-  generateDeterministicSeedData,
-} from '@/test/fixtures';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import {
   validateAllShiftConflicts,
@@ -94,42 +87,6 @@ interface ScheduleState {
 }
 
 function initializeStateFromSeed() {
-  const isTestMode = import.meta.env.MODE === 'test';
-  if (isTestMode) {
-    const seed = generateDeterministicSeedData(new Date());
-    const currentMondayStr = format(seed.baseMonday, 'yyyy-MM-dd');
-    const leaves = getMockLeaves(seed.baseMonday);
-    const holidays = getMockHolidays(seed.baseMonday);
-
-    const assignmentsMap: Record<string, ShiftAssignment> = {};
-    for (const a of seed.assignments) {
-      assignmentsMap[`${a.employeeId}_${a.workDate}`] = a;
-    }
-
-    return {
-      currentStartDate: currentMondayStr,
-      scheduleId: 102,
-      scheduleStatus: 'DRAFT' as ScheduleStatus,
-      scheduleVersion: 1,
-      publishedAt: null as string | null,
-      assignments: assignmentsMap,
-      conflicts: {} as Record<string, ScheduleConflict[]>,
-      changeHistory: [] as ChangeHistoryEntry[],
-      viewMode: 'WEEK' as const,
-      filterOptions: {
-        departmentId: 2, // OPS
-        searchTerm: '',
-        shiftCodeFilter: '',
-        onlyShowConflicts: false,
-      },
-      employees: MOCK_EMPLOYEES,
-      shiftTemplates: MOCK_SHIFT_TEMPLATES,
-      approvedLeaves: leaves,
-      holidays: holidays,
-    };
-  }
-
-  // Pure live mode in browser runtime
   const today = new Date();
   const dayOfWeek = today.getDay();
   const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
