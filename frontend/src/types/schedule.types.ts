@@ -1,4 +1,4 @@
-import type { ShiftAssignment, ScheduleConflict, LeaveRequest, CompanyHoliday } from './domain.types';
+import type { CompanyHoliday } from './domain.types';
 
 /** Filter options for the weekly schedule matrix */
 export interface ScheduleFilterOptions {
@@ -6,17 +6,6 @@ export interface ScheduleFilterOptions {
   searchTerm: string;
   shiftCodeFilter: string;
   onlyShowConflicts: boolean;
-}
-
-/** State and content rendered inside a single cell of the matrix */
-export interface ScheduleCellData {
-  employeeId: number;
-  workDate: string; // YYYY-MM-DD
-  assignment: ShiftAssignment | null;
-  conflicts: ScheduleConflict[];
-  approvedLeave: LeaveRequest | null;
-  holiday: CompanyHoliday | null;
-  isLocked: boolean; // e.g. inactive employee or past date
 }
 
 /** Day header representation */

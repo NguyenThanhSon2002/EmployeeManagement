@@ -6,8 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vitest run --pool=forks",
-    "test:watch": "vitest",
     "lint": "oxlint",
     "preview": "vite preview"
   },
