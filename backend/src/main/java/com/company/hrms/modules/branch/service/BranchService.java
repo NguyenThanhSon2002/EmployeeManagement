@@ -5,6 +5,7 @@ import com.company.hrms.common.exception.ResourceNotFoundException;
 import com.company.hrms.modules.branch.domain.Branch;
 import com.company.hrms.modules.branch.dto.BranchDto;
 import com.company.hrms.modules.branch.repository.BranchRepository;
+import com.company.hrms.modules.employee.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +16,11 @@ import java.util.stream.Collectors;
 public class BranchService {
 
     private final BranchRepository branchRepository;
+    private final EmployeeRepository employeeRepository;
 
-    public BranchService(BranchRepository branchRepository) {
+    public BranchService(BranchRepository branchRepository, EmployeeRepository employeeRepository) {
         this.branchRepository = branchRepository;
+        this.employeeRepository = employeeRepository;
     }
 
     @Transactional(readOnly = true)
@@ -73,6 +76,13 @@ public class BranchService {
     public void deleteBranch(Long id) {
         Branch branch = branchRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Chi nhánh", id));
+
+        long employeeCount = employeeRepository.countByBranchIdAndDeletedAtIsNull(id);
+        if (employeeCount > 0) {
+            throw new ResourceConflictException("Không thể xóa chi nhánh vì vẫn còn " + employeeCount 
+                    + " nhân sự đang trực thuộc. Vui lòng điều chuyển nhân sự sang cơ sở khác trước khi xóa.");
+        }
+
         branch.softDelete();
         branchRepository.save(branch);
     }

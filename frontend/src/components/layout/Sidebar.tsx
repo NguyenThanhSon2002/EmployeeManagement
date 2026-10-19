@@ -4,6 +4,7 @@ import {
   CalendarDays,
   LayoutDashboard,
   Users,
+  Building2,
   Clock,
   Layers,
   Palmtree,
@@ -55,6 +56,11 @@ const NAV_SECTIONS: NavSection[] = [
         path: ROUTE_PATHS.EMPLOYEES,
         label: 'Nhân Sự',
         icon: <Users size={18} />,
+      },
+      {
+        path: ROUTE_PATHS.BRANCHES,
+        label: 'Chi Nhánh',
+        icon: <Building2 size={18} />,
       },
       {
         path: ROUTE_PATHS.SHIFTS,
