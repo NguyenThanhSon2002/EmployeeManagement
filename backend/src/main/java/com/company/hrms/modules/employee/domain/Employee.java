@@ -36,8 +36,8 @@ public class Employee extends BaseAuditableEntity {
     @Column(name = "address", length = 255)
     private String address;
 
-    @Column(name = "department_id", nullable = false)
-    private Long departmentId;
+    @Column(name = "branch_id", nullable = false)
+    private Long branchId;
 
     @Column(name = "position_id", nullable = false)
     private Long positionId;
@@ -78,8 +78,8 @@ public class Employee extends BaseAuditableEntity {
     public void setGender(String gender) { this.gender = gender; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
-    public Long getDepartmentId() { return departmentId; }
-    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
     public Long getPositionId() { return positionId; }
     public void setPositionId(Long positionId) { this.positionId = positionId; }
     public Long getManagerId() { return managerId; }

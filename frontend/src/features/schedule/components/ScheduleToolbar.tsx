@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Department, ScheduleStatus, RoleType } from '@/types/domain.types';
+import type { Branch, ScheduleStatus, RoleType } from '@/types/domain.types';
 import { formatDateVi, offsetWeeks } from '@/utils/date.utils';
 import {
   ChevronLeft,
@@ -16,15 +16,15 @@ import {
 
 interface ScheduleToolbarProps {
   baseMonday: Date;
-  departments: Department[];
-  selectedDeptId: number;
+  branches: Branch[];
+  selectedBranchId: number;
   scheduleStatus: ScheduleStatus;
   viewMode: 'WEEK' | 'MONTH';
   currentRole: RoleType;
   onPrevWeek: () => void;
   onNextWeek: () => void;
   onToday: () => void;
-  onSelectDept: (deptId: number) => void;
+  onSelectBranch: (branchId: number) => void;
   onToggleViewMode: (mode: 'WEEK' | 'MONTH') => void;
   onOpenPublish: () => void;
   onOpenCopyWeek: () => void;
@@ -36,15 +36,15 @@ interface ScheduleToolbarProps {
 
 export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   baseMonday,
-  departments,
-  selectedDeptId,
+  branches,
+  selectedBranchId,
   scheduleStatus,
   viewMode,
   currentRole,
   onPrevWeek,
   onNextWeek,
   onToday,
-  onSelectDept,
+  onSelectBranch,
   onToggleViewMode,
   onOpenPublish,
   onOpenCopyWeek,
@@ -190,21 +190,22 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
         )}
       </div>
 
-      {/* Center: Department & Mode Selectors */}
+      {/* Center: Branch & Mode Selectors */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* Department Dropdown */}
+        {/* Branch Dropdown */}
         <select
           className="input-base"
-          value={selectedDeptId}
-          onChange={(e) => onSelectDept(Number(e.target.value))}
-          style={{ height: 34, minWidth: 190, fontSize: '12.5px', fontWeight: 500 }}
+          value={selectedBranchId}
+          onChange={(e) => onSelectBranch(Number(e.target.value))}
+          style={{ height: 34, minWidth: 200, fontSize: '12.5px', fontWeight: 500 }}
         >
-          {departments.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.departmentName}
+          {branches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.branchName}
             </option>
           ))}
         </select>
+
 
         {/* View Mode Toggle Pill */}
         <div

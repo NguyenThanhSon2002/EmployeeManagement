@@ -23,7 +23,7 @@ const DEFAULT_INITIAL_USER: Employee = {
   fullName: 'Đinh Thị Uyên',
   email: 'admin@company.com',
   phoneNumber: '0921234567',
-  departmentId: 2,
+  branchId: 1,
   positionId: 3,
   managerId: null,
   employmentStatus: 'OFFICIAL',
@@ -32,7 +32,7 @@ const DEFAULT_INITIAL_USER: Employee = {
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  currentRole: 'ROLE_ADMIN',
+  currentRole: 'ROLE_DIRECTOR',
   currentUser: DEFAULT_INITIAL_USER,
   token: localStorage.getItem('access_token'),
   isAuthenticated: !!localStorage.getItem('access_token') || import.meta.env.MODE === 'test',
@@ -40,9 +40,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setRole: (role: RoleType) => {
     let username = 'admin';
-    if (role === 'ROLE_ADMIN') {
+    if (role === 'ROLE_DIRECTOR' || role === 'ROLE_ADMIN') {
       username = 'admin';
-    } else if (role === 'ROLE_DEPT_MANAGER') {
+    } else if (role === 'ROLE_MANAGER' || role === 'ROLE_DEPT_MANAGER') {
       username = 'manager';
     } else if (role === 'ROLE_EMPLOYEE') {
       username = 'employee';
@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const res = await authService.login({ username, password });
       const userRole = (res.user.roles && res.user.roles.length > 0
         ? res.user.roles[0]
-        : 'ROLE_ADMIN') as RoleType;
+        : 'ROLE_DIRECTOR') as RoleType;
 
       const employeeObj: Employee = {
         id: res.user.employee_id || 1,
@@ -70,7 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: res.user.email,
         employeeCode: res.user.username.toUpperCase(),
         phoneNumber: '',
-        departmentId: 1,
+        branchId: 1,
         positionId: 1,
         managerId: null,
         employmentStatus: 'OFFICIAL',
@@ -98,7 +98,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       token: null,
       isAuthenticated: false,
-      currentRole: 'ROLE_ADMIN',
+      currentRole: 'ROLE_DIRECTOR',
       currentUser: DEFAULT_INITIAL_USER,
     });
   },
@@ -111,14 +111,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (token) {
       try {
         const user = await authService.getCurrentUser();
-        const userRole = (user.roles && user.roles.length > 0 ? user.roles[0] : 'ROLE_ADMIN') as RoleType;
+        const userRole = (user.roles && user.roles.length > 0 ? user.roles[0] : 'ROLE_DIRECTOR') as RoleType;
         const employeeObj: Employee = {
           id: user.employee_id || 1,
           fullName: user.full_name || user.username,
           email: user.email,
           employeeCode: user.username.toUpperCase(),
           phoneNumber: '',
-          departmentId: 1,
+          branchId: 1,
           positionId: 1,
           managerId: null,
           employmentStatus: 'OFFICIAL',

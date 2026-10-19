@@ -3,16 +3,18 @@
  * Conforms 100% to docs/10-frontend-architecture-plan.md, docs/03-database-design.md, and docs/04-api-specification.md
  */
 
-/** User roles in the system */
-export type RoleType = 'ROLE_ADMIN' | 'ROLE_HR_MANAGER' | 'ROLE_DEPT_MANAGER' | 'ROLE_EMPLOYEE';
+/** User roles in the system (3 Canonical Roles: Director, Manager, Employee) */
+export type RoleType = 'ROLE_DIRECTOR' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE' | 'ROLE_ADMIN' | 'ROLE_HR_MANAGER' | 'ROLE_DEPT_MANAGER';
 
-/** Department */
-export interface Department {
+/** Branch / Chi nhánh - Cơ sở làm việc */
+export interface Branch {
   id: number;
-  departmentCode: string;
-  departmentName: string;
-  managerId: number | null;
-  parentDepartmentId?: number | null;
+  branchCode: string;
+  branchName: string;
+  address?: string;
+  phoneNumber?: string;
+  managerId?: number | null;
+  isActive: boolean;
 }
 
 /** Job Position / Title */
@@ -32,7 +34,7 @@ export interface Employee {
   fullName: string;
   email: string;
   phoneNumber: string;
-  departmentId: number;
+  branchId: number;
   positionId: number;
   managerId: number | null;
   employmentStatus: EmploymentStatus;
@@ -46,6 +48,18 @@ export interface Employee {
   address?: string;
   employmentType?: string;
 }
+
+/** Lịch khả dụng làm việc của nhân viên theo ngày trong tuần */
+export interface EmployeeAvailability {
+  employeeId: number;
+  /** Thứ trong tuần: 1 = Thứ Hai, 2 = Thứ Ba, ..., 7 = Chủ Nhật */
+  dayOfWeek: number;
+  /** Danh sách ID các mẫu ca (ShiftTemplate.id) mà nhân viên đăng ký làm được */
+  shiftTemplateIds: number[];
+}
+
+/** Bản đồ tra cứu nhanh: employeeId -> dayOfWeek (1..7) -> shiftTemplateIds */
+export type AvailabilityMap = Record<number, Record<number, number[]>>;
 
 /** Shift Template (Work Shift Definition) */
 export interface ShiftTemplate {
@@ -70,7 +84,7 @@ export type ScheduleStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 /** Weekly Schedule Container */
 export interface ScheduleWeek {
   id: number;
-  departmentId: number;
+  branchId: number;
   startDate: string; // Monday YYYY-MM-DD
   endDate: string;   // Sunday YYYY-MM-DD
   status: ScheduleStatus;
@@ -109,7 +123,7 @@ export interface ShiftAssignment {
 export type ConflictSeverity = 'MANDATORY' | 'WARNING';
 
 /** Rule codes for scheduling business rules */
-export type ConflictRuleCode = 'BR-001' | 'BR-002' | 'BR-003' | 'BR-004' | 'BR-005' | 'BR-006' | 'BR-007';
+export type ConflictRuleCode = 'BR-001' | 'BR-002' | 'BR-003' | 'BR-004' | 'BR-005' | 'BR-006' | 'BR-007' | 'BR-DAILY-LIMIT';
 
 /** Scheduling Conflict Object */
 export interface ScheduleConflict {

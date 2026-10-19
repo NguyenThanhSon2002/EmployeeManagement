@@ -2,8 +2,8 @@ package com.company.hrms.modules.schedule.service;
 
 import com.company.hrms.common.exception.BusinessException;
 import com.company.hrms.common.exception.ResourceNotFoundException;
-import com.company.hrms.modules.department.domain.Department;
-import com.company.hrms.modules.department.repository.DepartmentRepository;
+import com.company.hrms.modules.branch.domain.Branch;
+import com.company.hrms.modules.branch.repository.BranchRepository;
 import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
 import com.company.hrms.modules.schedule.domain.CompanyHoliday;
@@ -38,7 +38,7 @@ public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final ShiftAssignmentRepository assignmentRepository;
     private final ScheduleChangeHistoryRepository historyRepository;
-    private final DepartmentRepository departmentRepository;
+    private final BranchRepository branchRepository;
     private final EmployeeRepository employeeRepository;
     private final WorkShiftRepository workShiftRepository;
     private final WorkShiftService workShiftService;
@@ -49,7 +49,7 @@ public class ScheduleService {
             ScheduleRepository scheduleRepository,
             ShiftAssignmentRepository assignmentRepository,
             ScheduleChangeHistoryRepository historyRepository,
-            DepartmentRepository departmentRepository,
+            BranchRepository branchRepository,
             EmployeeRepository employeeRepository,
             WorkShiftRepository workShiftRepository,
             WorkShiftService workShiftService,
@@ -58,7 +58,7 @@ public class ScheduleService {
         this.scheduleRepository = scheduleRepository;
         this.assignmentRepository = assignmentRepository;
         this.historyRepository = historyRepository;
-        this.departmentRepository = departmentRepository;
+        this.branchRepository = branchRepository;
         this.employeeRepository = employeeRepository;
         this.workShiftRepository = workShiftRepository;
         this.workShiftService = workShiftService;
@@ -67,20 +67,20 @@ public class ScheduleService {
     }
 
     @Transactional
-    public WeeklyScheduleResponse getWeeklySchedule(Long departmentId, LocalDate date) {
-        Department dept = departmentRepository.findByIdAndDeletedAtIsNull(departmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Phòng ban", departmentId));
+    public WeeklyScheduleResponse getWeeklySchedule(Long branchId, LocalDate date) {
+        Branch branch = branchRepository.findByIdAndDeletedAtIsNull(branchId)
+                .orElseThrow(() -> new ResourceNotFoundException("Chi nhánh", branchId));
 
         LocalDate monday = date.with(DayOfWeek.MONDAY);
         LocalDate sunday = monday.plusDays(6);
 
-        Schedule schedule = scheduleRepository.findByDepartmentIdAndStartDate(departmentId, monday)
+        Schedule schedule = scheduleRepository.findByBranchIdAndStartDate(branchId, monday)
                 .orElseGet(() -> {
-                    Schedule newSched = new Schedule(departmentId, monday, sunday);
+                    Schedule newSched = new Schedule(branchId, monday, sunday);
                     return scheduleRepository.save(newSched);
                 });
 
-        List<Employee> employees = employeeRepository.findAllByDepartmentIdAndDeletedAtIsNull(departmentId);
+        List<Employee> employees = employeeRepository.findAllByBranchIdAndDeletedAtIsNull(branchId);
         List<ShiftAssignment> assignments = assignmentRepository.findAllByScheduleId(schedule.getId());
 
         Map<Long, List<ShiftAssignment>> assignmentMap = assignments.stream()
@@ -88,8 +88,8 @@ public class ScheduleService {
 
         WeeklyScheduleResponse response = new WeeklyScheduleResponse();
         response.setScheduleId(schedule.getId());
-        response.setDepartmentId(dept.getId());
-        response.setDepartmentName(dept.getDepartmentName());
+        response.setBranchId(branch.getId());
+        response.setBranchName(branch.getBranchName());
         response.setStartDate(monday);
         response.setEndDate(sunday);
         response.setStatus(schedule.getStatus());
@@ -350,7 +350,7 @@ public class ScheduleService {
         schedule.setVersion(schedule.getVersion() + 1);
         Schedule saved = scheduleRepository.save(schedule);
 
-        return getWeeklySchedule(saved.getDepartmentId(), saved.getStartDate());
+        return getWeeklySchedule(saved.getBranchId(), saved.getStartDate());
     }
 
     @Transactional
@@ -364,7 +364,7 @@ public class ScheduleService {
         schedule.setVersion(schedule.getVersion() + 1);
         Schedule saved = scheduleRepository.save(schedule);
 
-        return getWeeklySchedule(saved.getDepartmentId(), saved.getStartDate());
+        return getWeeklySchedule(saved.getBranchId(), saved.getStartDate());
     }
 
     public ShiftAssignmentDto toDto(ShiftAssignment a) {

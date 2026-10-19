@@ -15,8 +15,8 @@ public class AttendanceSummaryDto {
     @JsonProperty("full_name")
     private String fullName;
 
-    @JsonProperty("department_name")
-    private String departmentName;
+    @JsonProperty("branch_name")
+    private String branchName;
 
     @JsonProperty("total_working_days")
     private Long totalWorkingDays = 0L;
@@ -48,8 +48,8 @@ public class AttendanceSummaryDto {
     public void setEmployeeCode(String employeeCode) { this.employeeCode = employeeCode; }
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
-    public String getDepartmentName() { return departmentName; }
-    public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
+    public String getBranchName() { return branchName; }
+    public void setBranchName(String branchName) { this.branchName = branchName; }
     public Long getTotalWorkingDays() { return totalWorkingDays; }
     public void setTotalWorkingDays(Long totalWorkingDays) { this.totalWorkingDays = totalWorkingDays; }
     public BigDecimal getTotalActualHours() { return totalActualHours; }

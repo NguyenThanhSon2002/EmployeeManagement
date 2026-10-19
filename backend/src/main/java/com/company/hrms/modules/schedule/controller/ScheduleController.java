@@ -27,29 +27,29 @@ public class ScheduleController {
     }
 
     @GetMapping("/weekly")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER', 'EMPLOYEE')")
-    @Operation(summary = "Lấy ma trận lịch tuần", description = "Lấy dữ liệu đầy đủ một tuần gồm nhân sự, ca phân công, mẫu ca và ngày lễ")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @Operation(summary = "Lấy ma trận lịch tuần", description = "Lấy dữ liệu đầy đủ một tuần gồm nhân sự, ca phân công, mẫu ca và ngày lễ theo chi nhánh")
     public ApiResponse<WeeklyScheduleResponse> getWeeklySchedule(
-            @RequestParam("department_id") Long departmentId,
+            @RequestParam(value = "branch_id", defaultValue = "1") Long branchId,
             @RequestParam("start_date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate) {
-        WeeklyScheduleResponse response = scheduleService.getWeeklySchedule(departmentId, startDate);
+        WeeklyScheduleResponse response = scheduleService.getWeeklySchedule(branchId, startDate);
         return ApiResponse.success(response);
     }
 
     @GetMapping("/week")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
     @Operation(summary = "Lấy ma trận lịch tuần (Alias)", description = "Hỗ trợ alias param date")
     public ApiResponse<WeeklyScheduleResponse> getWeeklyScheduleAlias(
-            @RequestParam("department_id") Long departmentId,
+            @RequestParam(value = "branch_id", defaultValue = "1") Long branchId,
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(value = "start_date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate) {
         LocalDate targetDate = date != null ? date : (startDate != null ? startDate : LocalDate.now());
-        WeeklyScheduleResponse response = scheduleService.getWeeklySchedule(departmentId, targetDate);
+        WeeklyScheduleResponse response = scheduleService.getWeeklySchedule(branchId, targetDate);
         return ApiResponse.success(response);
     }
 
     @PostMapping("/validate-conflicts")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
     @Operation(summary = "Kiểm tra xung đột xếp ca (Dry-run)", description = "Đánh giá các quy tắc BR-001 -> BR-007 mà không lưu dữ liệu")
     public ApiResponse<ConflictValidationResult> validateConflicts(@Valid @RequestBody ValidateConflictsRequest request) {
         ConflictValidationResult result = scheduleService.validateConflicts(request);
@@ -57,7 +57,7 @@ public class ScheduleController {
     }
 
     @PostMapping("/assignments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
     @Operation(summary = "Gán hoặc cập nhật phân ca đơn lẻ", description = "Xác thực xung đột, kiểm tra khóa lạc quan và ghi nhật ký")
     public ApiResponse<ShiftAssignmentDto> assignSingleShift(
             @Valid @RequestBody AssignSingleShiftRequest request,
@@ -68,7 +68,7 @@ public class ScheduleController {
     }
 
     @DeleteMapping("/assignments/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
     @Operation(summary = "Xóa một ca phân công", description = "Xóa phân ca và ghi nhận lịch sử nếu lịch đã công bố")
     public ApiResponse<Void> deleteAssignment(
             @PathVariable Long id,
@@ -80,7 +80,7 @@ public class ScheduleController {
     }
 
     @PostMapping("/bulk-assign")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
     @Operation(summary = "Gán ca hàng loạt", description = "Gán ca cho nhiều nhân sự trên một khoảng ngày trong một transaction")
     public ApiResponse<List<ShiftAssignmentDto>> bulkAssign(
             @Valid @RequestBody BulkAssignRequest request,
@@ -91,7 +91,7 @@ public class ScheduleController {
     }
 
     @PostMapping("/{id}/publish")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
     @Operation(summary = "Công bố lịch làm việc chính thức", description = "Chuyển trạng thái lịch sang PUBLISHED")
     public ApiResponse<WeeklyScheduleResponse> publishSchedule(
             @PathVariable Long id,
@@ -103,7 +103,7 @@ public class ScheduleController {
     }
 
     @PostMapping("/{id}/unpublish")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN', 'HR_MANAGER')")
     @Operation(summary = "Hủy công bố lịch", description = "Chuyển trạng thái lịch làm việc về DRAFT")
     public ApiResponse<WeeklyScheduleResponse> unpublishSchedule(
             @PathVariable Long id,

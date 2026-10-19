@@ -42,8 +42,8 @@ export interface EmployeeSchedule {
 
 export interface WeeklyScheduleData {
   schedule_id: number;
-  department_id: number;
-  department_name: string;
+  branch_id: number;
+  branch_name: string;
   start_date: string;
   end_date: string;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
@@ -72,13 +72,13 @@ export interface ConflictValidationResult {
 }
 
 export const scheduleService = {
-  async getWeeklySchedule(departmentId: number, date: string): Promise<WeeklyScheduleData> {
-    return api.get<WeeklyScheduleData>(`/schedules/weekly?department_id=${departmentId}&start_date=${date}`);
+  async getWeeklySchedule(branchId: number, date: string): Promise<WeeklyScheduleData> {
+    return api.get<WeeklyScheduleData>(`/schedules/weekly?branch_id=${branchId}&start_date=${date}`);
   },
 
-  async validateConflicts(departmentId: number, assignments: Array<{ employee_id: number; work_shift_id: number; work_date: string }>): Promise<ConflictValidationResult> {
+  async validateConflicts(branchId: number, assignments: Array<{ employee_id: number; work_shift_id: number; work_date: string }>): Promise<ConflictValidationResult> {
     return api.post<ConflictValidationResult>('/schedules/validate-conflicts', {
-      department_id: departmentId,
+      branch_id: branchId,
       assignments,
     });
   },

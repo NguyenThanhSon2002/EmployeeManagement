@@ -2,8 +2,8 @@ package com.company.hrms.modules.report.service;
 
 import com.company.hrms.modules.attendance.domain.AttendanceRecord;
 import com.company.hrms.modules.attendance.repository.AttendanceRecordRepository;
-import com.company.hrms.modules.department.domain.Department;
-import com.company.hrms.modules.department.repository.DepartmentRepository;
+import com.company.hrms.modules.branch.domain.Branch;
+import com.company.hrms.modules.branch.repository.BranchRepository;
 import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
 import com.company.hrms.modules.report.dto.AttendanceSummaryDto;
@@ -21,25 +21,25 @@ public class ReportService {
 
     private final AttendanceRecordRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
-    private final DepartmentRepository departmentRepository;
+    private final BranchRepository branchRepository;
 
     public ReportService(
             AttendanceRecordRepository attendanceRepository,
             EmployeeRepository employeeRepository,
-            DepartmentRepository departmentRepository) {
+            BranchRepository branchRepository) {
         this.attendanceRepository = attendanceRepository;
         this.employeeRepository = employeeRepository;
-        this.departmentRepository = departmentRepository;
+        this.branchRepository = branchRepository;
     }
 
     @Transactional(readOnly = true)
-    public List<AttendanceSummaryDto> getAttendanceSummary(Long departmentId, int year, int month) {
+    public List<AttendanceSummaryDto> getAttendanceSummary(Long branchId, int year, int month) {
         YearMonth ym = YearMonth.of(year, month);
         LocalDate fromDate = ym.atDay(1);
         LocalDate toDate = ym.atEndOfMonth();
 
-        List<Employee> employees = departmentId != null
-                ? employeeRepository.findAllByDepartmentIdAndDeletedAtIsNull(departmentId)
+        List<Employee> employees = branchId != null
+                ? employeeRepository.findAllByBranchIdAndDeletedAtIsNull(branchId)
                 : employeeRepository.findAll().stream().filter(e -> e.getDeletedAt() == null).collect(Collectors.toList());
 
         List<AttendanceRecord> records = attendanceRepository.findAllByWorkDateBetween(fromDate, toDate);
@@ -47,8 +47,8 @@ public class ReportService {
         Map<Long, List<AttendanceRecord>> recordsByEmp = records.stream()
                 .collect(Collectors.groupingBy(AttendanceRecord::getEmployeeId));
 
-        Map<Long, String> deptMap = departmentRepository.findAll().stream()
-                .collect(Collectors.toMap(Department::getId, Department::getDepartmentName));
+        Map<Long, String> branchMap = branchRepository.findAll().stream()
+                .collect(Collectors.toMap(Branch::getId, Branch::getBranchName));
 
         List<AttendanceSummaryDto> result = new ArrayList<>();
         for (Employee emp : employees) {
@@ -56,7 +56,7 @@ public class ReportService {
             summary.setEmployeeId(emp.getId());
             summary.setEmployeeCode(emp.getEmployeeCode());
             summary.setFullName(emp.getFullName());
-            summary.setDepartmentName(deptMap.getOrDefault(emp.getDepartmentId(), "Chưa phân bổ"));
+            summary.setBranchName(branchMap.getOrDefault(emp.getBranchId(), "Chưa phân bổ"));
 
             List<AttendanceRecord> empRecs = recordsByEmp.getOrDefault(emp.getId(), Collections.emptyList());
 

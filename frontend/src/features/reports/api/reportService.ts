@@ -4,7 +4,7 @@ export interface AttendanceSummary {
   employee_id: number;
   employee_code: string;
   full_name: string;
-  department_name: string;
+  branch_name: string;
   total_working_days: number;
   total_actual_hours: number;
   total_regular_hours: number;
@@ -15,18 +15,18 @@ export interface AttendanceSummary {
 }
 
 export const reportService = {
-  async getAttendanceSummary(departmentId?: number, year?: number, month?: number): Promise<AttendanceSummary[]> {
+  async getAttendanceSummary(branchId?: number, year?: number, month?: number): Promise<AttendanceSummary[]> {
     const query = new URLSearchParams();
-    if (departmentId) query.set('department_id', departmentId.toString());
+    if (branchId) query.set('branch_id', branchId.toString());
     if (year) query.set('year', year.toString());
     if (month) query.set('month', month.toString());
 
     return api.get<AttendanceSummary[]>(`/reports/attendance-summary?${query.toString()}`);
   },
 
-  async downloadExcel(departmentId?: number, year?: number, month?: number): Promise<void> {
+  async downloadExcel(branchId?: number, year?: number, month?: number): Promise<void> {
     const query = new URLSearchParams();
-    if (departmentId) query.set('department_id', departmentId.toString());
+    if (branchId) query.set('branch_id', branchId.toString());
     if (year) query.set('year', year.toString());
     if (month) query.set('month', month.toString());
 
@@ -41,9 +41,9 @@ export const reportService = {
     window.URL.revokeObjectURL(url);
   },
 
-  async downloadCsv(departmentId?: number, year?: number, month?: number): Promise<void> {
+  async downloadCsv(branchId?: number, year?: number, month?: number): Promise<void> {
     const query = new URLSearchParams();
-    if (departmentId) query.set('department_id', departmentId.toString());
+    if (branchId) query.set('branch_id', branchId.toString());
     if (year) query.set('year', year.toString());
     if (month) query.set('month', month.toString());
 

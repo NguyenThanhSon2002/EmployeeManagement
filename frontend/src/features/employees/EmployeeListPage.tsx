@@ -1,15 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Employee, Department } from '@/types/domain.types';
+import type { Employee, Branch } from '@/types/domain.types';
 import { EmployeeFormModal } from './components/EmployeeFormModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { employeeService } from './api/employeeService';
-import { departmentService } from '@/shared/department/departmentService';
+import { branchService } from '@/shared/branch/branchService';
 import { isMockEnabled } from '@/config/env.config';
-import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock } from 'lucide-react';
+import { useAvailabilityStore } from './store/useAvailabilityStore';
 
 const toArray = (res: any): any[] => {
   if (Array.isArray(res)) return res;
@@ -22,25 +23,25 @@ const toArray = (res: any): any[] => {
 export const EmployeeListPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useUIStore();
-  const { employees, departments, positions } = useDirectoryStore();
+  const { employees, branches, positions } = useDirectoryStore();
 
   const [employeesList, setEmployeesList] = useState<Employee[]>(employees);
-  const [departmentsList, setDepartmentsList] = useState<Department[]>(departments);
+  const [branchesList, setBranchesList] = useState<Branch[]>(branches);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDeptId, setSelectedDeptId] = useState<number>(0);
+  const [selectedBranchId, setSelectedBranchId] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
   useEffect(() => {
     if (employees.length > 0) setEmployeesList(employees);
-    if (departments.length > 0) setDepartmentsList(departments);
-  }, [employees, departments]);
+    if (branches.length > 0) setBranchesList(branches);
+  }, [employees, branches]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const { currentRole } = useAuthStore();
-  const canDelete = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER';
+  const canDelete = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER';
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -50,24 +51,35 @@ export const EmployeeListPage: React.FC = () => {
     let isMounted = true;
     const loadData = async () => {
       try {
-        const [empRes, deptRes] = await Promise.all([
-          employeeService.getEmployees({ page: 1, size: 100 }),
-          departmentService.getAllDepartments(),
+        const [empRes, branchRes] = await Promise.all([
+          employeeService.getEmployees({ page: 1, size: 100 }).catch((err) => {
+            console.warn('API getEmployees error, falling back to directory store:', err);
+            return null;
+          }),
+          branchService.getAllBranches().catch((err) => {
+            console.warn('API getAllBranches error, falling back to directory store:', err);
+            return null;
+          }),
         ]);
 
         if (!isMounted) return;
 
         const empData = toArray(empRes);
-        const deptData = toArray(deptRes);
+        const branchData = toArray(branchRes);
 
-        if (deptData && Array.isArray(deptData) && deptData.length > 0) {
-          const mappedDepts: Department[] = deptData.map((d: any) => ({
-            id: d.id,
-            departmentCode: d.department_code || d.departmentCode,
-            departmentName: d.department_name || d.departmentName,
-            managerId: d.manager_id || d.managerId || null,
+        if (branchData && Array.isArray(branchData) && branchData.length > 0) {
+          const mappedBranches: Branch[] = branchData.map((b: any) => ({
+            id: b.id,
+            branchCode: b.branch_code || b.branchCode,
+            branchName: b.branch_name || b.branchName,
+            address: b.address || '',
+            phoneNumber: b.phone_number || b.phoneNumber || '',
+            managerId: b.manager_id || b.managerId || null,
+            isActive: b.is_active !== undefined ? b.is_active : true,
           }));
-          setDepartmentsList(mappedDepts);
+          setBranchesList(mappedBranches);
+        } else if (branches.length > 0) {
+          setBranchesList(branches);
         }
 
         if (empData && Array.isArray(empData) && empData.length > 0) {
@@ -81,7 +93,7 @@ export const EmployeeListPage: React.FC = () => {
             dateOfBirth: dto.date_of_birth || dto.dateOfBirth || '',
             gender: dto.gender || 'OTHER',
             address: dto.address || '',
-            departmentId: dto.department_id || dto.departmentId || 1,
+            branchId: dto.branch_id || dto.branchId || dto.department_id || 1,
             positionId: dto.position_id || dto.positionId || 1,
             managerId: dto.manager_id || dto.managerId || null,
             employmentStatus: dto.employment_status || dto.employmentStatus || 'OFFICIAL',
@@ -91,15 +103,15 @@ export const EmployeeListPage: React.FC = () => {
             version: dto.version || 1,
           }));
           setEmployeesList(mappedEmps);
+        } else if (employees.length > 0) {
+          setEmployeesList(employees);
         }
       } catch (err) {
         if (!isMounted) return;
-        console.error('Không tải được dữ liệu nhân sự:', err);
-        addToast({
-          type: 'error',
-          title: 'Không tải được dữ liệu',
-          message: 'Không kết nối được máy chủ. Hãy kiểm tra backend đã chạy chưa.',
-        });
+        console.error('Không tải được dữ liệu nhân sự từ backend:', err);
+        if (employees.length > 0) {
+          setEmployeesList(employees);
+        }
       }
     };
 
@@ -112,7 +124,7 @@ export const EmployeeListPage: React.FC = () => {
   // Filtered List
   const filteredEmployees = useMemo(() => {
     return employeesList.filter((emp) => {
-      if (selectedDeptId !== 0 && emp.departmentId !== selectedDeptId) {
+      if (selectedBranchId !== 0 && emp.branchId !== selectedBranchId) {
         return false;
       }
       if (searchTerm) {
@@ -125,7 +137,7 @@ export const EmployeeListPage: React.FC = () => {
       }
       return true;
     });
-  }, [employeesList, searchTerm, selectedDeptId]);
+  }, [employeesList, searchTerm, selectedBranchId]);
 
   // Pagination Slice
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
@@ -150,7 +162,7 @@ export const EmployeeListPage: React.FC = () => {
       full_name: data.fullName,
       email: data.email,
       phone_number: data.phoneNumber,
-      department_id: data.departmentId,
+      branch_id: data.branchId,
       position_id: data.positionId,
       employment_status: data.employmentStatus,
       hire_date: data.hireDate,
@@ -180,7 +192,7 @@ export const EmployeeListPage: React.FC = () => {
 
     if (data.id) {
       setEmployeesList((prev) =>
-          prev.map((e) => (e.id === data.id ? ({ ...e, ...data } as Employee) : e))
+        prev.map((e) => (e.id === data.id ? ({ ...e, ...data } as Employee) : e))
       );
       addToast({
         type: 'success',
@@ -198,8 +210,8 @@ export const EmployeeListPage: React.FC = () => {
     }
   };
 
-  const getDeptName = (id: number) => {
-    return departmentsList.find((d) => d.id === id)?.departmentName || '---';
+  const getBranchName = (id: number) => {
+    return branchesList.find((b) => b.id === id)?.branchName || '---';
   };
 
   const getPositionName = (id: number) => {
@@ -250,7 +262,7 @@ export const EmployeeListPage: React.FC = () => {
             Quản Lý Hồ Sơ Nhân Sự
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-            Danh mục hồ sơ nhân viên, chức danh, phòng ban và tiến độ ký kết hợp đồng.
+            Danh mục hồ sơ nhân viên, chức danh, chi nhánh làm việc và lịch khả dụng theo ma trận ca.
           </p>
         </div>
         <button
@@ -323,20 +335,20 @@ export const EmployeeListPage: React.FC = () => {
             )}
           </div>
 
-          {/* Department Filter */}
+          {/* Branch Filter */}
           <select
             className="input-base"
-            value={selectedDeptId}
+            value={selectedBranchId}
             onChange={(e) => {
-              setSelectedDeptId(Number(e.target.value));
+              setSelectedBranchId(Number(e.target.value));
               setCurrentPage(1);
             }}
             style={{ height: 36, fontSize: '12.5px', minWidth: 200, fontWeight: 500 }}
           >
-            <option value={0}>Tất cả phòng ban</option>
-            {departmentsList.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.departmentName}
+            <option value={0}>Tất cả chi nhánh</option>
+            {branchesList.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.branchName}
               </option>
             ))}
           </select>
@@ -372,17 +384,18 @@ export const EmployeeListPage: React.FC = () => {
             >
               <th style={{ padding: '12px 16px' }}>Mã NV</th>
               <th style={{ padding: '12px 16px' }}>Họ và Tên</th>
-              <th style={{ padding: '12px 16px' }}>Phòng Ban</th>
+              <th style={{ padding: '12px 16px' }}>Chi Nhánh</th>
               <th style={{ padding: '12px 16px' }}>Chức Danh</th>
               <th style={{ padding: '12px 16px' }}>Liên Hệ</th>
               <th style={{ padding: '12px 16px' }}>Trạng Thái</th>
+              <th style={{ padding: '12px 16px' }}>Lịch Khả Dụng</th>
               <th style={{ padding: '12px 16px', textAlign: 'center' }}>Thao Tác</th>
             </tr>
           </thead>
           <tbody>
             {paginatedEmployees.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
                   Không tìm thấy nhân viên nào phù hợp với bộ lọc hiện tại.
                 </td>
               </tr>
@@ -457,7 +470,7 @@ export const EmployeeListPage: React.FC = () => {
                           fontSize: '12px',
                         }}
                       >
-                        {getDeptName(emp.departmentId)}
+                        {getBranchName(emp.branchId)}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
@@ -470,43 +483,84 @@ export const EmployeeListPage: React.FC = () => {
                       </div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>{badge}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      {(() => {
+                        const empAvail = useAvailabilityStore.getState().getAvailability(emp.id);
+                        let totalAvailSlots = 0;
+                        for (let d = 1; d <= 7; d++) {
+                          totalAvailSlots += (empAvail[d] || []).length;
+                        }
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/employees/${emp.id}?tab=AVAILABILITY`)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '4px 10px',
+                              borderRadius: 'var(--radius-md, 6px)',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              backgroundColor: totalAvailSlots > 0 ? '#ECFDF5' : '#F8FAFC',
+                              color: totalAvailSlots > 0 ? '#047857' : '#64748B',
+                              border: totalAvailSlots > 0 ? '1px solid #A7F3D0' : '1px dashed #CBD5E1',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                            title="Bấm để đăng ký / chỉnh sửa lịch làm việc khả dụng"
+                            aria-label={`Lịch làm việc khả dụng ${emp.fullName}`}
+                          >
+                            <Clock size={13} color={totalAvailSlots > 0 ? '#10B981' : '#94A3B8'} />
+                            {totalAvailSlots > 0 ? `${totalAvailSlots} ca rảnh/tuần` : 'Chưa đăng ký'}
+                          </button>
+                        );
+                      })()}
+                    </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
                         <button
                           type="button"
                           className="btn btn-default"
+                          onClick={() => navigate(`/employees/${emp.id}?tab=AVAILABILITY`)}
+                          style={{
+                            padding: '0 8px',
+                            height: 32,
+                            color: 'var(--color-primary, #2563EB)',
+                            backgroundColor: '#EFF6FF',
+                            borderColor: '#BFDBFE',
+                          }}
+                          title="Khai báo lịch làm việc khả dụng"
+                        >
+                          <Clock size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-default"
                           onClick={() => navigate(`/employees/${emp.id}`)}
                           style={{ padding: '0 8px', height: 32 }}
-                          title="Xem chi tiết hồ sơ 360 độ"
-                          aria-label={`Xem chi tiết ${emp.fullName}`}
+                          title="Xem chi tiết hồ sơ"
                         >
-                          <Eye size={15} />
+                          <Eye size={14} />
                         </button>
                         <button
                           type="button"
                           className="btn btn-default"
                           onClick={() => handleOpenEdit(emp)}
                           style={{ padding: '0 8px', height: 32 }}
-                          title="Sửa thông tin"
-                          aria-label={`Sửa ${emp.fullName}`}
+                          title="Chỉnh sửa thông tin"
                         >
-                          <Edit2 size={15} />
+                          <Edit2 size={14} />
                         </button>
                         {canDelete && (
                           <button
                             type="button"
-                            className="btn btn-default"
+                            className="btn btn-danger"
                             onClick={() => setDeletingEmployee(emp)}
-                            style={{
-                              padding: '0 8px',
-                              height: 32,
-                              color: '#DC2626',
-                              borderColor: '#FECACA',
-                            }}
+                            style={{ padding: '0 8px', height: 32 }}
                             title="Xóa hồ sơ nhân viên"
-                            aria-label={`Xóa ${emp.fullName}`}
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={14} />
                           </button>
                         )}
                       </div>
@@ -518,21 +572,22 @@ export const EmployeeListPage: React.FC = () => {
           </tbody>
         </table>
 
-        {/* Pagination Footer */}
+        {/* Pagination Toolbar */}
         <div
           style={{
             padding: '12px 18px',
-            borderTop: '1px solid var(--color-border)',
+            borderTop: '1px solid var(--color-border-subtle)',
             display: 'flex',
-            alignItems: 'center',
             justifyContent: 'space-between',
-            fontSize: 'var(--font-caption)',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 10,
+            fontSize: '12.5px',
             color: 'var(--color-text-secondary)',
-            backgroundColor: '#F8FAFC',
           }}
         >
           <div>
-            Trang <strong>{currentPage}</strong> / {totalPages}
+            Trang <strong>{currentPage}</strong> / <strong>{totalPages}</strong> (Tổng cộng {filteredEmployees.length} nhân viên)
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button
@@ -561,7 +616,7 @@ export const EmployeeListPage: React.FC = () => {
       <EmployeeFormModal
         isOpen={modalOpen}
         initialData={editingEmployee}
-        departments={departmentsList}
+        branches={branchesList}
         positions={positions}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSaveEmployee}
@@ -571,7 +626,7 @@ export const EmployeeListPage: React.FC = () => {
       <DeleteConfirmModal
         isOpen={!!deletingEmployee}
         employee={deletingEmployee}
-        departmentName={deletingEmployee ? getDeptName(deletingEmployee.departmentId) : undefined}
+        branchName={deletingEmployee ? getBranchName(deletingEmployee.branchId) : undefined}
         isDeleting={isDeleting}
         onClose={() => setDeletingEmployee(null)}
         onConfirm={handleConfirmDelete}

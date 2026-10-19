@@ -2,7 +2,7 @@ import type { ShiftAssignment, ScheduleConflict, LeaveRequest, CompanyHoliday } 
 
 /** Filter options for the weekly schedule matrix */
 export interface ScheduleFilterOptions {
-  departmentId: number;
+  branchId: number;
   searchTerm: string;
   shiftCodeFilter: string;
   onlyShowConflicts: boolean;

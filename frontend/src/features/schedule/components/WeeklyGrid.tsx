@@ -1,34 +1,44 @@
 import React from 'react';
-import type { Employee, ShiftAssignment, ScheduleConflict, LeaveRequest, CompanyHoliday } from '@/types/domain.types';
+import type {
+  Employee,
+  ShiftTemplate,
+  ShiftAssignment,
+  ScheduleConflict,
+  CompanyHoliday,
+} from '@/types/domain.types';
 import { GridHeader } from './GridHeader';
-import { EmployeeRow } from './EmployeeRow';
+import { ShiftRow } from './ShiftRow';
 import { getWeekDays, formatDateIso } from '@/utils/date.utils';
 
 interface WeeklyGridProps {
   baseMonday: Date;
+  shiftTemplates: ShiftTemplate[];
   employees: Employee[];
-  assignmentsMap: Record<string, ShiftAssignment>;
+  assignmentsMap: Record<string, ShiftAssignment[]>;
   conflictsMap: Record<string, ScheduleConflict[]>;
-  approvedLeaves: LeaveRequest[];
   holidays: CompanyHoliday[];
   canEdit: boolean;
-  onOpenAssign: (employeeId: number, workDate: string) => void;
+  onOpenAssignStaff: (shiftTemplateId: number, workDate: string) => void;
+  onRemoveAssignment: (assignmentId: number) => void;
 }
 
 export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   baseMonday,
+  shiftTemplates,
   employees,
   assignmentsMap,
   conflictsMap,
-  approvedLeaves,
   holidays,
   canEdit,
-  onOpenAssign,
+  onOpenAssignStaff,
+  onRemoveAssignment,
 }) => {
   const weekDays = getWeekDays(baseMonday);
   const todayDateStr = formatDateIso(new Date());
 
-  if (employees.length === 0) {
+  const activeTemplates = shiftTemplates.filter((t) => t.isActive);
+
+  if (activeTemplates.length === 0) {
     return (
       <div
         className="card"
@@ -38,12 +48,12 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
           color: 'var(--color-text-secondary)',
         }}
       >
-        <div style={{ fontSize: 32, marginBottom: 'var(--space-sm)' }}>🔍</div>
+        <div style={{ fontSize: 32, marginBottom: 'var(--space-sm)' }}>⏱️</div>
         <h3 style={{ fontSize: 'var(--font-h3)', marginBottom: 'var(--space-xs)' }}>
-          Không tìm thấy nhân viên phù hợp
+          Chưa có mẫu ca làm việc nào
         </h3>
         <p style={{ fontSize: 'var(--font-body)' }}>
-          Vui lòng thử điều chỉnh lại từ khóa tìm kiếm hoặc bỏ chọn bộ lọc cảnh báo.
+          Vui lòng kích hoạt hoặc thêm mới các mẫu ca (Shift Templates) để bắt đầu phân công nhân sự.
         </p>
       </div>
     );
@@ -52,8 +62,8 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   return (
     <div
       role="grid"
-      aria-label="Bảng phân ca làm việc theo tuần"
-      aria-rowcount={employees.length + 1}
+      aria-label="Bảng phân ca làm việc theo mẫu ca tuần"
+      aria-rowcount={activeTemplates.length + 1}
       aria-colcount={8}
       className="schedule-grid-container"
     >
@@ -65,19 +75,19 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
         assignmentsMap={assignmentsMap}
       />
 
-      {/* Employee Rows */}
-      {employees.map((emp) => (
-        <EmployeeRow
-          key={emp.id}
-          employee={emp}
+      {/* Shift Rows */}
+      {activeTemplates.map((template) => (
+        <ShiftRow
+          key={template.id}
+          template={template}
           weekDays={weekDays}
           assignmentsMap={assignmentsMap}
+          employees={employees}
           conflictsMap={conflictsMap}
-          approvedLeaves={approvedLeaves}
-          holidays={holidays}
           todayDateStr={todayDateStr}
           canEdit={canEdit}
-          onOpenAssign={onOpenAssign}
+          onOpenAssignDrawer={onOpenAssignStaff}
+          onRemoveAssignment={onRemoveAssignment}
         />
       ))}
     </div>
