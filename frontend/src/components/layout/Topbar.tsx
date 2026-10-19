@@ -4,9 +4,9 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { RoleSwitcher } from './RoleSwitcher';
 import { UserProfileDropdown } from './UserProfileDropdown';
-import { Clock, ChevronDown } from 'lucide-react';
+import { Clock, ChevronDown, Crown, Briefcase, User } from 'lucide-react';
+import type { RoleType } from '@/types/domain.types';
 
 export const Topbar: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +25,38 @@ export const Topbar: React.FC = () => {
   const timeFormatted = format(currentTime, 'HH:mm:ss');
   const dateFormatted = format(currentTime, "EEEE, 'ngày' dd/MM/yyyy", { locale: vi });
 
+  const getRoleBadge = (role: RoleType) => {
+    switch (role) {
+      case 'ROLE_DIRECTOR':
+        return {
+          label: 'Giám Đốc (Director)',
+          icon: <Crown size={14} color="#7C3AED" />,
+          color: '#6D28D9',
+          bg: '#F5F3FF',
+          border: '#DDD6FE',
+        };
+      case 'ROLE_MANAGER':
+        return {
+          label: 'Quản Lý (Manager)',
+          icon: <Briefcase size={14} color="#2563EB" />,
+          color: '#1D4ED8',
+          bg: '#EFF6FF',
+          border: '#BFDBFE',
+        };
+      case 'ROLE_EMPLOYEE':
+      default:
+        return {
+          label: 'Nhân Viên (Employee)',
+          icon: <User size={14} color="#059669" />,
+          color: '#047857',
+          bg: '#ECFDF5',
+          border: '#A7F3D0',
+        };
+    }
+  };
+
+  const roleBadge = getRoleBadge(currentRole);
+
   return (
     <header
       className="glass-surface"
@@ -40,24 +72,14 @@ export const Topbar: React.FC = () => {
         boxShadow: 'var(--shadow-xs)',
       }}
     >
-      {/* Left: System Title, Branch Scope & Operational Status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>
-            Hệ Thống Quản Lý Phân Ca & Nhân Sự
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-            <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-              Chi nhánh Cầu Giấy (CN_CAUGIAY)
-            </span>
-            <span style={{ color: 'var(--color-border)' }}>•</span>
-            <span className="pulse-dot-green" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#059669' }}>Hệ thống sẵn sàng</span>
-          </div>
-        </div>
+      {/* Left: System Title */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
+          Hệ Thống Quản Lý Phân Ca & Nhân Sự
+        </span>
       </div>
 
-      {/* Right Controls: Clock, Role Switcher, User Identity */}
+      {/* Right Controls: Clock, Role Badge, User Identity */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         {/* Real-time Clock GMT+7 with Tabular Monospace */}
         <div
@@ -91,8 +113,27 @@ export const Topbar: React.FC = () => {
           <span style={{ textTransform: 'capitalize', fontSize: 12 }}>{dateFormatted}</span>
         </div>
 
-        {/* Interactive Role Switcher */}
-        <RoleSwitcher />
+        {/* Current Active Role Badge (Static) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            height: 34,
+            padding: '0 12px',
+            borderRadius: 'var(--radius-full)',
+            backgroundColor: roleBadge.bg,
+            border: `1px solid ${roleBadge.border}`,
+            color: roleBadge.color,
+            fontSize: '12.5px',
+            fontWeight: 600,
+            boxShadow: 'var(--shadow-xs)',
+          }}
+          title={`Vai trò đang kích hoạt: ${roleBadge.label}`}
+        >
+          {roleBadge.icon}
+          <span>{roleBadge.label}</span>
+        </div>
 
         {/* Interactive User Profile Capsule & Dropdown */}
         <div style={{ position: 'relative' }}>

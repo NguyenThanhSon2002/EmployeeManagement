@@ -45,7 +45,7 @@ export const SettingsPage: React.FC = () => {
           Cài Đặt Hệ Thống & Tham Số Chính Sách
         </h1>
         <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-          Cấu hình các ngưỡng kiểm tra an toàn ca làm việc, thời gian nghỉ ngơi theo Bộ luật Lao động và quản lý dữ liệu demo.
+          Cấu hình các ngưỡng kiểm tra an toàn ca làm việc và thời gian nghỉ ngơi theo quy định pháp luật lao động.
         </p>
       </div>
 
@@ -68,10 +68,10 @@ export const SettingsPage: React.FC = () => {
           </div>
           <div>
             <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-              Tham Số Kiểm Tra An Toàn Phân Ca (Conflict Engine)
+              Tham Số Kiểm Tra An Toàn Phân Ca
             </h2>
             <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-              Bộ quy tắc tự động phát hiện xung đột thời gian thực (BR-001 đến BR-007)
+              Bộ quy tắc tự động phát hiện xung đột thời gian thực
             </div>
           </div>
         </div>
@@ -80,7 +80,7 @@ export const SettingsPage: React.FC = () => {
           {/* Min Rest Hours Toggle */}
           <div>
             <label style={{ display: 'block', fontWeight: 600, fontSize: '13.5px', marginBottom: 8, color: 'var(--color-text-primary)' }}>
-              Thời gian nghỉ ngơi tối thiểu giữa 2 ca làm việc (BR-006):
+              Thời gian nghỉ ngơi tối thiểu giữa 2 ca làm việc:
             </label>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               <label
@@ -108,7 +108,7 @@ export const SettingsPage: React.FC = () => {
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-text-primary)' }}>11.0 giờ</div>
                   <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                    Mặc định theo đề bài (Prompt standard)
+                    Tiêu chuẩn doanh nghiệp dịch vụ (11 giờ)
                   </div>
                 </div>
               </label>
@@ -138,7 +138,7 @@ export const SettingsPage: React.FC = () => {
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-text-primary)' }}>12.0 giờ</div>
                   <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                    Điều 110 Bộ luật Lao động 2019
+                    Quy chuẩn Bộ luật Lao động (12 giờ)
                   </div>
                 </div>
               </label>
@@ -148,7 +148,7 @@ export const SettingsPage: React.FC = () => {
           {/* Max Weekly Hours */}
           <div>
             <label style={{ display: 'block', fontWeight: 600, fontSize: '13.5px', marginBottom: 6, color: 'var(--color-text-primary)' }}>
-              Giới hạn trần giờ làm việc kế hoạch trong tuần (BR-004):
+              Giới hạn trần giờ làm việc kế hoạch trong tuần:
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <input

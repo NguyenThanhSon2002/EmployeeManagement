@@ -7,12 +7,15 @@ import com.company.hrms.modules.branch.repository.BranchRepository;
 import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.dto.EmployeeDto;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
+import com.company.hrms.modules.schedule.domain.ShiftAssignment;
+import com.company.hrms.modules.schedule.repository.ShiftAssignmentRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,10 +24,15 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final BranchRepository branchRepository;
+    private final ShiftAssignmentRepository assignmentRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository, BranchRepository branchRepository) {
+    public EmployeeService(
+            EmployeeRepository employeeRepository,
+            BranchRepository branchRepository,
+            ShiftAssignmentRepository assignmentRepository) {
         this.employeeRepository = employeeRepository;
         this.branchRepository = branchRepository;
+        this.assignmentRepository = assignmentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -84,6 +92,20 @@ public class EmployeeService {
 
         mapDtoToEntity(request, employee);
         Employee updated = employeeRepository.save(employee);
+
+        // If employee has resigned, cancel all future shift assignments
+        if ("RESIGNED".equalsIgnoreCase(updated.getEmploymentStatus()) || Boolean.FALSE.equals(updated.getIsActive())) {
+            List<ShiftAssignment> futureShifts = assignmentRepository.findAllByEmployeeIdAndWorkDateBetween(
+                    id, LocalDate.now(), LocalDate.now().plusYears(1)
+            );
+            for (ShiftAssignment shift : futureShifts) {
+                if (!"CANCELLED".equalsIgnoreCase(shift.getStatus())) {
+                    shift.setStatus("CANCELLED");
+                    assignmentRepository.save(shift);
+                }
+            }
+        }
+
         return toDto(updated);
     }
 
@@ -118,15 +140,21 @@ public class EmployeeService {
         entity.setManagerId(dto.getManagerId());
         if (dto.getEmploymentStatus() != null) {
             entity.setEmploymentStatus(dto.getEmploymentStatus());
+            if ("RESIGNED".equalsIgnoreCase(dto.getEmploymentStatus())) {
+                entity.setIsActive(false);
+            } else if (dto.getIsActive() != null) {
+                entity.setIsActive(dto.getIsActive());
+            } else {
+                entity.setIsActive(true);
+            }
+        } else if (dto.getIsActive() != null) {
+            entity.setIsActive(dto.getIsActive());
         }
         if (dto.getEmploymentType() != null) {
             entity.setEmploymentType(dto.getEmploymentType());
         }
         entity.setHireDate(dto.getHireDate());
         entity.setResignationDate(dto.getResignationDate());
-        if (dto.getIsActive() != null) {
-            entity.setIsActive(dto.getIsActive());
-        }
     }
 
     public EmployeeDto toDto(Employee entity) {

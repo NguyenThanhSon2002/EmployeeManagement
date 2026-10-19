@@ -62,7 +62,7 @@ export const LeaveRequestsPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            Quản Lý Đơn Xin Nghỉ Phép (SCR-13)
+            Quản Lý Đơn Xin Nghỉ Phép
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
             Tiếp nhận, thẩm tra quỹ phép năm và phê duyệt phân cấp đồng bộ trực tiếp sang Bảng Lịch Tuần.

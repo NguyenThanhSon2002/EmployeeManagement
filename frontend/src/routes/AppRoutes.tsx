@@ -10,6 +10,7 @@ import { ShiftTemplatesPage } from '@/features/shifts/ShiftTemplatesPage';
 import { AttendanceOverviewPage } from '@/features/attendance/AttendanceOverviewPage';
 import { LeaveRequestsPage } from '@/features/leaves/LeaveRequestsPage';
 import { ReportsPage } from '@/features/reports/ReportsPage';
+import { BranchesPage } from '@/features/branches/BranchesPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { ROUTE_PATHS } from './route-paths';
@@ -95,6 +96,7 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTE_PATHS.DASHBOARD} element={<DashboardPage />} />
         <Route path={ROUTE_PATHS.EMPLOYEES} element={<EmployeeListPage />} />
         <Route path={ROUTE_PATHS.EMPLOYEE_DETAIL} element={<EmployeeDetailPage />} />
+        <Route path={ROUTE_PATHS.BRANCHES} element={<BranchesPage />} />
         <Route path={ROUTE_PATHS.ATTENDANCE} element={<AttendanceOverviewPage />} />
         <Route path={ROUTE_PATHS.SHIFTS} element={<ShiftTemplatesPage />} />
         <Route path={ROUTE_PATHS.LEAVES} element={<LeaveRequestsPage />} />

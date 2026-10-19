@@ -189,7 +189,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
           >
             <span style={{ fontSize: '15px' }}>ℹ️</span>
             <div>
-              <strong>Tuân thủ quy định:</strong> Nhân viên sẽ được chuyển sang trạng thái <em>Đã nghỉ việc</em> và ẩn khỏi danh sách phân ca. Toàn bộ lịch sử chấm công, đơn phép và phân ca trước đây vẫn được lưu trữ bảo lưu trên hệ thống CSDL MySQL theo Luật Lao Động 2019.
+              <strong>Tuân thủ quy định:</strong> Nhân viên sẽ được chuyển sang trạng thái <em>Đã nghỉ việc</em> và ẩn khỏi danh sách phân ca. Toàn bộ lịch sử chấm công, đơn phép và phân ca trước đây vẫn được lưu trữ bảo lưu trên hệ thống theo Luật Lao Động 2019.
             </div>
           </div>
         </div>

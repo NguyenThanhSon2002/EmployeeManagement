@@ -5,6 +5,7 @@ export const ROUTE_PATHS = {
   DASHBOARD: '/dashboard',
   EMPLOYEES: '/employees',
   EMPLOYEE_DETAIL: '/employees/:id',
+  BRANCHES: '/branches',
   ATTENDANCE: '/attendance',
   SHIFTS: '/shifts',
   LEAVES: '/leaves',

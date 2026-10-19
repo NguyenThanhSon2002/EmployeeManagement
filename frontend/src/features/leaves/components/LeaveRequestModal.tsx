@@ -80,7 +80,7 @@ export const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ isOpen, on
     addToast({
       type: 'success',
       title: 'Nộp đơn xin nghỉ thành công',
-      message: `Đơn xin nghỉ ${totalDays} ngày đã được gửi và lưu vào CSDL MySQL (chờ phê duyệt).`,
+      message: `Đơn xin nghỉ ${totalDays} ngày đã được gửi thành công (chờ phê duyệt).`,
     });
     onClose();
   };
@@ -89,7 +89,7 @@ export const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ isOpen, on
     <div className="modal-backdrop">
       <div className="modal-content" style={{ maxWidth: 520 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 'var(--font-h2)', fontWeight: 600 }}>Tạo Đơn Xin Nghỉ Phép (SCR-13)</h2>
+          <h2 style={{ fontSize: 'var(--font-h2)', fontWeight: 600 }}>Tạo Đơn Xin Nghỉ Phép</h2>
           <button type="button" onClick={onClose} className="btn-icon">
             <X size={20} />
           </button>

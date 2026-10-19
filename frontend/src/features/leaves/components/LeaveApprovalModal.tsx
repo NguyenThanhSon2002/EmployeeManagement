@@ -35,7 +35,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
     addToast({
       type: 'success',
       title: 'Đã duyệt đơn nghỉ phép',
-      message: `Đơn của ${emp?.fullName} đã được chấp thuận và lưu vào CSDL MySQL. Thẻ [🏖️ PHÉP NĂM] đã tự động đồng bộ sang Bảng Lịch Tuần.`,
+      message: `Đơn của ${emp?.fullName} đã được chấp thuận thành công. Thẻ phép đã tự động đồng bộ sang Bảng Lịch Tuần.`,
     });
     onClose();
   };
@@ -53,7 +53,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
     addToast({
       type: 'info',
       title: 'Đã từ chối đơn nghỉ phép',
-      message: 'Hệ thống đã cập nhật trạng thái đơn thành TỪ CHỐI trong CSDL MySQL.',
+      message: 'Hệ thống đã cập nhật trạng thái đơn thành TỪ CHỐI.',
     });
     onClose();
   };
@@ -62,7 +62,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
     <div className="modal-backdrop">
       <div className="modal-content" style={{ maxWidth: 500 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 'var(--font-h2)', fontWeight: 600 }}>Phê Duyệt Đơn Nghỉ Phép (SCR-14)</h2>
+          <h2 style={{ fontSize: 'var(--font-h2)', fontWeight: 600 }}>Phê Duyệt Đơn Nghỉ Phép</h2>
           <button type="button" onClick={onClose} className="btn-icon">
             <X size={20} />
           </button>
@@ -127,7 +127,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
           >
             <Calendar size={16} style={{ flexShrink: 0 }} />
             <span>
-              <strong>Tự động đồng bộ:</strong> Khi bấm Chấp thuận, hệ thống tự động gán thẻ phép màu xanh lá lên Bảng Lịch Tuần (SCR-11) và kiểm tra lại xung đột ca.
+              <strong>Tự động đồng bộ:</strong> Khi bấm Chấp thuận, hệ thống tự động gán thẻ phép lên Bảng Lịch Tuần và kiểm tra lại xung đột ca.
             </span>
           </div>
 

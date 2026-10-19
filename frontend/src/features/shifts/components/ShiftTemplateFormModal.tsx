@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { ShiftTemplate } from '@/types/domain.types';
 import { X, Moon, AlertCircle, Check, Layers } from 'lucide-react';
 import { SmartTimePicker } from './SmartTimePicker';
+import { generateSlugCode } from '@/utils/code-generator.utils';
 
 interface ShiftTemplateFormModalProps {
   isOpen: boolean;
@@ -105,8 +106,8 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!shiftCode.trim() || !shiftName.trim()) {
-      setError('Vui lòng nhập đầy đủ Mã ca và Tên ca làm việc.');
+    if (!shiftName.trim()) {
+      setError('Vui lòng nhập Tên ca làm việc.');
       return;
     }
     if (Number(maxStaffing) < Number(minStaffing)) {
@@ -114,9 +115,11 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
       return;
     }
 
+    const finalShiftCode = shiftCode.trim() || generateSlugCode(shiftName, 'CA_');
+
     onSave(
       {
-        shiftCode: shiftCode.toUpperCase().trim(),
+        shiftCode: finalShiftCode.toUpperCase().trim(),
         shiftName: shiftName.trim(),
         startTime,
         endTime,
@@ -260,37 +263,20 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
               </div>
             )}
 
-            {/* Hàng 1: Mã ca & Tên ca */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 5 }}>
-                  Mã ca <span style={{ color: '#DC2626' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  className="input-base"
-                  placeholder="VD: CA_SANG"
-                  value={shiftCode}
-                  onChange={(e) => setShiftCode(e.target.value.toUpperCase())}
-                  style={{ width: '100%', textTransform: 'uppercase', fontWeight: 700 }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 5 }}>
-                  Tên ca hiển thị <span style={{ color: '#DC2626' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  className="input-base"
-                  placeholder="VD: Ca Sáng (06:00 - 14:00)"
-                  value={shiftName}
-                  onChange={(e) => setShiftName(e.target.value)}
-                  style={{ width: '100%' }}
-                  required
-                />
-              </div>
+            {/* Hàng 1: Tên ca làm việc */}
+            <div>
+              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 5 }}>
+                Tên ca làm việc <span style={{ color: '#DC2626' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className="input-base"
+                placeholder="VD: Ca Sáng, Ca Chiều, Ca Hành Chính..."
+                value={shiftName}
+                onChange={(e) => setShiftName(e.target.value)}
+                style={{ width: '100%' }}
+                required
+              />
             </div>
 
             {/* Hàng 2: Khung giờ & Nghỉ giữa ca */}
@@ -448,7 +434,7 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
             {/* Hàng 4: Bảng màu sắc & Thẻ xem trước mini */}
             <div>
               <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 8 }}>
-                Màu hiển thị trên lịch tuần (Chuẩn WCAG AA)
+                Màu hiển thị trên lịch tuần
               </span>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 {/* Color Swatches */}
@@ -502,7 +488,7 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
                     boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                   }}
                 >
-                  <span>{shiftCode || 'MÃ CA'}</span>
+                  <span>{shiftName || 'Mẫu ca mới'}</span>
                   <span>•</span>
                   <span>{startTime} - {endTime}</span>
                   {isCrossMidnight && <span style={{ fontSize: 10.5 }}>🌙 (+1)</span>}

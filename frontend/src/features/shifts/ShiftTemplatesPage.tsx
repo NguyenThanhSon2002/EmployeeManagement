@@ -6,7 +6,6 @@ import { ShiftTemplateCard } from './components/ShiftTemplateCard';
 import { ShiftTemplateFormModal } from './components/ShiftTemplateFormModal';
 import {
   Plus,
-  ShieldCheck,
   Layers,
   Sun,
   Moon,
@@ -46,7 +45,7 @@ export const ShiftTemplatesPage: React.FC = () => {
         addToast({
           type: 'success',
           title: 'Đã xóa mẫu ca',
-          message: `Mẫu ca "${target.shiftName}" đã được gỡ khỏi danh mục chuẩn trong Database.`,
+          message: `Đã xóa mẫu ca "${target.shiftName}" thành công.`,
         });
       } else {
         addToast({
@@ -65,14 +64,14 @@ export const ShiftTemplatesPage: React.FC = () => {
         addToast({
           type: 'success',
           title: 'Cập nhật thành công',
-          message: `Mẫu ca "${data.shiftName}" đã được lưu vào Database. Lịch tuần cũ vẫn được bảo vệ nguyên vẹn theo cơ chế snapshot.`,
+          message: `Đã cập nhật mẫu ca "${data.shiftName}" thành công.`,
         });
       } else {
         await addShiftTemplate(data);
         addToast({
           type: 'success',
           title: 'Thêm mẫu ca thành công',
-          message: `Mẫu ca mới "${data.shiftName}" đã được lưu vào Database và sẵn sàng phân công trên Bảng Lịch Tuần.`,
+          message: `Đã tạo mẫu ca mới "${data.shiftName}" thành công.`,
         });
       }
     } catch (err: any) {
@@ -130,11 +129,11 @@ export const ShiftTemplatesPage: React.FC = () => {
                 margin: 0,
               }}
             >
-              Danh Mục Mẫu Ca Làm Việc (SCR-10)
+              Danh Mục Mẫu Ca Làm Việc
             </h1>
           </div>
           <p style={{ color: '#64748B', marginTop: 4, fontSize: '13.5px', marginLeft: 48 }}>
-            Quản lý chuẩn hóa khung giờ ca làm việc, định biên nhân sự tối thiểu/tối đa và mã màu tương phản WCAG AA
+            Quản lý chuẩn hóa khung giờ ca làm việc, định biên nhân sự tối thiểu/tối đa và màu sắc nhận diện trực quan.
           </p>
         </div>
 
@@ -314,27 +313,7 @@ export const ShiftTemplatesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Snapshotting Notice Banner */}
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          padding: '16px 20px',
-          background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)',
-          border: '1px solid #BFDBFE',
-          borderRadius: 12,
-          color: '#1E40AF',
-          fontSize: '13.5px',
-          boxShadow: '0 2px 4px rgba(37, 99, 235, 0.05)',
-        }}
-      >
-        <ShieldCheck size={26} style={{ flexShrink: 0, color: '#2563EB' }} />
-        <div style={{ lineHeight: 1.5 }}>
-          <strong style={{ fontWeight: 800, color: '#1D4ED8' }}>Cơ chế bảo vệ Snapshotting an toàn:</strong> Khi bạn điều chỉnh giờ hoặc định biên của mẫu ca, các phân công ca đã tạo trong lịch tuần quá khứ và hiện tại hoàn toàn <strong>không bị ảnh hưởng hồi tố</strong> nhờ cơ chế lưu bản chụp (snapshot) độc lập tại thời điểm phân công.
-        </div>
-      </div>
+
 
       {/* Templates Grid */}
       {shiftTemplates.length === 0 ? (

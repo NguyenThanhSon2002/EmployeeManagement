@@ -79,7 +79,7 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
       if (hasOverlap) {
         return {
           success: false,
-          error: 'Nhân viên đã có đơn xin nghỉ phép khác trong khoảng thời gian này (BR-009).',
+          error: 'Nhân viên đã có đơn xin nghỉ phép khác trong khoảng thời gian này.',
         };
       }
 

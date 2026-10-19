@@ -59,19 +59,6 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
           <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text-primary)' }}>
             {template.shiftName}
           </span>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              padding: '1px 6px',
-              borderRadius: 4,
-              backgroundColor: `${template.colorCode || '#2563EB'}20`,
-              color: template.colorCode || '#2563EB',
-              letterSpacing: '0.04em',
-            }}
-          >
-            {template.shiftCode}
-          </span>
         </div>
 
         {/* Time and duration */}
@@ -122,10 +109,17 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
         const dateStr = formatDateIso(day);
         const isToday = dateStr === todayDateStr;
 
-        // Filter assignments matching this template and date
-        const cellAssignments = allAssignments.filter(
-          (a) => a.workShiftId === template.id && a.workDate === dateStr && a.status !== 'CANCELLED'
-        );
+        // Filter assignments matching this template and date, excluding resigned or inactive employees
+        const cellAssignments = allAssignments.filter((a) => {
+          if (a.workShiftId !== template.id || a.workDate !== dateStr || a.status === 'CANCELLED') {
+            return false;
+          }
+          const emp = employees.find((e) => e.id === a.employeeId);
+          if (!emp || emp.employmentStatus === 'RESIGNED' || emp.isActive === false) {
+            return false;
+          }
+          return true;
+        });
 
         return (
           <ShiftGridCell

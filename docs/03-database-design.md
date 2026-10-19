@@ -1,10 +1,11 @@
 # TÀI LIỆU 03: THIẾT KẾ CƠ SỞ DỮ LIỆU (DATABASE SCHEMA DESIGN)
 **Dự án:** Employee Management System  
 **Hệ quản trị CSDL:** MySQL 8.0+ (InnoDB Engine, utf8mb4_unicode_ci)  
-**Công cụ quản lý migration:** Flyway Migration  
-**Phiên bản:** 1.0.0  
-**Ngày cập nhật:** 13/10/2026  
-**Trạng thái:** Confirmed / Baseline  
+**Công cụ quản lý migration:** Flyway Migration (V1 - V5)  
+**Phiên bản:** 1.2.0  
+**Ngày cập nhật:** 19/10/2026  
+**Trạng thái:** Confirmed / Baseline (Đã chuẩn hóa Branches và Bổ sung Từ điển Dữ liệu)  
+**Từ điển dữ liệu chi tiết:** [DATA_DICTIONARY.md](./database/DATA_DICTIONARY.md)  
 
 ---
 
@@ -14,7 +15,7 @@
    - Tên bảng: Số nhiều, viết thường theo chuẩn `snake_case` (ví dụ: `employees`, `shift_assignments`, `attendance_records`).
    - Tên cột: Viết thường theo chuẩn `snake_case` (ví dụ: `employee_code`, `check_in_time`, `is_cross_midnight`).
    - Khóa chính (PK): Luôn là `id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY`.
-   - Khóa ngoại (FK): Tên bảng số ít kèm hậu tố `_id` (ví dụ: `department_id`, `work_shift_id`).
+   - Khóa ngoại (FK): Tên bảng số ít kèm hậu tố `_id` (ví dụ: `branch_id`, `work_shift_id`).
    - Cột cờ logic: Bắt đầu bằng tiền tố `is_` hoặc `has_` kiểu `BOOLEAN` (TINYINT(1)).
 2. **Quy chuẩn Lưu vết Kiểm toán (Audit Columns):**
    Mọi bảng nghiệp vụ cốt lõi đều bắt buộc có 4 cột kiểm toán hệ thống:
@@ -44,13 +45,13 @@ erDiagram
     permissions ||--o{ role_permissions : "thuộc"
     users ||--o| employees : "liên kết 1-1"
 
-    departments ||--o{ departments : "phân cấp cha-con"
-    departments ||--o{ employees : "thuộc về"
+    branches ||--o{ employees : "thuộc về"
     positions ||--o{ employees : "đảm nhiệm"
     employees ||--o{ employees : "quản lý trực tiếp"
+    employees ||--o| branches : "trưởng cơ sở"
 
     work_shifts ||--o{ shift_assignments : "mẫu gốc"
-    departments ||--o{ schedules : "lịch phòng ban"
+    branches ||--o{ schedules : "lịch chi nhánh"
     schedules ||--o{ shift_assignments : "chứa các ca"
     employees ||--o{ shift_assignments : "được phân công"
 
@@ -75,11 +76,19 @@ erDiagram
         boolean is_active
     }
 
+    branches {
+        bigint id PK
+        varchar branch_code UK
+        varchar branch_name
+        bigint manager_id FK
+        boolean is_active
+    }
+
     employees {
         bigint id PK
         varchar employee_code UK
         varchar full_name
-        bigint department_id FK
+        bigint branch_id FK
         bigint position_id FK
         varchar employment_status
         date hire_date
@@ -97,7 +106,7 @@ erDiagram
 
     schedules {
         bigint id PK
-        bigint department_id FK
+        bigint branch_id FK
         date start_date
         date end_date
         varchar status

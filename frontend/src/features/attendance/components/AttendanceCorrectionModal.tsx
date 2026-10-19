@@ -103,7 +103,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h2 style={{ fontSize: 'var(--font-h2)', fontWeight: 600 }}>
-              Giải Trình Bổ Sung Giờ Công (SCR-09)
+              Giải Trình Bổ Sung Giờ Công
             </h2>
             <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2 }}>
               Xử lý các sự cố quên quét thẻ, máy lỗi hoặc sự cố chấm công ngoài văn phòng

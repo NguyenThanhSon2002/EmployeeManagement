@@ -122,7 +122,7 @@ export const AttendanceOverviewPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            Bảng Tổng Quan Chấm Công Hàng Ngày (SCR-08)
+            Bảng Tổng Quan Chấm Công Hàng Ngày
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
             Giám sát thời gian thực giờ vào/ra, cảnh báo đi muộn, về sớm và tiếp nhận giải trình công.
@@ -131,7 +131,7 @@ export const AttendanceOverviewPage: React.FC = () => {
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button type="button" className="btn btn-default" onClick={handleOpenAllCorrections}>
-            <FileQuestion size={16} /> Quản lý Giải trình (SCR-09)
+            <FileQuestion size={16} /> Quản lý Giải trình
           </button>
           <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
             <Download size={16} /> Xuất CSV Điểm Danh

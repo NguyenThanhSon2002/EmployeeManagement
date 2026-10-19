@@ -49,6 +49,12 @@ public class WeeklyScheduleResponse {
         @JsonProperty("weekly_scheduled_hours")
         private Double weeklyScheduledHours = 0.0;
 
+        @JsonProperty("employment_status")
+        private String employmentStatus;
+
+        @JsonProperty("is_active")
+        private Boolean isActive;
+
         private List<ShiftAssignmentDto> assignments = new ArrayList<>();
 
         public EmployeeScheduleDto() {
@@ -61,12 +67,25 @@ public class WeeklyScheduleResponse {
             this.weeklyScheduledHours = 0.0;
         }
 
+        public EmployeeScheduleDto(Long employeeId, String employeeCode, String fullName, String employmentStatus, Boolean isActive) {
+            this.employeeId = employeeId;
+            this.employeeCode = employeeCode;
+            this.fullName = fullName;
+            this.employmentStatus = employmentStatus;
+            this.isActive = isActive;
+            this.weeklyScheduledHours = 0.0;
+        }
+
         public Long getEmployeeId() { return employeeId; }
         public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
         public String getEmployeeCode() { return employeeCode; }
         public void setEmployeeCode(String employeeCode) { this.employeeCode = employeeCode; }
         public String getFullName() { return fullName; }
         public void setFullName(String fullName) { this.fullName = fullName; }
+        public String getEmploymentStatus() { return employmentStatus; }
+        public void setEmploymentStatus(String employmentStatus) { this.employmentStatus = employmentStatus; }
+        public Boolean getIsActive() { return isActive; }
+        public void setIsActive(Boolean isActive) { this.isActive = isActive; }
         public Double getWeeklyScheduledHours() { return weeklyScheduledHours; }
         public void setWeeklyScheduledHours(Double hours) { this.weeklyScheduledHours = hours; }
         public List<ShiftAssignmentDto> getAssignments() { return assignments; }

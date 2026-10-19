@@ -100,7 +100,7 @@ export const LateEarlyReport: React.FC = () => {
         </div>
 
         <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
-          <Download size={16} /> Xuất CSV Vi Phạm (UTF-8 BOM)
+          <Download size={16} /> Xuất Báo Cáo Vi Phạm
         </button>
       </div>
 

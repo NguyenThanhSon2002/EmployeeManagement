@@ -134,7 +134,7 @@ export const ScheduledVsActualTable: React.FC = () => {
         </div>
 
         <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
-          <Download size={16} /> Xuất CSV Đối Chiếu (UTF-8 BOM)
+          <Download size={16} /> Xuất Báo Cáo Đối Chiếu
         </button>
       </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays, format, parseISO, startOfMonth, addMonths } from 'date-fns';
 import { getWeekDays } from '@/utils/date.utils';
 import { useScheduleStore } from './store/useScheduleStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
@@ -17,6 +17,7 @@ import { AssignStaffDrawer } from './dialogs/AssignStaffDrawer';
 import { BulkAssignDialog } from './dialogs/BulkAssignDialog';
 import { CopyWeekDialog } from './dialogs/CopyWeekDialog';
 import { PublishConfirmDialog } from './dialogs/PublishConfirmDialog';
+import { UnpublishConfirmDialog } from './dialogs/UnpublishConfirmDialog';
 import { ChangeHistoryDrawer } from './dialogs/ChangeHistoryDrawer';
 import { buildWeeklyRosterCsv, downloadCsvFile } from '@/utils/csv-exporter.utils';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
@@ -44,7 +45,7 @@ export const SchedulePage: React.FC = () => {
     bulkAssign,
     copyWeek,
     publishSchedule,
-    resetDemoData,
+    unpublishSchedule,
     fetchWeeklySchedule,
   } = useScheduleStore();
 
@@ -68,9 +69,11 @@ export const SchedulePage: React.FC = () => {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [unpublishDialogOpen, setUnpublishDialogOpen] = useState(false);
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
 
   const baseMonday = useMemo(() => parseISO(currentStartDate), [currentStartDate]);
+  const [monthDate, setMonthDate] = useState<Date>(() => startOfMonth(parseISO(currentStartDate)));
 
   // Week Navigation Handlers
   const handlePrevWeek = () => {
@@ -92,11 +95,46 @@ export const SchedulePage: React.FC = () => {
     setWeek(format(currMonday, 'yyyy-MM-dd'));
   };
 
+  // Month Navigation Handlers
+  const handlePrevMonth = () => {
+    const prevM = addMonths(monthDate, -1);
+    setMonthDate(prevM);
+    const firstDay = startOfMonth(prevM);
+    const day = firstDay.getDay();
+    const diff = firstDay.getDate() - day + (day === 0 ? -6 : 1);
+    const mon = new Date(firstDay.getFullYear(), firstDay.getMonth(), diff);
+    setWeek(format(mon, 'yyyy-MM-dd'));
+  };
+
+  const handleNextMonth = () => {
+    const nextM = addMonths(monthDate, 1);
+    setMonthDate(nextM);
+    const firstDay = startOfMonth(nextM);
+    const day = firstDay.getDay();
+    const diff = firstDay.getDate() - day + (day === 0 ? -6 : 1);
+    const mon = new Date(firstDay.getFullYear(), firstDay.getMonth(), diff);
+    setWeek(format(mon, 'yyyy-MM-dd'));
+  };
+
+  const handleCurrentMonth = () => {
+    const now = new Date();
+    setMonthDate(startOfMonth(now));
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const currMonday = new Date(now.setDate(diff));
+    setWeek(format(currMonday, 'yyyy-MM-dd'));
+  };
+
   // Filter Employees
   const filteredEmployees = useMemo(() => {
     const allAssignmentsList: ShiftAssignment[] = Object.values(assignments).flat();
 
     return employees.filter((emp) => {
+      // 0. Exclude resigned staff completely from scheduling
+      if (emp.employmentStatus === 'RESIGNED') {
+        return false;
+      }
+
       // 1. Branch filter (if not 0)
       if (filterOptions.branchId && emp.branchId !== filterOptions.branchId) {
         return false;
@@ -145,6 +183,10 @@ export const SchedulePage: React.FC = () => {
 
     for (const a of allAssignmentsList) {
       if (a.workDate >= currentStartDate && a.workDate <= sundayStr && a.status !== 'CANCELLED') {
+        const emp = employees.find((e) => e.id === a.employeeId);
+        if (!emp || emp.employmentStatus === 'RESIGNED' || emp.isActive === false) {
+          continue;
+        }
         shiftsCount++;
         const { netHours } = calculateShiftDurations(
           a.snapshotStartTime,
@@ -180,7 +222,7 @@ export const SchedulePage: React.FC = () => {
       conflictCount: conflictsTotal,
       understaffedDaysCount: understaffed,
     };
-  }, [assignments, conflicts, currentStartDate, baseMonday]);
+  }, [assignments, conflicts, currentStartDate, baseMonday, employees]);
 
   // Shift-Centric Drawer Opening Handlers
   const handleOpenAssignStaff = (shiftTemplateId: number, workDate: string) => {
@@ -253,7 +295,7 @@ export const SchedulePage: React.FC = () => {
     addToast({
       type: 'success',
       title: 'Đã xuất file CSV',
-      message: `File ${filename} đã được tải về máy tính (chuẩn UTF-8 BOM).`,
+      message: `File ${filename} đã được tải về máy tính thành công.`,
     });
   };
 
@@ -279,11 +321,23 @@ export const SchedulePage: React.FC = () => {
     setPublishDialogOpen(false);
   };
 
+  // Unpublish Schedule Handler (Revert to Draft)
+  const handleConfirmUnpublish = () => {
+    unpublishSchedule();
+    addToast({
+      type: 'info',
+      title: 'Đã thu hồi công bố',
+      message: 'Lịch tuần đã được chuyển về trạng thái Bản nháp để bạn tiếp tục chỉnh sửa.',
+    });
+    setUnpublishDialogOpen(false);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {/* 1. Top Action Toolbar */}
       <ScheduleToolbar
         baseMonday={baseMonday}
+        monthDate={monthDate}
         branches={branches}
         selectedBranchId={filterOptions.branchId || (branches[0]?.id || 1)}
         scheduleStatus={scheduleStatus}
@@ -292,14 +346,22 @@ export const SchedulePage: React.FC = () => {
         onPrevWeek={handlePrevWeek}
         onNextWeek={handleNextWeek}
         onToday={handleToday}
+        onPrevMonth={handlePrevMonth}
+        onNextMonth={handleNextMonth}
+        onCurrentMonth={handleCurrentMonth}
         onSelectBranch={(branchId) => setFilters({ branchId })}
-        onToggleViewMode={setViewMode}
+        onToggleViewMode={(mode) => {
+          setViewMode(mode);
+          if (mode === 'MONTH') {
+            setMonthDate(startOfMonth(baseMonday));
+          }
+        }}
         onOpenPublish={() => setPublishDialogOpen(true)}
+        onOpenUnpublish={() => setUnpublishDialogOpen(true)}
         onOpenCopyWeek={() => setCopyDialogOpen(true)}
         onOpenBulkAssign={() => setBulkDialogOpen(true)}
         onExportCsv={handleExportCsv}
         onOpenHistory={() => setHistoryDrawerOpen(true)}
-        onResetDemo={resetDemoData}
       />
 
       {/* 2. Executive Summary Metrics Cards */}
@@ -320,7 +382,7 @@ export const SchedulePage: React.FC = () => {
         shiftCodeFilter={filterOptions.shiftCodeFilter || ''}
         onlyShowConflicts={Boolean(filterOptions.onlyShowConflicts)}
         shiftTemplates={shiftTemplates}
-        totalEmployees={employees.length}
+        totalEmployees={employees.filter((e) => e.isActive && e.employmentStatus !== 'RESIGNED').length}
         filteredCount={filteredEmployees.length}
         onSearchChange={(val) => setFilters({ searchTerm: val })}
         onShiftFilterChange={(val) => setFilters({ shiftCodeFilter: val })}
@@ -335,7 +397,7 @@ export const SchedulePage: React.FC = () => {
         <WeeklyGrid
           baseMonday={baseMonday}
           shiftTemplates={shiftTemplates}
-          employees={employees}
+          employees={filteredEmployees}
           assignmentsMap={assignments}
           conflictsMap={conflicts}
           holidays={holidays}
@@ -345,10 +407,13 @@ export const SchedulePage: React.FC = () => {
         />
       ) : (
         <MonthViewGrid
-          currentDate={baseMonday}
+          currentDate={monthDate}
           employees={filteredEmployees}
           assignmentsMap={assignments}
           holidays={holidays}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          onCurrentMonth={handleCurrentMonth}
           onSelectDay={(dateStr) => {
             const d = parseISO(dateStr);
             const day = d.getDay();
@@ -421,6 +486,13 @@ export const SchedulePage: React.FC = () => {
         conflicts={conflicts}
         onClose={() => setPublishDialogOpen(false)}
         onConfirm={handleConfirmPublish}
+      />
+
+      {/* Unpublish Confirm Dialog */}
+      <UnpublishConfirmDialog
+        isOpen={unpublishDialogOpen}
+        onClose={() => setUnpublishDialogOpen(false)}
+        onConfirm={handleConfirmUnpublish}
       />
 
       {/* Change History Drawer */}

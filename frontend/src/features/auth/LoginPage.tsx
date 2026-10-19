@@ -11,6 +11,8 @@ import {
   ShieldCheck,
   Briefcase,
   UserCheck,
+  Crown,
+  User,
   AlertCircle,
   Loader2,
   ArrowRight,
@@ -935,37 +937,189 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Secondary Enterprise / Demo Access Option */}
-          <div style={{ marginTop: 22, textAlign: 'center' }}>
-            <button
-              type="button"
-              onClick={() => setShowDemoModal(true)}
+          {/* Quick Role-based 1-Click Login Cards */}
+          <div
+            style={{
+              marginTop: 20,
+              paddingTop: 16,
+              borderTop: '1px solid #E2E8F0',
+            }}
+          >
+            <div
               style={{
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                gap: 7,
-                fontSize: 13,
-                fontWeight: 500,
-                color: '#64748B',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px 12px',
-                borderRadius: 6,
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#2563EB';
-                e.currentTarget.style.backgroundColor = '#EFF6FF';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#64748B';
-                e.currentTarget.style.backgroundColor = 'transparent';
+                justifyContent: 'space-between',
+                marginBottom: 10,
               }}
             >
-              <ShieldCheck size={16} color="#3B82F6" />
-              Đăng nhập qua Enterprise SSO / Tài khoản mẫu
-            </button>
+              <span
+                style={{
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  color: '#475569',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Tài khoản thử nghiệm (1-Click Login):
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDemoModal(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#2563EB',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                Chi tiết vai trò
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {/* Card 1: Director */}
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('admin', 'Admin@123')}
+                disabled={isSubmitting || isLoading}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '10px 6px',
+                  borderRadius: 8,
+                  border: '1px solid #E9D5FF',
+                  backgroundColor: '#FAF5FF',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  textAlign: 'center',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#9333EA';
+                  e.currentTarget.style.backgroundColor = '#F3E8FF';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#E9D5FF';
+                  e.currentTarget.style.backgroundColor = '#FAF5FF';
+                }}
+                title="Đăng nhập tài khoản Giám Đốc (admin / Admin@123)"
+              >
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 6,
+                    backgroundColor: '#EDE9FE',
+                    color: '#7C3AED',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 4,
+                  }}
+                >
+                  <Crown size={16} />
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#581C87' }}>Giám Đốc</span>
+                <span style={{ fontSize: '10.5px', color: '#7E22CE', fontFamily: 'monospace' }}>admin</span>
+              </button>
+
+              {/* Card 2: Manager */}
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('manager', 'Admin@123')}
+                disabled={isSubmitting || isLoading}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '10px 6px',
+                  borderRadius: 8,
+                  border: '1px solid #BFDBFE',
+                  backgroundColor: '#EFF6FF',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  textAlign: 'center',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#2563EB';
+                  e.currentTarget.style.backgroundColor = '#DBEAFE';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#BFDBFE';
+                  e.currentTarget.style.backgroundColor = '#EFF6FF';
+                }}
+                title="Đăng nhập tài khoản Quản Lý (manager / Admin@123)"
+              >
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 6,
+                    backgroundColor: '#DBEAFE',
+                    color: '#1D4ED8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 4,
+                  }}
+                >
+                  <Briefcase size={16} />
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#1E3A8A' }}>Quản Lý</span>
+                <span style={{ fontSize: '10.5px', color: '#1D4ED8', fontFamily: 'monospace' }}>manager</span>
+              </button>
+
+              {/* Card 3: Employee */}
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('employee', 'Admin@123')}
+                disabled={isSubmitting || isLoading}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '10px 6px',
+                  borderRadius: 8,
+                  border: '1px solid #BBF7D0',
+                  backgroundColor: '#F0FDF4',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  textAlign: 'center',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#16A34A';
+                  e.currentTarget.style.backgroundColor = '#DCFCE7';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#BBF7D0';
+                  e.currentTarget.style.backgroundColor = '#F0FDF4';
+                }}
+                title="Đăng nhập tài khoản Nhân Viên (employee / Admin@123)"
+              >
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 6,
+                    backgroundColor: '#DCFCE7',
+                    color: '#15803D',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 4,
+                  }}
+                >
+                  <User size={16} />
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#14532D' }}>Nhân Viên</span>
+                <span style={{ fontSize: '10.5px', color: '#15803D', fontFamily: 'monospace' }}>employee</span>
+              </button>
+            </div>
           </div>
         </div>
 

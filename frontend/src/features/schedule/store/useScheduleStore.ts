@@ -154,7 +154,7 @@ function initializeStateFromSeed(branchId: number = 1) {
       shiftCodeFilter: '',
       onlyShowConflicts: false,
     },
-    employees: [] as Employee[],
+    employees: useDirectoryStore.getState().employees.filter((e) => e.branchId === branchId),
     shiftTemplates: [] as ShiftTemplate[],
     approvedLeaves: [] as LeaveRequest[],
     holidays: [] as CompanyHoliday[],
@@ -241,6 +241,10 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       }
 
       if (isMockEnabled()) {
+        const fallbackEmployees = useDirectoryStore.getState().employees.filter((e) => e.branchId === branchId);
+        if (fallbackEmployees.length > 0) {
+          set({ employees: fallbackEmployees });
+        }
         get().recomputeAllConflicts();
         return;
       }
@@ -259,19 +263,25 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         const backendEmployees: Employee[] = [];
 
         for (const empSchedule of data.employees || []) {
+          const dirEmp = useDirectoryStore.getState().getEmployeeById(empSchedule.employee_id);
+          const resolvedStatus = (empSchedule as any).employment_status || (empSchedule as any).employmentStatus || dirEmp?.employmentStatus || 'OFFICIAL';
+          const resolvedIsActive = (empSchedule as any).is_active !== undefined
+            ? (empSchedule as any).is_active
+            : ((empSchedule as any).isActive !== undefined ? (empSchedule as any).isActive : (dirEmp?.isActive !== undefined ? dirEmp.isActive : resolvedStatus !== 'RESIGNED'));
+
           backendEmployees.push({
             id: empSchedule.employee_id,
             employeeCode: empSchedule.employee_code,
             fullName: empSchedule.full_name,
             email: `${empSchedule.employee_code.toLowerCase()}@example.com`,
-            phoneNumber: '',
+            phoneNumber: dirEmp?.phoneNumber || '',
             branchId: data.branch_id || branchId,
-            positionId: 1,
-            managerId: null,
-            employmentStatus: 'OFFICIAL',
-            employmentType: 'FULL_TIME',
-            hireDate: '2026-01-01',
-            isActive: true,
+            positionId: dirEmp?.positionId || 3,
+            managerId: dirEmp?.managerId || null,
+            employmentStatus: resolvedStatus,
+            employmentType: dirEmp?.employmentType || 'FULL_TIME',
+            hireDate: dirEmp?.hireDate || '2026-01-01',
+            isActive: resolvedIsActive,
           });
 
           for (const a of empSchedule.assignments || []) {

@@ -197,6 +197,21 @@ export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
                     />
                     <span style={{ fontWeight: 500 }}>{emp.fullName}</span>
                     <span style={{ color: 'var(--color-text-muted)' }}>({emp.employeeCode})</span>
+                    {emp.employmentStatus === 'ON_LEAVE' && (
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          backgroundColor: '#FEF3C7',
+                          color: '#D97706',
+                          padding: '1px 5px',
+                          borderRadius: 4,
+                          marginLeft: 'auto',
+                        }}
+                      >
+                        Nghỉ chế độ
+                      </span>
+                    )}
                   </label>
                 );
               })}
