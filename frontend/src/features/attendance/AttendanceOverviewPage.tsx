@@ -18,16 +18,16 @@ export const AttendanceOverviewPage: React.FC = () => {
   const {
     records,
     selectedDate,
-    departmentFilter,
+    branchFilter,
     setSelectedDate,
-    setDepartmentFilter,
+    setBranchFilter,
     fetchRecords,
   } = useAttendanceStore();
-  const { employees, departments } = useDirectoryStore();
+  const { employees, branches } = useDirectoryStore();
 
   React.useEffect(() => {
-    fetchRecords?.(selectedDate, departmentFilter || undefined);
-  }, [fetchRecords, selectedDate, departmentFilter]);
+    fetchRecords?.(selectedDate, branchFilter || undefined);
+  }, [fetchRecords, selectedDate, branchFilter]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,7 +38,7 @@ export const AttendanceOverviewPage: React.FC = () => {
     const emp = employees.find((e) => e.id === rec.employeeId);
     if (!emp) return false;
 
-    if (departmentFilter && emp.departmentId !== departmentFilter) return false;
+    if (branchFilter && emp.branchId !== branchFilter) return false;
 
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
@@ -70,7 +70,7 @@ export const AttendanceOverviewPage: React.FC = () => {
     const columns = [
       { key: 'employeeCode', header: 'Mã NV' },
       { key: 'fullName', header: 'Họ và tên' },
-      { key: 'department', header: 'Phòng ban' },
+      { key: 'branch', header: 'Chi nhánh' },
       { key: 'workDate', header: 'Ngày' },
       { key: 'checkIn', header: 'Giờ vào' },
       { key: 'checkOut', header: 'Giờ ra' },
@@ -83,11 +83,11 @@ export const AttendanceOverviewPage: React.FC = () => {
 
     const dataRows = filteredRecords.map((r) => {
       const emp = employees.find((e) => e.id === r.employeeId);
-      const dept = departments.find((d) => d.id === emp?.departmentId);
+      const branch = branches.find((b) => b.id === emp?.branchId);
       return {
         employeeCode: emp?.employeeCode || '',
         fullName: emp?.fullName || '',
-        department: dept?.departmentName || '',
+        branch: branch?.branchName || '',
         workDate: r.workDate,
         checkIn: r.checkInTime ? r.checkInTime.split('T')[1]?.substring(0, 5) || '' : '',
         checkOut: r.checkOutTime ? r.checkOutTime.split('T')[1]?.substring(0, 5) || '' : '',
@@ -275,17 +275,17 @@ export const AttendanceOverviewPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>Phòng ban:</label>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>Chi nhánh:</label>
           <select
             className="input-base"
-            style={{ width: 190, height: 36, fontSize: '12.5px', fontWeight: 500 }}
-            value={departmentFilter || ''}
-            onChange={(e) => setDepartmentFilter(e.target.value ? Number(e.target.value) : null)}
+            style={{ width: 210, height: 36, fontSize: '12.5px', fontWeight: 500 }}
+            value={branchFilter || ''}
+            onChange={(e) => setBranchFilter(e.target.value ? Number(e.target.value) : null)}
           >
-            <option value="">-- Tất cả phòng ban --</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.departmentName}
+            <option value="">-- Tất cả cơ sở / chi nhánh --</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.branchName}
               </option>
             ))}
           </select>
@@ -311,7 +311,7 @@ export const AttendanceOverviewPage: React.FC = () => {
             <tr>
               <th>Mã NV</th>
               <th>Họ và tên</th>
-              <th>Phòng ban</th>
+              <th>Chi nhánh</th>
               <th>Giờ vào</th>
               <th>Giờ ra</th>
               <th>Đi muộn</th>
@@ -331,7 +331,7 @@ export const AttendanceOverviewPage: React.FC = () => {
             ) : (
               filteredRecords.map((r) => {
                 const emp = employees.find((e) => e.id === r.employeeId);
-                const dept = departments.find((d) => d.id === emp?.departmentId);
+                const branch = branches.find((b) => b.id === emp?.branchId);
 
                 const inStr = r.checkInTime ? r.checkInTime.split('T')[1]?.substring(0, 5) : '--:--';
                 const outStr = r.checkOutTime ? r.checkOutTime.split('T')[1]?.substring(0, 5) : '--:--';
@@ -364,7 +364,7 @@ export const AttendanceOverviewPage: React.FC = () => {
                           fontSize: '12px',
                         }}
                       >
-                        {dept?.departmentName}
+                        {branch?.branchName}
                       </span>
                     </td>
                     <td>

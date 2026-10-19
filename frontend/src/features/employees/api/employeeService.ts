@@ -11,7 +11,7 @@ export interface Employee {
   date_of_birth?: string;
   gender?: string;
   address?: string;
-  department_id: number;
+  branch_id: number;
   position_id: number;
   manager_id?: number;
   employment_status: string;
@@ -23,9 +23,9 @@ export interface Employee {
 }
 
 export const employeeService = {
-  async getEmployees(params?: { department_id?: number; status?: string; search?: string; page?: number; size?: number }): Promise<Employee[]> {
+  async getEmployees(params?: { branch_id?: number; status?: string; search?: string; page?: number; size?: number }): Promise<Employee[]> {
     const query = new URLSearchParams();
-    if (params?.department_id) query.set('department_id', params.department_id.toString());
+    if (params?.branch_id) query.set('branch_id', params.branch_id.toString());
     if (params?.status) query.set('status', params.status);
     if (params?.search) query.set('keyword', params.search);
     if (params?.page) query.set('page', params.page.toString());

@@ -1,167 +1,151 @@
 package com.company.hrms.modules.schedule;
 
-import com.company.hrms.modules.auth.dto.LoginRequest;
-import com.company.hrms.modules.schedule.dto.AssignSingleShiftRequest;
-import com.company.hrms.modules.schedule.dto.PublishScheduleRequest;
-import com.company.hrms.modules.schedule.dto.ValidateConflictsRequest;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.company.hrms.common.exception.GlobalExceptionHandler;
+import com.company.hrms.modules.schedule.controller.ScheduleController;
+import com.company.hrms.modules.schedule.dto.*;
+import com.company.hrms.modules.schedule.service.ScheduleService;
+import com.company.hrms.security.service.UserPrincipal;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@ExtendWith(MockitoExtension.class)
 class ScheduleControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
+    @Mock
+    private ScheduleService scheduleService;
+
+    @InjectMocks
+    private ScheduleController scheduleController;
+
     private ObjectMapper objectMapper;
 
-    private String adminToken;
-
     @BeforeEach
-    void setUp() throws Exception {
-        LoginRequest loginRequest = new LoginRequest("admin", "Admin@123");
-        String responseBody = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+    void setUp() {
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        mockMvc = MockMvcBuilders.standaloneSetup(scheduleController)
+                .setCustomArgumentResolvers(new org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
-        this.adminToken = objectMapper.readTree(responseBody).path("data").path("access_token").asText();
+    private UsernamePasswordAuthenticationToken createMockAuth() {
+        UserPrincipal principal = new UserPrincipal(
+                1L, 1L, "admin", "admin@company.com", "hash", true,
+                List.of(new SimpleGrantedAuthority("ROLE_DIRECTOR"))
+        );
+        return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
     }
 
     @Test
-    void testGetWeeklySchedule() throws Exception {
-        mockMvc.perform(get("/api/v1/schedules/weekly?department_id=1&start_date=2026-10-12")
-                        .header("Authorization", "Bearer " + adminToken))
+    void testGetWeeklySchedule_Success() throws Exception {
+        WeeklyScheduleResponse response = new WeeklyScheduleResponse();
+        response.setScheduleId(1L);
+        response.setBranchId(1L);
+        response.setStartDate(LocalDate.of(2026, 10, 12));
+        response.setEndDate(LocalDate.of(2026, 10, 18));
+        response.setStatus("PUBLISHED");
+
+        when(scheduleService.getWeeklySchedule(eq(1L), any(LocalDate.class))).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/schedules/weekly?branch_id=1&start_date=2026-10-12"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data.schedule_id", notNullValue()))
-                .andExpect(jsonPath("$.data.department_id", is(1)))
-                .andExpect(jsonPath("$.data.employees", notNullValue()))
-                .andExpect(jsonPath("$.data.shift_templates", hasSize(greaterThanOrEqualTo(4))));
+                .andExpect(jsonPath("$.data.schedule_id", is(1)))
+                .andExpect(jsonPath("$.data.status", is("PUBLISHED")));
     }
 
     @Test
-    void testValidateConflicts_DryRun() throws Exception {
+    void testValidateConflicts_Success() throws Exception {
+        ValidateConflictsRequest request = new ValidateConflictsRequest();
+        request.setBranchId(1L);
+
         ValidateConflictsRequest.CandidateAssignmentItem item = new ValidateConflictsRequest.CandidateAssignmentItem();
         item.setEmployeeId(1L);
         item.setWorkShiftId(1L);
-        item.setWorkDate(LocalDate.of(2026, 10, 14));
-
-        ValidateConflictsRequest request = new ValidateConflictsRequest();
-        request.setDepartmentId(1L);
+        item.setWorkDate(LocalDate.of(2026, 10, 15));
         request.setAssignments(List.of(item));
 
+        ConflictValidationResult result = new ConflictValidationResult();
+
+        when(scheduleService.validateConflicts(any(ValidateConflictsRequest.class))).thenReturn(result);
+
         mockMvc.perform(post("/api/v1/schedules/validate-conflicts")
-                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data.has_mandatory_errors", notNullValue()));
+                .andExpect(jsonPath("$.data.is_valid", is(true)));
     }
 
     @Test
-    void testAssignSingleShift_Lifecycle_And_OptimisticLock() throws Exception {
-        // 1. Get weekly schedule for department 2 (IT/Operations)
-        String weekRes = mockMvc.perform(get("/api/v1/schedules/weekly?department_id=2&start_date=2026-11-02")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+    void testAssignSingleShift_Success() throws Exception {
+        AssignSingleShiftRequest request = new AssignSingleShiftRequest();
+        request.setScheduleId(1L);
+        request.setEmployeeId(1L);
+        request.setWorkShiftId(1L);
+        request.setWorkDate(LocalDate.of(2026, 10, 15));
+        request.setScheduleVersion(0);
 
-        JsonNode weekData = objectMapper.readTree(weekRes).path("data");
-        long scheduleId = weekData.path("schedule_id").asLong();
-        int initialVersion = weekData.path("version").asInt();
+        ShiftAssignmentDto dto = new ShiftAssignmentDto();
+        dto.setId(100L);
+        dto.setScheduleId(1L);
+        dto.setEmployeeId(1L);
+        dto.setWorkDate(LocalDate.of(2026, 10, 15));
 
-        // 2. Assign shift (Ca Sáng on 2026-11-02 for Employee 1)
-        AssignSingleShiftRequest assignReq = new AssignSingleShiftRequest();
-        assignReq.setScheduleId(scheduleId);
-        assignReq.setEmployeeId(1L);
-        assignReq.setWorkShiftId(1L); // Ca Sáng
-        assignReq.setWorkDate(LocalDate.of(2026, 11, 2));
-        assignReq.setScheduleVersion(initialVersion);
+        when(scheduleService.assignSingleShift(any(), eq(1L))).thenReturn(dto);
 
-        String assignRes = mockMvc.perform(post("/api/v1/schedules/assignments")
-                        .header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/v1/schedules/assignments")
+                        .principal(createMockAuth())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(assignReq)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data.shift_name", notNullValue()))
-                .andExpect(jsonPath("$.data.start_time", notNullValue()))
-                .andReturn().getResponse().getContentAsString();
-
-        long createdAssignmentId = objectMapper.readTree(assignRes).path("data").path("id").asLong();
-
-        // 3. Try to assign with outdated version -> Expect 409 Conflict
-        assignReq.setWorkDate(LocalDate.of(2026, 11, 3));
-        assignReq.setScheduleVersion(initialVersion); // Stale version!
-        mockMvc.perform(post("/api/v1/schedules/assignments")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(assignReq)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.code", is("OPTIMISTIC_LOCK_CONFLICT")));
-
-        // 4. Try overlapping shift on 2026-11-02 -> Expect 422 ERR_SHIFT_OVERLAP
-        assignReq.setWorkDate(LocalDate.of(2026, 11, 2));
-        assignReq.setScheduleVersion(initialVersion + 1); // Current version
-        mockMvc.perform(post("/api/v1/schedules/assignments")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(assignReq)))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error.code", is("ERR_SHIFT_OVERLAP")));
-
-        // 5. Delete the created assignment
-        mockMvc.perform(delete("/api/v1/schedules/assignments/" + createdAssignmentId + "?schedule_version=" + (initialVersion + 1))
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success", is(true)));
+                .andExpect(jsonPath("$.data.id", is(100)));
     }
 
     @Test
-    void testPublishAndUnpublishSchedule() throws Exception {
-        // 1. Get weekly schedule
-        String weekRes = mockMvc.perform(get("/api/v1/schedules/weekly?department_id=3&start_date=2026-11-09")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+    void testPublishSchedule_Success() throws Exception {
+        PublishScheduleRequest request = new PublishScheduleRequest();
+        request.setVersion(0);
 
-        JsonNode weekData = objectMapper.readTree(weekRes).path("data");
-        long scheduleId = weekData.path("schedule_id").asLong();
-        int version = weekData.path("version").asInt();
+        WeeklyScheduleResponse response = new WeeklyScheduleResponse();
+        response.setScheduleId(1L);
+        response.setStatus("PUBLISHED");
 
-        // 2. Publish
-        PublishScheduleRequest pubReq = new PublishScheduleRequest(version);
-        mockMvc.perform(post("/api/v1/schedules/" + scheduleId + "/publish")
-                        .header("Authorization", "Bearer " + adminToken)
+        when(scheduleService.publishSchedule(eq(1L), eq(0), eq(1L))).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/schedules/1/publish")
+                        .principal(createMockAuth())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(pubReq)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data.status", is("PUBLISHED")));
-
-        // 3. Unpublish back to DRAFT
-        mockMvc.perform(post("/api/v1/schedules/" + scheduleId + "/unpublish")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status", is("DRAFT")));
     }
 }

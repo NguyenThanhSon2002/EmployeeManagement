@@ -36,7 +36,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
 
   if (!isOpen) return null;
 
-  const isManagerOrAdmin = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER' || currentRole === 'ROLE_DEPT_MANAGER';
+  const isManagerOrAdmin = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_MANAGER';
 
   const handleSubmitNew = (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { Employee, RoleType } from '@/types/domain.types';
-import { User, Settings, LogOut, ShieldCheck, Briefcase, UserCheck } from 'lucide-react';
+import { User, Settings, LogOut, ShieldCheck, Briefcase } from 'lucide-react';
 
 interface UserProfileDropdownProps {
   isOpen: boolean;
@@ -14,30 +14,23 @@ interface UserProfileDropdownProps {
 
 const getRoleBadge = (role: RoleType) => {
   switch (role) {
-    case 'ROLE_ADMIN':
+    case 'ROLE_DIRECTOR':
       return {
-        label: 'Quản trị viên (ADMIN)',
+        label: 'Giám đốc',
         icon: <ShieldCheck size={12} />,
         bg: '#EDE9FE',
         color: '#6D28D9',
         border: '#DDD6FE',
       };
-    case 'ROLE_HR_MANAGER':
+    case 'ROLE_MANAGER':
       return {
-        label: 'Trưởng phòng Nhân sự',
-        icon: <UserCheck size={12} />,
-        bg: '#CCFBF1',
-        color: '#0F766E',
-        border: '#99F6E4',
-      };
-    case 'ROLE_DEPT_MANAGER':
-      return {
-        label: 'Trưởng bộ phận',
+        label: 'Quản lý cơ sở',
         icon: <Briefcase size={12} />,
         bg: '#FFEDD5',
         color: '#C2410C',
         border: '#FED7AA',
       };
+    case 'ROLE_EMPLOYEE':
     default:
       return {
         label: 'Nhân viên',
@@ -208,7 +201,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           <span>Hồ sơ của tôi</span>
         </button>
 
-        {role === 'ROLE_ADMIN' && onOpenSettings && (
+        {role === 'ROLE_DIRECTOR' && onOpenSettings && (
           <button
             type="button"
             onClick={onOpenSettings}

@@ -35,21 +35,21 @@ public class PositionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER')")
+    @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Tạo mới chức danh")
     public ApiResponse<PositionDto> createPosition(@Valid @RequestBody PositionDto request) {
         return ApiResponse.success(positionService.createPosition(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER')")
+    @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Cập nhật chức danh")
     public ApiResponse<PositionDto> updatePosition(@PathVariable Long id, @Valid @RequestBody PositionDto request) {
         return ApiResponse.success(positionService.updatePosition(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Xóa mềm chức danh")
     public ApiResponse<Void> deletePosition(@PathVariable Long id) {
         positionService.deletePosition(id);

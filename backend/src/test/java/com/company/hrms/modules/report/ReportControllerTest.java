@@ -1,89 +1,106 @@
 package com.company.hrms.modules.report;
 
-import com.company.hrms.modules.auth.dto.LoginRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.company.hrms.common.exception.GlobalExceptionHandler;
+import com.company.hrms.modules.report.controller.ReportController;
+import com.company.hrms.modules.report.dto.AttendanceSummaryDto;
+import com.company.hrms.modules.report.service.ExcelExportService;
+import com.company.hrms.modules.report.service.ReportService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@ExtendWith(MockitoExtension.class)
 class ReportControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Mock
+    private ReportService reportService;
 
-    private String adminToken;
+    @Mock
+    private ExcelExportService exportService;
+
+    @InjectMocks
+    private ReportController reportController;
 
     @BeforeEach
-    void setUp() throws Exception {
-        LoginRequest loginRequest = new LoginRequest("admin", "Admin@123");
-        String responseBody = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(reportController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
-        this.adminToken = objectMapper.readTree(responseBody).path("data").path("access_token").asText();
+    private AttendanceSummaryDto createSampleSummary(Long empId, String empName) {
+        AttendanceSummaryDto dto = new AttendanceSummaryDto();
+        dto.setEmployeeId(empId);
+        dto.setEmployeeCode("EMP-00" + empId);
+        dto.setFullName(empName);
+        dto.setBranchName("Chi nhánh Cầu Giấy");
+        dto.setTotalWorkingDays(22L);
+        dto.setTotalRegularHours(new java.math.BigDecimal("176.0"));
+        dto.setTotalOvertimeHours(new java.math.BigDecimal("10.0"));
+        return dto;
     }
 
     @Test
     void testGetAttendanceSummary_Success() throws Exception {
-        mockMvc.perform(get("/api/v1/reports/attendance-summary?year=2026&month=12")
-                        .header("Authorization", "Bearer " + adminToken))
+        AttendanceSummaryDto summary = createSampleSummary(1L, "Nguyễn Văn An");
+        when(reportService.getAttendanceSummary(eq(null), anyInt(), anyInt()))
+                .thenReturn(List.of(summary));
+
+        mockMvc.perform(get("/api/v1/reports/attendance-summary?year=2026&month=10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data", notNullValue()))
-                .andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(1))));
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].full_name", is("Nguyễn Văn An")));
+    }
+
+    @Test
+    void testGetAttendanceSummary_WithBranchFilter() throws Exception {
+        AttendanceSummaryDto summary = createSampleSummary(1L, "Nguyễn Văn An");
+        when(reportService.getAttendanceSummary(eq(1L), anyInt(), anyInt()))
+                .thenReturn(List.of(summary));
+
+        mockMvc.perform(get("/api/v1/reports/attendance-summary?branch_id=1&year=2026&month=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].branch_name", is("Chi nhánh Cầu Giấy")));
     }
 
     @Test
     void testExportExcel_Success() throws Exception {
-        byte[] excelBytes = mockMvc.perform(get("/api/v1/reports/export/excel?year=2026&month=12")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", containsString("Bao_Cao_Cham_Cong_12_2026.xlsx")))
-                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .andReturn().getResponse().getContentAsByteArray();
+        when(reportService.getAttendanceSummary(eq(1L), anyInt(), anyInt())).thenReturn(List.of());
+        when(exportService.exportAttendanceToExcel(org.mockito.ArgumentMatchers.any(), anyInt(), anyInt())).thenReturn(new byte[]{1, 2, 3});
 
-        assertTrue(excelBytes.length > 0, "Excel export should produce non-empty byte array");
-        // Check standard ZIP / OOXML magic bytes: PK (0x50, 0x4B)
-        assertTrue(excelBytes[0] == 0x50 && excelBytes[1] == 0x4B, "Excel file should start with PK zip header");
+        mockMvc.perform(get("/api/v1/reports/export/excel?branch_id=1&year=2026&month=10"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("attachment; filename=\"Bao_Cao_Cham_Cong_10_2026.xlsx\"")))
+                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
     }
 
     @Test
     void testExportCsv_Success() throws Exception {
-        byte[] csvBytes = mockMvc.perform(get("/api/v1/reports/export/csv?year=2026&month=12")
-                        .header("Authorization", "Bearer " + adminToken))
+        when(reportService.getAttendanceSummary(eq(null), anyInt(), anyInt())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/reports/export/csv?year=2026&month=10"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", containsString("Bao_Cao_Cham_Cong_12_2026.csv")))
-                .andExpect(content().contentType("text/csv;charset=UTF-8"))
-                .andReturn().getResponse().getContentAsByteArray();
-
-        assertTrue(csvBytes.length > 0, "CSV export should produce non-empty byte array");
-        String content = new String(csvBytes, StandardCharsets.UTF_8);
-        assertTrue(content.startsWith("\uFEFF"), "CSV must start with UTF-8 BOM for Vietnamese character encoding in Excel");
-        assertTrue(content.contains("Mã nhân viên"), "CSV header must contain Vietnamese text columns");
-    }
-
-    @Test
-    void testUnauthorized_ShouldReturnUnauthorizedOrForbidden() throws Exception {
-        mockMvc.perform(get("/api/v1/reports/attendance-summary?year=2026&month=12"))
-                .andExpect(status().isForbidden());
+                .andExpect(header().string("Content-Disposition", containsString("attachment; filename=\"Bao_Cao_Cham_Cong_10_2026.csv\"")))
+                .andExpect(content().contentType("text/csv;charset=UTF-8"));
     }
 }

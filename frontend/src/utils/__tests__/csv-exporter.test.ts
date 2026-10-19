@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import type { Employee, ShiftAssignment, Department } from '@/types/domain.types';
+import type { Employee, ShiftAssignment, Branch } from '@/types/domain.types';
 import { buildWeeklyRosterCsv } from '../csv-exporter.utils';
 
 describe('Suite 5: CSV Client-Side Export with UTF-8 BOM', () => {
   it('TC-CSV-01: Generates CSV prepended with UTF-8 BOM character (\\uFEFF)', () => {
     const monday = new Date('2026-10-12T00:00:00Z');
-    const dept: Department = {
+    const branch: Branch = {
       id: 1,
-      departmentCode: 'TECH',
-      departmentName: 'Phòng Kỹ Thuật',
+      branchCode: 'CN_HN',
+      branchName: 'Chi nhánh Hà Nội',
+      address: '123 Cầu Giấy',
+      phoneNumber: '0901234567',
       managerId: null,
-      parentDepartmentId: null,
+      isActive: true,
     };
     const employees: Employee[] = [
       {
@@ -19,7 +21,7 @@ describe('Suite 5: CSV Client-Side Export with UTF-8 BOM', () => {
         fullName: 'Nguyễn Văn An',
         email: 'an.nguyen@company.com',
         phoneNumber: '0901234567',
-        departmentId: 1,
+        branchId: 1,
         positionId: 1,
         managerId: null,
         employmentStatus: 'OFFICIAL',
@@ -51,7 +53,7 @@ describe('Suite 5: CSV Client-Side Export with UTF-8 BOM', () => {
 
     const csv = buildWeeklyRosterCsv({
       monday,
-      department: dept,
+      branch,
       employees,
       assignments,
     });
@@ -61,7 +63,7 @@ describe('Suite 5: CSV Client-Side Export with UTF-8 BOM', () => {
     expect(csv.startsWith('\uFEFF')).toBe(true);
 
     // Check Vietnamese text is properly encoded
-    expect(csv).toContain('Phòng Kỹ Thuật');
+    expect(csv).toContain('Chi nhánh Hà Nội');
     expect(csv).toContain('Nguyễn Văn An');
     expect(csv).toContain('Ca Sáng (08:00-17:00)');
     expect(csv).toContain('"8.0"'); // Net hours

@@ -57,7 +57,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/records")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE')")
     @Operation(summary = "Lấy danh sách bảng chấm công", description = "Hỗ trợ phân trang, lọc theo nhân viên, ngày làm việc, trạng thái")
     public PageResponse<AttendanceRecordDto> getAttendanceRecords(
             @RequestParam(value = "employee_id", required = false) Long employeeId,
@@ -82,7 +82,7 @@ public class AttendanceController {
     }
 
     @PutMapping("/corrections/{id}/review")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Phê duyệt hoặc từ chối giải trình", description = "Nếu duyệt, giờ chấm công sẽ được tính toán lại ngay lập tức")
     public ApiResponse<AttendanceCorrectionDto> reviewCorrection(
             @PathVariable Long id,

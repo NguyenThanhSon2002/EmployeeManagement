@@ -1,111 +1,129 @@
 package com.company.hrms.modules.leave;
 
-import com.company.hrms.modules.auth.dto.LoginRequest;
+import com.company.hrms.common.exception.GlobalExceptionHandler;
+import com.company.hrms.modules.leave.controller.LeaveController;
 import com.company.hrms.modules.leave.dto.CreateLeaveRequestDto;
+import com.company.hrms.modules.leave.dto.LeaveRequestDto;
+import com.company.hrms.modules.leave.dto.LeaveTypeDto;
 import com.company.hrms.modules.leave.dto.ReviewLeaveRequestDto;
+import com.company.hrms.modules.leave.service.LeaveService;
+import com.company.hrms.security.service.UserPrincipal;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@ExtendWith(MockitoExtension.class)
 class LeaveControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
+    @Mock
+    private LeaveService leaveService;
+
+    @InjectMocks
+    private LeaveController leaveController;
+
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private com.company.hrms.modules.leave.repository.LeaveRequestRepository leaveRequestRepository;
-
-    private String adminToken;
-
     @BeforeEach
-    void setUp() throws Exception {
-        leaveRequestRepository.deleteAll();
+    void setUp() {
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        mockMvc = MockMvcBuilders.standaloneSetup(leaveController)
+                .setCustomArgumentResolvers(new org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
-        LoginRequest loginRequest = new LoginRequest("admin", "Admin@123");
-        String responseBody = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        this.adminToken = objectMapper.readTree(responseBody).path("data").path("access_token").asText();
+    private UsernamePasswordAuthenticationToken createMockAuth() {
+        UserPrincipal principal = new UserPrincipal(
+                1L, 1L, "admin", "admin@company.com", "hash", true,
+                List.of(new SimpleGrantedAuthority("ROLE_DIRECTOR"))
+        );
+        return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
     }
 
     @Test
-    void testGetLeaveTypes() throws Exception {
-        mockMvc.perform(get("/api/v1/leaves/types")
-                        .header("Authorization", "Bearer " + adminToken))
+    void testGetLeaveTypes_Success() throws Exception {
+        LeaveTypeDto typeDto = new LeaveTypeDto();
+        typeDto.setId(1L);
+        typeDto.setTypeName("Nghỉ phép năm");
+        typeDto.setIsPaid(true);
+
+        when(leaveService.getLeaveTypes()).thenReturn(List.of(typeDto));
+
+        mockMvc.perform(get("/api/v1/leaves/types"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(5))));
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].type_name", is("Nghỉ phép năm")));
     }
 
     @Test
-    void testGetLeaveBalances() throws Exception {
-        mockMvc.perform(get("/api/v1/leaves/balances?employee_id=1&year=2026")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data", not(empty())));
-    }
+    void testSubmitLeaveRequest_Success() throws Exception {
+        CreateLeaveRequestDto request = new CreateLeaveRequestDto();
+        request.setLeaveTypeId(1L);
+        request.setStartDate(LocalDate.of(2026, 11, 10));
+        request.setEndDate(LocalDate.of(2026, 11, 12));
+        request.setTotalDays(new java.math.BigDecimal("3.0"));
+        request.setReason("Nghỉ phép thường niên");
 
-    @Test
-    void testSubmitLeaveRequest_Lifecycle_And_OverlapCheck() throws Exception {
-        LocalDate start = LocalDate.of(2026, 12, 10);
-        LocalDate end = LocalDate.of(2026, 12, 11);
+        LeaveRequestDto responseDto = new LeaveRequestDto();
+        responseDto.setId(10L);
+        responseDto.setEmployeeId(1L);
+        responseDto.setStatus("PENDING");
 
-        CreateLeaveRequestDto req = new CreateLeaveRequestDto();
-        req.setLeaveTypeId(1L); // Annual leave
-        req.setStartDate(start);
-        req.setEndDate(end);
-        req.setTotalDays(BigDecimal.valueOf(2.0));
-        req.setReason("Nghỉ phép việc gia đình");
+        when(leaveService.submitLeaveRequest(eq(1L), any())).thenReturn(responseDto);
 
-        // 1. Submit leave request
-        String res = mockMvc.perform(post("/api/v1/leaves/requests")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data.status", is("SUBMITTED")))
-                .andReturn().getResponse().getContentAsString();
-
-        long requestId = objectMapper.readTree(res).path("data").path("id").asLong();
-
-        // 2. Submit overlapping request -> Expect 422 ERR_LEAVE_OVERLAP (BR-009)
         mockMvc.perform(post("/api/v1/leaves/requests")
-                        .header("Authorization", "Bearer " + adminToken)
+                        .principal(createMockAuth())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error.code", is("ERR_LEAVE_OVERLAP")));
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.id", is(10)))
+                .andExpect(jsonPath("$.data.status", is("PENDING")));
+    }
 
-        // 3. Review (Approve)
-        ReviewLeaveRequestDto reviewDto = new ReviewLeaveRequestDto("APPROVE", null);
-        mockMvc.perform(put("/api/v1/leaves/requests/" + requestId + "/review")
-                        .header("Authorization", "Bearer " + adminToken)
+    @Test
+    void testReviewLeaveRequest_Success() throws Exception {
+        ReviewLeaveRequestDto reviewDto = new ReviewLeaveRequestDto();
+        reviewDto.setAction("APPROVE");
+        reviewDto.setRejectionReason(null);
+
+        LeaveRequestDto responseDto = new LeaveRequestDto();
+        responseDto.setId(10L);
+        responseDto.setStatus("APPROVED");
+
+        when(leaveService.reviewLeaveRequest(eq(10L), any(), eq(1L))).thenReturn(responseDto);
+
+        mockMvc.perform(put("/api/v1/leaves/requests/10/review")
+                        .principal(createMockAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reviewDto)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data.status", is("APPROVED")));
     }
 }

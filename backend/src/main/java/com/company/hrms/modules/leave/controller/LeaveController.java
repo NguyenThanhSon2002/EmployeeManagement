@@ -72,7 +72,7 @@ public class LeaveController {
     }
 
     @PutMapping("/requests/{id}/review")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Phê duyệt hoặc từ chối đơn nghỉ phép", description = "Nếu duyệt sẽ chính thức trừ ngày vào used_days của quỹ phép")
     public ApiResponse<LeaveRequestDto> reviewLeaveRequest(
             @PathVariable Long id,

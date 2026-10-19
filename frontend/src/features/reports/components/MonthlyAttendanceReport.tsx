@@ -12,16 +12,16 @@ export const MonthlyAttendanceReport: React.FC = () => {
   const { assignments } = useScheduleStore();
   const { records } = useAttendanceStore();
   const { leaves } = useLeaveStore();
-  const { employees, departments } = useDirectoryStore();
+  const { employees, branches } = useDirectoryStore();
 
-  const [departmentFilter, setDepartmentFilter] = useState<number | null>(null);
+  const [branchFilter, setBranchFilter] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const reportData = employees.map((emp) => {
-    const dept = departments.find((d) => d.id === emp.departmentId);
+    const branch = branches.find((b) => b.id === emp.branchId);
 
     // Count assigned shifts
-    const empAssignments = Object.values(assignments).filter(
+    const empAssignments = Object.values(assignments).flat().filter(
       (a) => a.employeeId === emp.id && a.status === 'ASSIGNED'
     );
     const scheduledShifts = empAssignments.length;
@@ -42,8 +42,8 @@ export const MonthlyAttendanceReport: React.FC = () => {
       employeeId: emp.id,
       employeeCode: emp.employeeCode,
       fullName: emp.fullName,
-      departmentId: emp.departmentId,
-      departmentName: dept?.departmentName || '',
+      branchId: emp.branchId,
+      branchName: branch?.branchName || '',
       scheduledShifts,
       actualHours,
       otHours,
@@ -53,7 +53,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
       leaveDays,
     };
   }).filter((item) => {
-    if (departmentFilter && item.departmentId !== departmentFilter) return false;
+    if (branchFilter && item.branchId !== branchFilter) return false;
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       return item.fullName.toLowerCase().includes(q) || item.employeeCode.toLowerCase().includes(q);
@@ -65,7 +65,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
     const columns = [
       { key: 'employeeCode', header: 'Mã NV' },
       { key: 'fullName', header: 'Họ và tên' },
-      { key: 'departmentName', header: 'Phòng ban' },
+      { key: 'branchName', header: 'Chi nhánh' },
       { key: 'scheduledShifts', header: 'Số ca kế hoạch' },
       { key: 'actualHours', header: 'Giờ làm thực tế' },
       { key: 'otHours', header: 'Giờ làm thêm (OT)' },
@@ -78,7 +78,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
     const dataRows = reportData.map((d) => ({
       employeeCode: d.employeeCode,
       fullName: d.fullName,
-      departmentName: d.departmentName,
+      branchName: d.branchName,
       scheduledShifts: d.scheduledShifts.toString(),
       actualHours: d.actualHours.toFixed(1),
       otHours: d.otHours.toFixed(1),
@@ -89,7 +89,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
     }));
 
     if (!isMockEnabled()) {
-      reportService.downloadCsv(departmentFilter || undefined, 2026, 10).catch(() => {
+      reportService.downloadCsv(branchFilter || undefined, 2026, 10).catch(() => {
         exportToCsv(
           'BaoCao_TongHopCong_Thang10_2026.csv',
           dataRows,
@@ -111,7 +111,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
   const handleExportExcel = async () => {
     if (!isMockEnabled()) {
       try {
-        await reportService.downloadExcel(departmentFilter || undefined, 2026, 10);
+        await reportService.downloadExcel(branchFilter || undefined, 2026, 10);
       } catch (err) {
         console.warn('Backend Excel export failed:', err);
       }
@@ -137,14 +137,14 @@ export const MonthlyAttendanceReport: React.FC = () => {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             className="input"
-            style={{ width: 200 }}
-            value={departmentFilter || ''}
-            onChange={(e) => setDepartmentFilter(e.target.value ? Number(e.target.value) : null)}
+            style={{ width: 220 }}
+            value={branchFilter || ''}
+            onChange={(e) => setBranchFilter(e.target.value ? Number(e.target.value) : null)}
           >
-            <option value="">-- Tất cả phòng ban --</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.departmentName}
+            <option value="">-- Tất cả cơ sở / chi nhánh --</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.branchName}
               </option>
             ))}
           </select>
@@ -179,7 +179,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
             <tr>
               <th>Mã NV</th>
               <th>Họ và tên</th>
-              <th>Phòng ban</th>
+              <th>Chi nhánh</th>
               <th style={{ textAlign: 'right' }}>Số ca chuẩn</th>
               <th style={{ textAlign: 'right' }}>Giờ thực tế</th>
               <th style={{ textAlign: 'right' }}>Tăng ca (OT)</th>
@@ -195,7 +195,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
                   <span style={{ fontWeight: 600 }}>{d.employeeCode}</span>
                 </td>
                 <td>{d.fullName}</td>
-                <td>{d.departmentName}</td>
+                <td>{d.branchName}</td>
                 <td style={{ textAlign: 'right', fontWeight: 500 }}>{d.scheduledShifts} ca</td>
                 <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-primary)' }}>
                   {d.actualHours.toFixed(1)}h

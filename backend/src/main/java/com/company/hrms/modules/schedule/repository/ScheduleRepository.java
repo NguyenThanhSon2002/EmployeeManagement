@@ -10,7 +10,7 @@ import java.util.Optional;
 @Repository
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
-    Optional<Schedule> findByDepartmentIdAndStartDate(Long departmentId, LocalDate startDate);
+    Optional<Schedule> findByBranchIdAndStartDate(Long branchId, LocalDate startDate);
 
-    boolean existsByDepartmentIdAndStartDate(Long departmentId, LocalDate startDate);
+    boolean existsByBranchIdAndStartDate(Long branchId, LocalDate startDate);
 }

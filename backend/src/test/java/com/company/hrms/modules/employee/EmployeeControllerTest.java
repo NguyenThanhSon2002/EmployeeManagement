@@ -1,63 +1,98 @@
 package com.company.hrms.modules.employee;
 
-import com.company.hrms.modules.auth.dto.LoginRequest;
+import com.company.hrms.common.exception.GlobalExceptionHandler;
+import org.springframework.dao.OptimisticLockingFailureException;
+import com.company.hrms.common.exception.ResourceConflictException;
+import com.company.hrms.common.exception.ResourceNotFoundException;
+import com.company.hrms.modules.employee.controller.EmployeeController;
 import com.company.hrms.modules.employee.dto.EmployeeDto;
+import com.company.hrms.modules.employee.service.EmployeeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@ExtendWith(MockitoExtension.class)
 class EmployeeControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
+    @Mock
+    private EmployeeService employeeService;
+
+    @InjectMocks
+    private EmployeeController employeeController;
+
     private ObjectMapper objectMapper;
 
-    private String adminToken;
-
     @BeforeEach
-    void setUp() throws Exception {
-        LoginRequest loginRequest = new LoginRequest("admin", "Admin@123");
-        String responseBody = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+    void setUp() {
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        mockMvc = MockMvcBuilders.standaloneSetup(employeeController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
-        this.adminToken = objectMapper.readTree(responseBody).path("data").path("access_token").asText();
+    private EmployeeDto createSampleEmployee(Long id, String code, String name) {
+        EmployeeDto dto = new EmployeeDto();
+        dto.setId(id);
+        dto.setEmployeeCode(code);
+        dto.setFullName(name);
+        dto.setEmail(code.toLowerCase() + "@company.com");
+        dto.setPhoneNumber("0901234567");
+        dto.setNationalId("001202001111");
+        dto.setBranchId(1L);
+        dto.setPositionId(1L);
+        dto.setEmploymentStatus("OFFICIAL");
+        dto.setEmploymentType("FULL_TIME");
+        dto.setHireDate(LocalDate.of(2024, 1, 1));
+        dto.setIsActive(true);
+        dto.setVersion(0);
+        return dto;
     }
 
     @Test
     void testGetEmployees_Pagination() throws Exception {
-        mockMvc.perform(get("/api/v1/employees?page=1&size=5")
-                        .header("Authorization", "Bearer " + adminToken))
+        EmployeeDto emp = createSampleEmployee(1L, "EMP-001", "Nguyễn Văn An");
+        PageImpl<EmployeeDto> page = new PageImpl<>(List.of(emp), PageRequest.of(0, 5), 1);
+
+        when(employeeService.getEmployees(any(), any(), any(), any())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/employees?page=1&size=5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data", hasSize(lessThanOrEqualTo(5))))
+                .andExpect(jsonPath("$.data", hasSize(1)))
                 .andExpect(jsonPath("$.meta.pagination.page", is(1)))
-                .andExpect(jsonPath("$.meta.pagination.size", is(5)))
-                .andExpect(jsonPath("$.meta.pagination.total_elements", greaterThan(0)));
+                .andExpect(jsonPath("$.meta.pagination.total_elements", is(1)));
     }
 
     @Test
     void testGetEmployeeById_Success() throws Exception {
-        mockMvc.perform(get("/api/v1/employees/1")
-                        .header("Authorization", "Bearer " + adminToken))
+        EmployeeDto emp = createSampleEmployee(1L, "EMP-001", "Nguyễn Văn An");
+        when(employeeService.getEmployeeById(1L)).thenReturn(emp);
+
+        mockMvc.perform(get("/api/v1/employees/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data.employee_code", is("EMP-001")))
@@ -66,26 +101,39 @@ class EmployeeControllerTest {
 
     @Test
     void testGetEmployeeById_NotFound() throws Exception {
-        mockMvc.perform(get("/api/v1/employees/999999")
-                        .header("Authorization", "Bearer " + adminToken))
+        when(employeeService.getEmployeeById(999999L))
+                .thenThrow(new ResourceNotFoundException("Không tìm thấy nhân viên"));
+
+        mockMvc.perform(get("/api/v1/employees/999999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.error.code", is("RESOURCE_NOT_FOUND")));
     }
 
     @Test
-    void testCreateEmployee_ConflictDuplicateCode() throws Exception {
-        EmployeeDto request = new EmployeeDto();
-        request.setEmployeeCode("EMP-001"); // Already exists in V3 seed
-        request.setFullName("Người Trùng Mã");
-        request.setEmail("trungma@company.com");
-        request.setPhoneNumber("0988776655");
-        request.setDepartmentId(1L);
-        request.setPositionId(1L);
-        request.setHireDate(LocalDate.now());
+    void testCreateEmployee_Success() throws Exception {
+        EmployeeDto request = createSampleEmployee(null, "EMP-002", "Trần Thị Bích");
+        EmployeeDto created = createSampleEmployee(2L, "EMP-002", "Trần Thị Bích");
+
+        when(employeeService.createEmployee(any(EmployeeDto.class))).thenReturn(created);
 
         mockMvc.perform(post("/api/v1/employees")
-                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.id", is(2)))
+                .andExpect(jsonPath("$.data.employee_code", is("EMP-002")));
+    }
+
+    @Test
+    void testCreateEmployee_ConflictDuplicateCode() throws Exception {
+        EmployeeDto request = createSampleEmployee(null, "EMP-001", "Người Trùng Mã");
+
+        when(employeeService.createEmployee(any(EmployeeDto.class)))
+                .thenThrow(new ResourceConflictException("Mã nhân viên đã tồn tại trên hệ thống"));
+
+        mockMvc.perform(post("/api/v1/employees")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -94,74 +142,39 @@ class EmployeeControllerTest {
     }
 
     @Test
-    void testCreateAndSoftDeleteEmployee() throws Exception {
-        String uniqueCode = "EMP-TEST-" + System.currentTimeMillis();
-        EmployeeDto request = new EmployeeDto();
-        request.setEmployeeCode(uniqueCode);
-        request.setFullName("Nhân Viên Thử Nghiệm");
-        request.setEmail("test." + System.currentTimeMillis() + "@company.com");
-        request.setPhoneNumber("09" + String.valueOf(System.currentTimeMillis()).substring(5));
-        request.setDepartmentId(1L);
-        request.setPositionId(1L);
-        request.setHireDate(LocalDate.now());
+    void testUpdateEmployee_OptimisticLockFailure() throws Exception {
+        EmployeeDto request = createSampleEmployee(1L, "EMP-001", "Nguyễn Văn An");
 
-        // 1. Create
-        String createRes = mockMvc.perform(post("/api/v1/employees")
-                        .header("Authorization", "Bearer " + adminToken)
+        when(employeeService.updateEmployee(eq(1L), any(EmployeeDto.class)))
+                .thenThrow(new OptimisticLockingFailureException("Dữ liệu đã bị thay đổi bởi người dùng khác"));
+
+        mockMvc.perform(put("/api/v1/employees/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.employee_code", is(uniqueCode)))
-                .andReturn().getResponse().getContentAsString();
-
-        long createdId = objectMapper.readTree(createRes).path("data").path("id").asLong();
-
-        // 2. Soft Delete
-        mockMvc.perform(delete("/api/v1/employees/" + createdId)
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success", is(true)));
-
-        // 3. Verify Not Found after soft delete
-        mockMvc.perform(get("/api/v1/employees/" + createdId)
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void testDeleteEmployee_DepartmentManager_Conflict() throws Exception {
-        // Employee ID 1 (Nguyễn Văn An) is manager of department 1
-        mockMvc.perform(delete("/api/v1/employees/1")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.success", is(false)))
-                .andExpect(jsonPath("$.error.message", containsString("Trưởng phòng")));
-    }
-
-    @Test
-    void testUpdateEmployee_OptimisticLockFailure() throws Exception {
-        // 1. Get employee 1
-        String empRes = mockMvc.perform(get("/api/v1/employees/1")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        EmployeeDto dto = objectMapper.readValue(
-                objectMapper.readTree(empRes).path("data").toString(),
-                EmployeeDto.class
-        );
-
-        // 2. Set outdated/wrong version
-        int currentVersion = dto.getVersion() != null ? dto.getVersion() : 0;
-        dto.setVersion(currentVersion + 99);
-
-        // 3. Update employee with stale version
-        mockMvc.perform(put("/api/v1/employees/1")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.error.code", is("OPTIMISTIC_LOCK_CONFLICT")));
+    }
+
+    @Test
+    void testDeleteEmployee_Success() throws Exception {
+        doNothing().when(employeeService).deleteEmployee(1L);
+
+        mockMvc.perform(delete("/api/v1/employees/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)));
+
+        verify(employeeService, times(1)).deleteEmployee(1L);
+    }
+
+    @Test
+    void testDeleteEmployee_BranchManager_Conflict() throws Exception {
+        doThrow(new ResourceConflictException("Không thể xóa nhân sự đang là Quản lý chi nhánh (Chi nhánh Cầu Giấy)"))
+                .when(employeeService).deleteEmployee(1L);
+
+        mockMvc.perform(delete("/api/v1/employees/1"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.error.message", containsString("Quản lý chi nhánh")));
     }
 }

@@ -33,32 +33,32 @@ public class ReportController {
     }
 
     @GetMapping("/attendance-summary")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
-    @Operation(summary = "Lấy báo cáo tổng hợp công tháng", description = "Tính tổng ngày làm, giờ thường, giờ OT, giờ đêm, đi muộn của nhân viên")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
+    @Operation(summary = "Lấy báo cáo tổng hợp công tháng", description = "Tính tổng ngày làm, giờ thường, giờ OT, giờ đêm, đi muộn của nhân viên theo chi nhánh")
     public ApiResponse<List<AttendanceSummaryDto>> getAttendanceSummary(
-            @RequestParam(value = "department_id", required = false) Long departmentId,
+            @RequestParam(value = "branch_id", required = false) Long branchId,
             @RequestParam(value = "year", required = false) Integer year,
             @RequestParam(value = "month", required = false) Integer month) {
 
         int targetYear = year != null ? year : LocalDate.now().getYear();
         int targetMonth = month != null ? month : LocalDate.now().getMonthValue();
 
-        List<AttendanceSummaryDto> summaries = reportService.getAttendanceSummary(departmentId, targetYear, targetMonth);
+        List<AttendanceSummaryDto> summaries = reportService.getAttendanceSummary(branchId, targetYear, targetMonth);
         return ApiResponse.success(summaries);
     }
 
     @GetMapping("/export/excel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Xuất báo cáo Excel (.xlsx)", description = "File định dạng chuẩn Microsoft Excel có định dạng bảng và tiêu đề chuyên nghiệp")
     public ResponseEntity<byte[]> exportExcel(
-            @RequestParam(value = "department_id", required = false) Long departmentId,
+            @RequestParam(value = "branch_id", required = false) Long branchId,
             @RequestParam(value = "year", required = false) Integer year,
             @RequestParam(value = "month", required = false) Integer month) throws IOException {
 
         int targetYear = year != null ? year : LocalDate.now().getYear();
         int targetMonth = month != null ? month : LocalDate.now().getMonthValue();
 
-        List<AttendanceSummaryDto> summaries = reportService.getAttendanceSummary(departmentId, targetYear, targetMonth);
+        List<AttendanceSummaryDto> summaries = reportService.getAttendanceSummary(branchId, targetYear, targetMonth);
         byte[] bytes = exportService.exportAttendanceToExcel(summaries, targetYear, targetMonth);
 
         String filename = "Bao_Cao_Cham_Cong_" + targetMonth + "_" + targetYear + ".xlsx";
@@ -70,17 +70,17 @@ public class ReportController {
     }
 
     @GetMapping("/export/csv")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Xuất báo cáo CSV chuẩn UTF-8 BOM", description = "Chống lỗi font dấu tiếng Việt khi mở trực tiếp bằng Excel")
     public ResponseEntity<byte[]> exportCsv(
-            @RequestParam(value = "department_id", required = false) Long departmentId,
+            @RequestParam(value = "branch_id", required = false) Long branchId,
             @RequestParam(value = "year", required = false) Integer year,
             @RequestParam(value = "month", required = false) Integer month) {
 
         int targetYear = year != null ? year : LocalDate.now().getYear();
         int targetMonth = month != null ? month : LocalDate.now().getMonthValue();
 
-        List<AttendanceSummaryDto> summaries = reportService.getAttendanceSummary(departmentId, targetYear, targetMonth);
+        List<AttendanceSummaryDto> summaries = reportService.getAttendanceSummary(branchId, targetYear, targetMonth);
         byte[] bytes = exportService.exportAttendanceToCsv(summaries, targetYear, targetMonth);
 
         String filename = "Bao_Cao_Cham_Cong_" + targetMonth + "_" + targetYear + ".csv";

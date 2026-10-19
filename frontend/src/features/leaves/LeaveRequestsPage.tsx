@@ -23,7 +23,7 @@ export const LeaveRequestsPage: React.FC = () => {
     fetchLeaves?.();
   }, [fetchLeaves]);
 
-  const isManagerOrAdmin = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER' || currentRole === 'ROLE_DEPT_MANAGER';
+  const isManagerOrAdmin = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_MANAGER';
 
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');

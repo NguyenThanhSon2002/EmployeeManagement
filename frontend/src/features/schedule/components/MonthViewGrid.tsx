@@ -15,7 +15,7 @@ import { formatDateIso } from '@/utils/date.utils';
 interface MonthViewGridProps {
   currentDate: Date;
   employees: Employee[];
-  assignmentsMap: Record<string, ShiftAssignment>;
+  assignmentsMap: Record<string, ShiftAssignment[]>;
   holidays: CompanyHoliday[];
   onSelectDay: (dateStr: string) => void;
 }
@@ -86,7 +86,8 @@ export const MonthViewGrid: React.FC<MonthViewGridProps> = ({
           const holiday = holidays.find((h) => h.holidayDate === dateStr);
 
           // Count active shifts on this date
-          const dayAssignments = Object.values(assignmentsMap).filter(
+          const allList: ShiftAssignment[] = Object.values(assignmentsMap).flat();
+          const dayAssignments = allList.filter(
             (a) => a.workDate === dateStr && a.status !== 'CANCELLED'
           );
 

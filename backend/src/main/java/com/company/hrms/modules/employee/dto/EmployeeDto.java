@@ -39,9 +39,9 @@ public class EmployeeDto {
     private String gender;
     private String address;
 
-    @NotNull(message = "Phòng ban không được để trống")
-    @JsonProperty("department_id")
-    private Long departmentId;
+    @NotNull(message = "Chi nhánh không được để trống")
+    @JsonProperty("branch_id")
+    private Long branchId;
 
     @NotNull(message = "Chức danh không được để trống")
     @JsonProperty("position_id")
@@ -94,8 +94,8 @@ public class EmployeeDto {
     public void setGender(String gender) { this.gender = gender; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
-    public Long getDepartmentId() { return departmentId; }
-    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
     public Long getPositionId() { return positionId; }
     public void setPositionId(Long positionId) { this.positionId = positionId; }
     public Long getManagerId() { return managerId; }

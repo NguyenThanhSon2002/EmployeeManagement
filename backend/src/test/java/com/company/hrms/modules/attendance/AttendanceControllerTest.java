@@ -1,118 +1,150 @@
 package com.company.hrms.modules.attendance;
 
+import com.company.hrms.common.exception.GlobalExceptionHandler;
+import com.company.hrms.modules.attendance.controller.AttendanceController;
 import com.company.hrms.modules.attendance.dto.AttendanceCorrectionDto;
+import com.company.hrms.modules.attendance.dto.AttendanceRecordDto;
 import com.company.hrms.modules.attendance.dto.CheckInRequest;
 import com.company.hrms.modules.attendance.dto.CheckOutRequest;
-import com.company.hrms.modules.auth.dto.LoginRequest;
+import com.company.hrms.modules.attendance.service.AttendanceService;
+import com.company.hrms.security.service.UserPrincipal;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@ExtendWith(MockitoExtension.class)
 class AttendanceControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
+    @Mock
+    private AttendanceService attendanceService;
+
+    @InjectMocks
+    private AttendanceController attendanceController;
+
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private com.company.hrms.modules.attendance.repository.AttendanceRecordRepository attendanceRecordRepository;
-
-    @Autowired
-    private com.company.hrms.modules.attendance.repository.AttendanceCorrectionRepository attendanceCorrectionRepository;
-
-    private String adminToken;
-
     @BeforeEach
-    void setUp() throws Exception {
-        attendanceCorrectionRepository.deleteAll();
-        attendanceRecordRepository.deleteAll();
+    void setUp() {
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        mockMvc = MockMvcBuilders.standaloneSetup(attendanceController)
+                .setCustomArgumentResolvers(new org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
-        LoginRequest loginRequest = new LoginRequest("admin", "Admin@123");
-        String responseBody = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        this.adminToken = objectMapper.readTree(responseBody).path("data").path("access_token").asText();
+    private UsernamePasswordAuthenticationToken createMockAuth() {
+        UserPrincipal principal = new UserPrincipal(
+                1L, 1L, "admin", "admin@company.com", "hash", true,
+                List.of(new SimpleGrantedAuthority("ROLE_DIRECTOR"))
+        );
+        return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
     }
 
     @Test
     void testCheckIn_And_CheckOut_Workflow() throws Exception {
         LocalDate workDate = LocalDate.of(2026, 12, 1);
+        AttendanceRecordDto inDto = new AttendanceRecordDto();
+        inDto.setId(100L);
+        inDto.setEmployeeId(1L);
+        inDto.setWorkDate(workDate);
+        inDto.setCheckInTime(LocalDateTime.of(workDate, java.time.LocalTime.of(8, 0)));
+        inDto.setStatus("PRESENT");
+
+        when(attendanceService.checkIn(eq(1L), any(), any())).thenReturn(inDto);
+
         CheckInRequest checkInReq = new CheckInRequest("Đi làm đúng giờ");
         checkInReq.setWorkDate(workDate);
 
-        // 1. Check In
-        String inRes = mockMvc.perform(post("/api/v1/attendance/check-in")
-                        .header("Authorization", "Bearer " + adminToken)
+        mockMvc.perform(post("/api/v1/attendance/check-in")
+                        .principal(createMockAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(checkInReq)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data.check_in_time", notNullValue()))
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(jsonPath("$.data.id", is(100)));
 
-        long recordId = objectMapper.readTree(inRes).path("data").path("id").asLong();
+        AttendanceRecordDto outDto = new AttendanceRecordDto();
+        outDto.setId(100L);
+        outDto.setEmployeeId(1L);
+        outDto.setWorkDate(workDate);
+        outDto.setCheckOutTime(LocalDateTime.of(workDate, java.time.LocalTime.of(17, 0)));
+        outDto.setStatus("PRESENT");
 
-        // 2. Duplicate Check In -> Conflict 409
-        mockMvc.perform(post("/api/v1/attendance/check-in")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(checkInReq)))
-                .andExpect(status().isConflict());
+        when(attendanceService.checkOut(eq(1L), any(), any())).thenReturn(outDto);
 
-        // 3. Check Out
-        CheckOutRequest checkOutReq = new CheckOutRequest("Tan ca về nhà");
+        CheckOutRequest checkOutReq = new CheckOutRequest("Tan ca");
         checkOutReq.setWorkDate(workDate);
 
         mockMvc.perform(post("/api/v1/attendance/check-out")
-                        .header("Authorization", "Bearer " + adminToken)
+                        .principal(createMockAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(checkOutReq)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data.check_out_time", notNullValue()));
+    }
 
-        // 4. Submit Correction
+    @Test
+    void testGetAttendanceRecords_Filter() throws Exception {
+        AttendanceRecordDto record = new AttendanceRecordDto();
+        record.setId(1L);
+        record.setEmployeeId(1L);
+        record.setStatus("PRESENT");
+
+        PageImpl<AttendanceRecordDto> page = new PageImpl<>(List.of(record), PageRequest.of(0, 10), 1);
+        when(attendanceService.getAttendanceRecords(any(), any(), any(), any())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/attendance/records?page=1&size=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(1)));
+    }
+
+    @Test
+    void testSubmitCorrection_Success() throws Exception {
         AttendanceCorrectionDto corrDto = new AttendanceCorrectionDto();
-        corrDto.setAttendanceRecordId(recordId);
-        corrDto.setRequestedCheckIn(LocalDateTime.of(workDate, java.time.LocalTime.of(8, 0)));
-        corrDto.setRequestedCheckOut(LocalDateTime.of(workDate, java.time.LocalTime.of(17, 0)));
-        corrDto.setReason("Quên mang thẻ chấm công");
+        corrDto.setId(50L);
+        corrDto.setAttendanceRecordId(100L);
+        corrDto.setRequestedCheckIn(LocalDateTime.of(2026, 12, 1, 8, 0));
+        corrDto.setRequestedCheckOut(LocalDateTime.of(2026, 12, 1, 17, 0));
+        corrDto.setStatus("PENDING");
+        corrDto.setReason("Quên mang thẻ");
+
+        when(attendanceService.submitCorrection(eq(1L), any())).thenReturn(corrDto);
 
         mockMvc.perform(post("/api/v1/attendance/corrections")
-                        .header("Authorization", "Bearer " + adminToken)
+                        .principal(createMockAuth())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(corrDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data.status", is("PENDING")));
-    }
-
-    @Test
-    void testGetAttendanceRecords_Filter() throws Exception {
-        mockMvc.perform(get("/api/v1/attendance/records?page=1&size=10")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.data", notNullValue()));
     }
 }

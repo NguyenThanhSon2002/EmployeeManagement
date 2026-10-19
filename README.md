@@ -81,9 +81,9 @@ Trình duyệt sẽ mở tại [http://localhost:5173](http://localhost:5173).
 
 | Tên Đăng Nhập | Vai Trò (Role) | Mật Khẩu Mặc Định | Quyền Hạn |
 | :--- | :--- | :---: | :--- |
-| `admin` | `ROLE_ADMIN` | `Admin@123` | Quản trị toàn hệ thống, cấu hình tham số, phân quyền |
-| `manager` | `ROLE_DEPT_MANAGER` | `Admin@123` | Quản lý ca làm việc phòng ban, duyệt nghỉ phép, xem báo cáo |
-| `employee` | `ROLE_EMPLOYEE` | `Admin@123` | Điểm danh check-in/out, nộp đơn phép, xem lịch ca cá nhân |
+| `admin` | `ROLE_DIRECTOR` | `Admin@123` | Giám đốc: Toàn quyền điều hành, quản trị tài khoản, cài đặt hệ thống |
+| `manager` | `ROLE_MANAGER` | `Admin@123` | Quản lý cơ sở: Xếp ca tuần cho chi nhánh, quản lý nhân sự tại cơ sở, duyệt công/phép |
+| `employee` | `ROLE_EMPLOYEE` | `Admin@123` | Nhân viên: Điểm danh check-in/out, đăng ký lịch khả dụng, nộp đơn phép, xem ca cá nhân |
 
 *(Mật khẩu có thể tùy biến qua biến môi trường `VITE_DEFAULT_AUTH_PASSWORD` và Flyway migration)*
 

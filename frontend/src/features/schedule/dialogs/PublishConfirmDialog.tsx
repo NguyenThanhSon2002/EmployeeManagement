@@ -88,7 +88,7 @@ export const PublishConfirmDialog: React.FC<PublishConfirmDialogProps> = ({
                 Bạn có chắc chắn muốn <strong>công bố chính thức</strong> lịch phân ca tuần này?
               </p>
               <ul style={{ fontSize: 'var(--font-caption)', color: 'var(--color-text-secondary)', paddingLeft: 18, lineHeight: 1.6 }}>
-                <li>Toàn bộ nhân viên phòng ban sẽ nhìn thấy ca làm việc của mình trên cổng portal.</li>
+                <li>Toàn bộ nhân viên chi nhánh sẽ nhìn thấy ca làm việc của mình trên cổng portal.</li>
                 <li>Mọi thay đổi tiếp theo sau khi công bố sẽ yêu cầu nhập lý do giải trình và lưu vết kiểm toán.</li>
                 {warningConflicts.length > 0 && (
                   <li style={{ color: '#d48806', fontWeight: 500 }}>

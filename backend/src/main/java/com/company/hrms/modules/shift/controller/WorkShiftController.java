@@ -37,15 +37,15 @@ public class WorkShiftController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER')")
-    @Operation(summary = "Tạo mẫu ca làm việc mới", description = "Dành riêng cho Admin và Quản lý nhân sự")
+    @PreAuthorize("hasRole('DIRECTOR')")
+    @Operation(summary = "Tạo mẫu ca làm việc mới", description = "Dành riêng cho Giám đốc")
     public ApiResponse<WorkShiftDto> createWorkShift(@Valid @RequestBody WorkShiftDto request) {
         WorkShiftDto created = workShiftService.createWorkShift(request);
         return ApiResponse.success(created);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER')")
+    @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Cập nhật mẫu ca làm việc", description = "Sửa thông tin ca (không làm sai lệch lịch sử nhờ snapshotting)")
     public ApiResponse<WorkShiftDto> updateWorkShift(
             @PathVariable Long id,
@@ -55,7 +55,7 @@ public class WorkShiftController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER')")
+    @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Xóa mềm mẫu ca làm việc", description = "Ẩn mẫu ca khỏi danh sách phân ca mới")
     public ApiResponse<Void> deleteWorkShift(@PathVariable Long id) {
         workShiftService.deleteWorkShift(id);

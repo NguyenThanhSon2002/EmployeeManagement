@@ -6,7 +6,7 @@ import { Trash2, AlertTriangle, X, Loader2 } from 'lucide-react';
 interface DeleteConfirmModalProps {
   isOpen: boolean;
   employee: Employee | null;
-  departmentName?: string;
+  branchName?: string;
   isDeleting: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void> | void;
@@ -15,7 +15,7 @@ interface DeleteConfirmModalProps {
 export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   isOpen,
   employee,
-  departmentName,
+  branchName,
   isDeleting,
   onClose,
   onConfirm,
@@ -159,10 +159,10 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
                 {employee.employeeCode}
               </span>
             </div>
-            {departmentName && (
+            {branchName && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--color-text-secondary, #64748B)' }}>Phòng ban:</span>
-                <span style={{ color: 'var(--color-text-primary, #0F172A)' }}>{departmentName}</span>
+                <span style={{ color: 'var(--color-text-secondary, #64748B)' }}>Chi nhánh / Cơ sở:</span>
+                <span style={{ color: 'var(--color-text-primary, #0F172A)' }}>{branchName}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>

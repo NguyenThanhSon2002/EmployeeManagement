@@ -6,18 +6,18 @@ import { Plus, Palmtree, Lock } from 'lucide-react';
 interface ScheduleCellProps {
   employeeId: number;
   workDate: string;
-  assignment: ShiftAssignment | null;
+  assignments: ShiftAssignment[];
   conflicts: ScheduleConflict[];
   approvedLeave: LeaveRequest | null;
   holiday: CompanyHoliday | null;
   isToday: boolean;
   isLocked: boolean;
   canEdit: boolean;
-  onOpenAssign: () => void;
+  onOpenAssign: (targetAssignment?: ShiftAssignment | null) => void;
 }
 
 export const ScheduleCell: React.FC<ScheduleCellProps> = React.memo(({
-  assignment,
+  assignments = [],
   conflicts,
   approvedLeave,
   isToday,
@@ -64,27 +64,44 @@ export const ScheduleCell: React.FC<ScheduleCellProps> = React.memo(({
     );
   }
 
-  // 3. Assigned shift
-  if (assignment) {
+  // 3. One or more assigned shifts (Multi-shift stack)
+  if (assignments.length > 0) {
     return (
-      <div role="gridcell" className={cellClass}>
-        <ShiftCard
-          assignment={assignment}
-          conflicts={conflicts}
-          onClick={canEdit ? onOpenAssign : () => {}}
-        />
+      <div role="gridcell" className={cellClass} style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'flex-start' }}>
+        {assignments.map((assignment) => (
+          <ShiftCard
+            key={assignment.id}
+            assignment={assignment}
+            conflicts={conflicts}
+            onClick={canEdit ? () => onOpenAssign(assignment) : () => {}}
+          />
+        ))}
+
+        {/* Allow adding second shift if employee currently has 1 shift */}
+        {canEdit && assignments.length < 2 && (
+          <button
+            type="button"
+            className="cell-add-mini-btn"
+            onClick={() => onOpenAssign(null)}
+            aria-label="Thêm ca thứ 2 trong ngày"
+            title="Thêm ca thứ 2 cho nhân viên trong ngày này"
+          >
+            <Plus size={12} />
+            <span>+ Ca 2</span>
+          </button>
+        )}
       </div>
     );
   }
 
-  // 4. Empty slot
+  // 4. Empty slot (0 shifts assigned)
   return (
     <div role="gridcell" className={cellClass}>
       {canEdit && (
         <button
           type="button"
           className="cell-add-btn"
-          onClick={onOpenAssign}
+          onClick={() => onOpenAssign(null)}
           aria-label="Thêm phân ca mới"
           title="Click để phân ca"
         >
