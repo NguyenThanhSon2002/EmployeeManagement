@@ -49,14 +49,14 @@ public class EmployeeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN', 'HR_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Tạo mới hồ sơ nhân viên")
     public ApiResponse<EmployeeDto> createEmployee(@Valid @RequestBody EmployeeDto request) {
         return ApiResponse.success(employeeService.createEmployee(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN', 'HR_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Cập nhật hồ sơ nhân viên")
     public ApiResponse<EmployeeDto> updateEmployee(
             @PathVariable Long id,
@@ -65,7 +65,7 @@ public class EmployeeController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN', 'HR_MANAGER')")
+    @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Xóa mềm hồ sơ nhân viên")
     public ApiResponse<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);

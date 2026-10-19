@@ -33,7 +33,7 @@ public class ReportController {
     }
 
     @GetMapping("/attendance-summary")
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Lấy báo cáo tổng hợp công tháng", description = "Tính tổng ngày làm, giờ thường, giờ OT, giờ đêm, đi muộn của nhân viên theo chi nhánh")
     public ApiResponse<List<AttendanceSummaryDto>> getAttendanceSummary(
             @RequestParam(value = "branch_id", required = false) Long branchId,
@@ -48,7 +48,7 @@ public class ReportController {
     }
 
     @GetMapping("/export/excel")
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Xuất báo cáo Excel (.xlsx)", description = "File định dạng chuẩn Microsoft Excel có định dạng bảng và tiêu đề chuyên nghiệp")
     public ResponseEntity<byte[]> exportExcel(
             @RequestParam(value = "branch_id", required = false) Long branchId,
@@ -70,7 +70,7 @@ public class ReportController {
     }
 
     @GetMapping("/export/csv")
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'ADMIN', 'HR_MANAGER', 'DEPT_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Xuất báo cáo CSV chuẩn UTF-8 BOM", description = "Chống lỗi font dấu tiếng Việt khi mở trực tiếp bằng Excel")
     public ResponseEntity<byte[]> exportCsv(
             @RequestParam(value = "branch_id", required = false) Long branchId,

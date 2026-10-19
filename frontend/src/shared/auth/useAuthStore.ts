@@ -40,9 +40,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setRole: (role: RoleType) => {
     let username = 'admin';
-    if (role === 'ROLE_DIRECTOR' || role === 'ROLE_ADMIN') {
+    if (role === 'ROLE_DIRECTOR') {
       username = 'admin';
-    } else if (role === 'ROLE_MANAGER' || role === 'ROLE_DEPT_MANAGER') {
+    } else if (role === 'ROLE_MANAGER') {
       username = 'manager';
     } else if (role === 'ROLE_EMPLOYEE') {
       username = 'employee';

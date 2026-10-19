@@ -24,7 +24,7 @@ export const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ isOpen, on
   const { addToast } = useUIStore();
   const { employees } = useDirectoryStore();
 
-  const isManagerOrAdmin = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER' || currentRole === 'ROLE_DEPT_MANAGER';
+  const isManagerOrAdmin = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_MANAGER';
 
   const [employeeId, setEmployeeId] = useState<number>(currentUser.id);
   const [leaveTypeId, setLeaveTypeId] = useState<number>(1);

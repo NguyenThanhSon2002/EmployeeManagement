@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { Employee, RoleType } from '@/types/domain.types';
-import { User, Settings, LogOut, ShieldCheck, Briefcase, UserCheck } from 'lucide-react';
+import { User, Settings, LogOut, ShieldCheck, Briefcase } from 'lucide-react';
 
 interface UserProfileDropdownProps {
   isOpen: boolean;
@@ -15,7 +15,6 @@ interface UserProfileDropdownProps {
 const getRoleBadge = (role: RoleType) => {
   switch (role) {
     case 'ROLE_DIRECTOR':
-    case 'ROLE_ADMIN':
       return {
         label: 'Giám đốc',
         icon: <ShieldCheck size={12} />,
@@ -24,8 +23,6 @@ const getRoleBadge = (role: RoleType) => {
         border: '#DDD6FE',
       };
     case 'ROLE_MANAGER':
-    case 'ROLE_HR_MANAGER':
-    case 'ROLE_DEPT_MANAGER':
       return {
         label: 'Quản lý cơ sở',
         icon: <Briefcase size={12} />,

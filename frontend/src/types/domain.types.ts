@@ -4,7 +4,7 @@
  */
 
 /** User roles in the system (3 Canonical Roles: Director, Manager, Employee) */
-export type RoleType = 'ROLE_DIRECTOR' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE' | 'ROLE_ADMIN' | 'ROLE_HR_MANAGER' | 'ROLE_DEPT_MANAGER';
+export type RoleType = 'ROLE_DIRECTOR' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE';
 
 /** Branch / Chi nhánh - Cơ sở làm việc */
 export interface Branch {
