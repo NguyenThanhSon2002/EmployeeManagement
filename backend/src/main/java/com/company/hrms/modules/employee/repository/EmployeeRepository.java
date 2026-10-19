@@ -26,6 +26,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     List<Employee> findAllByBranchIdAndDeletedAtIsNull(Long branchId);
 
+    long countByBranchIdAndDeletedAtIsNull(Long branchId);
+
     @Query("SELECT e FROM Employee e WHERE e.deletedAt IS NULL " +
             "AND (:branchId IS NULL OR e.branchId = :branchId) " +
             "AND (:status IS NULL OR e.employmentStatus = :status) " +
