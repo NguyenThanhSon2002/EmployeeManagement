@@ -72,21 +72,11 @@ export const Topbar: React.FC = () => {
         boxShadow: 'var(--shadow-xs)',
       }}
     >
-      {/* Left: System Title, Branch Scope & Operational Status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>
-            Hệ Thống Quản Lý Phân Ca & Nhân Sự
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-            <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-              Chi nhánh Cầu Giấy (CN_CAUGIAY)
-            </span>
-            <span style={{ color: 'var(--color-border)' }}>•</span>
-            <span className="pulse-dot-green" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#059669' }}>Hệ thống sẵn sàng</span>
-          </div>
-        </div>
+      {/* Left: System Title */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>
+          Hệ Thống Quản Lý Phân Ca & Nhân Sự
+        </span>
       </div>
 
       {/* Right Controls: Clock, Role Badge, User Identity */}

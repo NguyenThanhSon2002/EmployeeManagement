@@ -9,6 +9,7 @@ import {
   isSameMonth,
   isSameDay,
 } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ShiftAssignment, Employee, CompanyHoliday } from '@/types/domain.types';
 import { formatDateIso } from '@/utils/date.utils';
 
@@ -18,6 +19,9 @@ interface MonthViewGridProps {
   assignmentsMap: Record<string, ShiftAssignment[]>;
   holidays: CompanyHoliday[];
   onSelectDay: (dateStr: string) => void;
+  onPrevMonth?: () => void;
+  onNextMonth?: () => void;
+  onCurrentMonth?: () => void;
 }
 
 export const MonthViewGrid: React.FC<MonthViewGridProps> = ({
@@ -26,6 +30,9 @@ export const MonthViewGrid: React.FC<MonthViewGridProps> = ({
   assignmentsMap,
   holidays,
   onSelectDay,
+  onPrevMonth,
+  onNextMonth,
+  onCurrentMonth,
 }) => {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
@@ -43,10 +50,108 @@ export const MonthViewGrid: React.FC<MonthViewGridProps> = ({
 
   return (
     <div className="card" style={{ padding: 'var(--space-md)', overflowX: 'auto' }}>
-      <div style={{ marginBottom: 'var(--space-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ fontSize: 'var(--font-h3)', fontWeight: 600 }}>
-          Lịch Phân Ca Toàn Tháng {format(currentDate, 'MM/yyyy')}
-        </h3>
+      <div style={{ marginBottom: 'var(--space-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <h3 style={{ fontSize: 'var(--font-h3)', fontWeight: 600, margin: 0 }}>
+            Lịch Phân Ca Toàn Tháng
+          </h3>
+
+          {(onPrevMonth || onNextMonth || onCurrentMonth) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  backgroundColor: '#F8FAFC',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: 'var(--shadow-xs)',
+                  overflow: 'hidden',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={onPrevMonth}
+                  title="Tháng trước"
+                  aria-label="Tháng trước"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 30,
+                    height: 30,
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: 'var(--color-text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'background-color var(--transition-fast)',
+                  }}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={onCurrentMonth}
+                  title="Click để quay về tháng hiện tại"
+                  style={{
+                    borderTop: 'none',
+                    borderBottom: 'none',
+                    borderLeft: '1px solid var(--color-border)',
+                    borderRight: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-surface)',
+                    height: 30,
+                    padding: '0 12px',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    color: 'var(--color-primary)',
+                    cursor: 'pointer',
+                    transition: 'background-color var(--transition-fast)',
+                  }}
+                >
+                  Tháng {format(currentDate, 'MM/yyyy')}
+                </button>
+                <button
+                  type="button"
+                  onClick={onNextMonth}
+                  title="Tháng sau"
+                  aria-label="Tháng sau"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 30,
+                    height: 30,
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: 'var(--color-text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'background-color var(--transition-fast)',
+                  }}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {onCurrentMonth && (
+                <button
+                  type="button"
+                  onClick={onCurrentMonth}
+                  className="btn btn-default"
+                  title="Về tháng hiện tại"
+                  style={{
+                    height: 30,
+                    padding: '0 10px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                  }}
+                >
+                  Hôm nay
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         <div style={{ fontSize: 'var(--font-caption)', color: 'var(--color-text-muted)' }}>
           Tổng quân số: {employees.length} nhân viên
         </div>
