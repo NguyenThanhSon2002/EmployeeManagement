@@ -62,26 +62,7 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
         {/* Card Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '4px 10px',
-                borderRadius: 8,
-                backgroundColor: template.colorCode || '#EFF6FF',
-                color: template.textColor || '#1D4ED8',
-                fontWeight: 800,
-                fontSize: 12,
-                border: `1px solid ${template.textColor || '#1D4ED8'}35`,
-                letterSpacing: '0.04em',
-              }}
-            >
-              {template.isCrossMidnight ? <Moon size={12} /> : <Sun size={12} />}
-              {template.shiftCode}
-            </span>
-
-            {template.isCrossMidnight && (
+            {template.isCrossMidnight ? (
               <span
                 style={{
                   display: 'inline-flex',
@@ -98,6 +79,23 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
               >
                 <Moon size={11} /> Ca qua đêm (+1 ngày)
               </span>
+            ) : (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '3px 8px',
+                  borderRadius: 9999,
+                  backgroundColor: '#F8FAFC',
+                  color: '#475569',
+                  border: '1px solid #E2E8F0',
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+              >
+                <Sun size={11} color="#EAB308" /> Ca trong ngày
+              </span>
             )}
           </div>
 
@@ -106,8 +104,9 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
             style={{
               fontSize: 12,
               fontWeight: 700,
-              color: '#475569',
-              backgroundColor: '#F1F5F9',
+              color: '#1E40AF',
+              backgroundColor: '#EFF6FF',
+              border: '1px solid #DBEAFE',
               padding: '3px 8px',
               borderRadius: 6,
             }}

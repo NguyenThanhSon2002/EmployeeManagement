@@ -41,14 +41,14 @@ export const QuickAttendanceCard: React.FC = () => {
       addToast({
         type: 'success',
         title: 'Điểm danh vào ca thành công',
-        message: 'Đã ghi nhận check-in và lưu vào CSDL MySQL.',
+        message: 'Đã ghi nhận thời gian vào ca thành công.',
       });
     } else {
       checkOut(currentUser.id);
       addToast({
         type: 'info',
         title: 'Check-out hoàn tất',
-        message: 'Đã ghi nhận check-out ca làm việc vào CSDL MySQL.',
+        message: 'Đã ghi nhận kết thúc ca làm việc thành công.',
       });
     }
   };

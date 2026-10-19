@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Branch, Employee } from '@/types/domain.types';
 import { useModalFocusTrap } from '@/hooks/useModalFocusTrap';
+import { generateSlugCode } from '@/utils/code-generator.utils';
 import { Building2, X, Loader2, Save } from 'lucide-react';
 
 interface BranchFormModalProps {
@@ -58,12 +59,6 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
 
-    if (!branchCode.trim()) {
-      errs.branchCode = 'Mã chi nhánh không được để trống';
-    } else if (!/^[A-Z0-9_]+$/.test(branchCode.trim())) {
-      errs.branchCode = 'Mã chi nhánh chỉ bao gồm chữ HOA, số và dấu gạch dưới (VD: CN_HADONG)';
-    }
-
     if (!branchName.trim()) {
       errs.branchName = 'Tên chi nhánh không được để trống';
     } else if (branchName.trim().length > 150) {
@@ -82,8 +77,10 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
     e.preventDefault();
     if (!validate()) return;
 
+    const finalCode = branchCode.trim() || generateSlugCode(branchName, 'CN_');
+
     onSubmit({
-      branchCode: branchCode.trim(),
+      branchCode: finalCode,
       branchName: branchName.trim(),
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
@@ -164,7 +161,7 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
                 {mode === 'create' ? 'Thêm Chi Nhánh / Cơ Sở Mới' : 'Cập Nhật Thông Tin Chi Nhánh'}
               </h2>
               <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: 'var(--color-text-secondary, #64748B)' }}>
-                {mode === 'create' ? 'Thiết lập cơ sở làm việc và quản lý phụ trách' : `Chỉnh sửa thông tin cơ sở [${branch?.branchCode}]`}
+                {mode === 'create' ? 'Thiết lập cơ sở làm việc và quản lý phụ trách' : `Chỉnh sửa thông tin chi nhánh "${branch?.branchName}"`}
               </p>
             </div>
           </div>
@@ -189,55 +186,28 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Row 1: Code and Name */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: 6, color: '#334155' }}>
-                  Mã chi nhánh <span style={{ color: '#DC2626' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="VD: CN_HADONG"
-                  value={branchCode}
-                  onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
-                  disabled={mode === 'edit' || isSaving}
-                  style={{
-                    width: '100%',
-                    fontFamily: 'monospace',
-                    textTransform: 'uppercase',
-                    borderColor: errors.branchCode ? '#DC2626' : undefined,
-                  }}
-                />
-                {errors.branchCode && (
-                  <span style={{ fontSize: '11.5px', color: '#DC2626', marginTop: 4, display: 'block' }}>
-                    {errors.branchCode}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: 6, color: '#334155' }}>
-                  Tên chi nhánh <span style={{ color: '#DC2626' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="VD: Chi nhánh Hà Đông"
-                  value={branchName}
-                  onChange={(e) => setBranchName(e.target.value)}
-                  disabled={isSaving}
-                  style={{
-                    width: '100%',
-                    borderColor: errors.branchName ? '#DC2626' : undefined,
-                  }}
-                />
-                {errors.branchName && (
-                  <span style={{ fontSize: '11.5px', color: '#DC2626', marginTop: 4, display: 'block' }}>
-                    {errors.branchName}
-                  </span>
-                )}
-              </div>
+            {/* Tên chi nhánh */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: 6, color: '#334155' }}>
+                Tên chi nhánh / cơ sở <span style={{ color: '#DC2626' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className="input"
+                placeholder="VD: Chi nhánh Hà Đông"
+                value={branchName}
+                onChange={(e) => setBranchName(e.target.value)}
+                disabled={isSaving}
+                style={{
+                  width: '100%',
+                  borderColor: errors.branchName ? '#DC2626' : undefined,
+                }}
+              />
+              {errors.branchName && (
+                <span style={{ fontSize: '11.5px', color: '#DC2626', marginTop: 4, display: 'block' }}>
+                  {errors.branchName}
+                </span>
+              )}
             </div>
 
             {/* Row 2: Address */}

@@ -12,10 +12,10 @@ export const ReportsPage: React.FC = () => {
       {/* Header */}
       <div>
         <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-          Trung Tâm Báo Cáo & Thống Kê (SCR-15)
+          Trung Tâm Báo Cáo & Thống Kê
         </h1>
         <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-          Đối soát dữ liệu công ca, phân tích tỷ lệ hoàn thành kế hoạch và xuất báo cáo CSV tiếng Việt (UTF-8 BOM).
+          Đối soát dữ liệu công ca, phân tích tỷ lệ hoàn thành kế hoạch và xuất báo cáo Excel/CSV.
         </p>
       </div>
 

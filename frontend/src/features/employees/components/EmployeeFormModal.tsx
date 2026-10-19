@@ -373,7 +373,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.branchName} ({b.branchCode})
+                      {b.branchName}
                     </option>
                   ))}
                 </select>

@@ -257,28 +257,6 @@ export const Sidebar: React.FC = () => {
           </div>
         ))}
       </nav>
-
-      {/* Footer Branding Info */}
-      {!sidebarCollapsed && (
-        <div
-          style={{
-            padding: '12px 16px',
-            borderTop: '1px solid var(--color-border-subtle)',
-            backgroundColor: '#F8FAFC',
-            fontSize: 11,
-            color: 'var(--color-text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>EMS Suite v2.0</div>
-            <div>WCAG 2.1 AA Compliant</div>
-          </div>
-          <span className="pulse-dot-green" title="Hệ thống trực tuyến bình thường" />
-        </div>
-      )}
     </aside>
   );
 };

@@ -98,7 +98,7 @@ export const DeleteBranchModal: React.FC<DeleteBranchModalProps> = ({
                 {hasEmployees ? 'Không Thể Xóa Chi Nhánh' : 'Xác Nhận Xóa Chi Nhánh'}
               </h2>
               <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#64748B' }}>
-                Cơ sở: <strong>{branch.branchName}</strong> ({branch.branchCode})
+                Cơ sở: <strong>{branch.branchName}</strong>
               </p>
             </div>
           </div>
@@ -148,7 +148,7 @@ export const DeleteBranchModal: React.FC<DeleteBranchModalProps> = ({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <p style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-primary, #1E293B)', lineHeight: 1.5 }}>
-                Bạn có chắc chắn muốn xóa chi nhánh <strong>{branch.branchName}</strong> (Mã: <code>{branch.branchCode}</code>) không?
+                Bạn có chắc chắn muốn xóa chi nhánh <strong>{branch.branchName}</strong> không?
               </p>
               <div
                 style={{

@@ -14,10 +14,8 @@ import {
   MapPin,
   Users,
   CheckCircle2,
-  ShieldCheck,
   Edit2,
   Trash2,
-  ShieldAlert,
   Loader2,
 } from 'lucide-react';
 
@@ -150,7 +148,7 @@ export const BranchesPage: React.FC = () => {
         addToast({
           type: 'success',
           title: 'Tạo chi nhánh thành công',
-          message: `Đã thêm chi nhánh ${created.branchName} (${created.branchCode}) vào hệ thống.`,
+          message: `Đã thêm chi nhánh ${created.branchName} vào hệ thống.`,
         });
       } else if (formMode === 'edit' && selectedBranch) {
         const updated = await updateBranch(selectedBranch.id, data);
@@ -226,41 +224,6 @@ export const BranchesPage: React.FC = () => {
               <Building2 size={28} style={{ color: 'var(--color-primary, #2563EB)' }} />
               Quản Lý Chi Nhánh & Cơ Sở
             </h1>
-            {isDirector ? (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: '11.5px',
-                  fontWeight: 600,
-                  padding: '3px 8px',
-                  borderRadius: '12px',
-                  backgroundColor: '#EFF6FF',
-                  color: '#1D4ED8',
-                  border: '1px solid #BFDBFE',
-                }}
-              >
-                <ShieldCheck size={13} /> Quyền Giám Đốc
-              </span>
-            ) : (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontSize: '11.5px',
-                  fontWeight: 600,
-                  padding: '3px 8px',
-                  borderRadius: '12px',
-                  backgroundColor: '#F1F5F9',
-                  color: '#64748B',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <ShieldAlert size={13} /> Chế Độ Chỉ Xem
-              </span>
-            )}
           </div>
           <p
             style={{
@@ -550,9 +513,6 @@ export const BranchesPage: React.FC = () => {
                   }}
                 >
                   <th style={{ padding: '12px 16px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                    Mã Cơ Sở
-                  </th>
-                  <th style={{ padding: '12px 16px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                     Tên Chi Nhánh & Địa Chỉ
                   </th>
                   <th style={{ padding: '12px 16px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
@@ -585,24 +545,6 @@ export const BranchesPage: React.FC = () => {
                         transition: 'background-color 0.15s ease',
                       }}
                     >
-                      {/* Branch Code */}
-                      <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
-                        <span
-                          style={{
-                            fontFamily: 'monospace',
-                            fontWeight: 700,
-                            fontSize: '12.5px',
-                            backgroundColor: '#F1F5F9',
-                            color: '#1E293B',
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid #E2E8F0',
-                          }}
-                        >
-                          {branch.branchCode}
-                        </span>
-                      </td>
-
                       {/* Name & Address */}
                       <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
                         <div style={{ fontWeight: 600, fontSize: '14px', color: '#0F172A' }}>

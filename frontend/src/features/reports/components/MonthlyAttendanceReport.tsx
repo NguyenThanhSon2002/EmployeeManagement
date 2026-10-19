@@ -167,7 +167,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
             <Download size={16} /> Xuất Excel (.xlsx)
           </button>
           <button type="button" className="btn btn-primary" onClick={handleExportCsv} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Download size={16} /> Xuất CSV (UTF-8 BOM)
+            <Download size={16} /> Xuất CSV
           </button>
         </div>
       </div>
