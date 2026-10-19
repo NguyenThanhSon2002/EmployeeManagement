@@ -75,17 +75,23 @@ export const EmployeeDetailPage: React.FC = () => {
     isActive: true,
   };
 
-  const [employee, setEmployee] = useState<Employee>(cachedEmployee || fallbackEmp);
-  const [branchesList, setBranchesList] = useState<Branch[]>(branches);
+  const [employee, setEmployee] = useState<Employee | null>(
+    isMockEnabled() ? (cachedEmployee || fallbackEmp) : null
+  );
+  const [branchesList, setBranchesList] = useState<Branch[]>(isMockEnabled() ? branches : []);
+  const [isLoading, setIsLoading] = useState<boolean>(!isMockEnabled());
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isMockEnabled() || !id) return;
 
     let isMounted = true;
     const fetchEmployee = async () => {
+      setIsLoading(true);
+      setLoadError(null);
       try {
         const [empData, branchData] = await Promise.all([
-          employeeService.getEmployeeById(Number(id)).catch(() => null),
+          employeeService.getEmployeeById(Number(id)),
           branchService.getAllBranches().catch(() => null),
         ]);
 
@@ -124,9 +130,27 @@ export const EmployeeDetailPage: React.FC = () => {
             isActive: empData.is_active !== undefined ? empData.is_active : true,
             version: empData.version || 1,
           });
+        } else {
+          setEmployee(null);
+          setLoadError('Không tìm thấy thông tin nhân viên.');
+          addToast({
+            type: 'error',
+            title: 'Lỗi tải dữ liệu',
+            message: 'Không tìm thấy thông tin nhân viên trên hệ thống.',
+          });
         }
-      } catch (err) {
-        console.warn('Could not fetch employee by id from API:', err);
+      } catch (err: any) {
+        if (!isMounted) return;
+        console.error('Could not fetch employee by id from API:', err);
+        setEmployee(null);
+        setLoadError('Không thể tải thông tin nhân sự từ máy chủ.');
+        addToast({
+          type: 'error',
+          title: 'Lỗi tải dữ liệu',
+          message: 'Không thể kết nối máy chủ để tải thông tin nhân viên.',
+        });
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -134,18 +158,22 @@ export const EmployeeDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, addToast]);
 
-  const branch = (branchesList.length > 0 ? branchesList : branches).find((b) => b.id === employee.branchId);
-  const position = positions.find((p) => p.id === employee.positionId);
+  const branch = employee ? (branchesList.length > 0 ? branchesList : branches).find((b) => b.id === employee.branchId) : undefined;
+  const position = employee ? positions.find((p) => p.id === employee.positionId) : undefined;
 
   // Shifts of this employee
-  const employeeShifts = Object.values(assignments).flat().filter(
-    (a) => a.employeeId === employee.id && a.status !== 'CANCELLED'
-  );
+  const employeeShifts = employee
+    ? Object.values(assignments).flat().filter(
+        (a) => a.employeeId === employee.id && a.status !== 'CANCELLED'
+      )
+    : [];
 
   // Leaves of this employee
-  const employeeLeaves = approvedLeaves.filter((l) => l.employeeId === employee.id);
+  const employeeLeaves = employee
+    ? approvedLeaves.filter((l) => l.employeeId === employee.id)
+    : [];
 
   const handleConfirmDelete = async () => {
     if (!employee || !employee.id) return;
@@ -196,9 +224,24 @@ export const EmployeeDetailPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Profile Header Banner */}
-      <div
-        className="card"
+      {isLoading ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+          Đang tải thông tin nhân sự...
+        </div>
+      ) : !employee ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
+          <p style={{ color: 'var(--color-error)', marginBottom: 16 }}>
+            {loadError || 'Không tìm thấy hồ sơ nhân sự trên hệ thống.'}
+          </p>
+          <button className="btn btn-primary" onClick={() => navigate('/employees')}>
+            Quay lại danh sách nhân viên
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Profile Header Banner */}
+          <div
+            className="card"
         style={{
           padding: '20px 24px',
           display: 'flex',
@@ -590,6 +633,8 @@ export const EmployeeDetailPage: React.FC = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
       />
-    </div>
+    </>
+  )}
+</div>
   );
 };

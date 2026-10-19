@@ -25,16 +25,20 @@ export const EmployeeListPage: React.FC = () => {
   const { addToast } = useUIStore();
   const { employees, branches, positions } = useDirectoryStore();
 
-  const [employeesList, setEmployeesList] = useState<Employee[]>(employees);
-  const [branchesList, setBranchesList] = useState<Branch[]>(branches);
+  const [employeesList, setEmployeesList] = useState<Employee[]>(isMockEnabled() ? employees : []);
+  const [branchesList, setBranchesList] = useState<Branch[]>(isMockEnabled() ? branches : []);
+  const [isLoading, setIsLoading] = useState<boolean>(!isMockEnabled());
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
   useEffect(() => {
-    if (employees.length > 0) setEmployeesList(employees);
-    if (branches.length > 0) setBranchesList(branches);
+    if (isMockEnabled()) {
+      if (employees.length > 0) setEmployeesList(employees);
+      if (branches.length > 0) setBranchesList(branches);
+    }
   }, [employees, branches]);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -50,16 +54,12 @@ export const EmployeeListPage: React.FC = () => {
 
     let isMounted = true;
     const loadData = async () => {
+      setIsLoading(true);
+      setLoadError(null);
       try {
         const [empRes, branchRes] = await Promise.all([
-          employeeService.getEmployees({ page: 1, size: 100 }).catch((err) => {
-            console.warn('API getEmployees error, falling back to directory store:', err);
-            return null;
-          }),
-          branchService.getAllBranches().catch((err) => {
-            console.warn('API getAllBranches error, falling back to directory store:', err);
-            return null;
-          }),
+          employeeService.getEmployees({ page: 1, size: 100 }),
+          branchService.getAllBranches(),
         ]);
 
         if (!isMounted) return;
@@ -67,51 +67,49 @@ export const EmployeeListPage: React.FC = () => {
         const empData = toArray(empRes);
         const branchData = toArray(branchRes);
 
-        if (branchData && Array.isArray(branchData) && branchData.length > 0) {
-          const mappedBranches: Branch[] = branchData.map((b: any) => ({
-            id: b.id,
-            branchCode: b.branch_code || b.branchCode,
-            branchName: b.branch_name || b.branchName,
-            address: b.address || '',
-            phoneNumber: b.phone_number || b.phoneNumber || '',
-            managerId: b.manager_id || b.managerId || null,
-            isActive: b.is_active !== undefined ? b.is_active : true,
-          }));
-          setBranchesList(mappedBranches);
-        } else if (branches.length > 0) {
-          setBranchesList(branches);
-        }
+        const mappedBranches: Branch[] = branchData.map((b: any) => ({
+          id: b.id,
+          branchCode: b.branch_code || b.branchCode,
+          branchName: b.branch_name || b.branchName,
+          address: b.address || '',
+          phoneNumber: b.phone_number || b.phoneNumber || '',
+          managerId: b.manager_id || b.managerId || null,
+          isActive: b.is_active !== undefined ? b.is_active : true,
+        }));
+        setBranchesList(mappedBranches);
 
-        if (empData && Array.isArray(empData) && empData.length > 0) {
-          const mappedEmps: Employee[] = empData.map((dto: any) => ({
-            id: dto.id,
-            employeeCode: dto.employee_code || dto.employeeCode,
-            fullName: dto.full_name || dto.fullName,
-            email: dto.email,
-            phoneNumber: dto.phone_number || dto.phoneNumber || '',
-            nationalId: dto.national_id || dto.nationalId || '',
-            dateOfBirth: dto.date_of_birth || dto.dateOfBirth || '',
-            gender: dto.gender || 'OTHER',
-            address: dto.address || '',
-            branchId: dto.branch_id || dto.branchId || dto.department_id || 1,
-            positionId: dto.position_id || dto.positionId || 1,
-            managerId: dto.manager_id || dto.managerId || null,
-            employmentStatus: dto.employment_status || dto.employmentStatus || 'OFFICIAL',
-            employmentType: dto.employment_type || dto.employmentType || 'FULL_TIME',
-            hireDate: dto.hire_date || dto.hireDate || '2026-01-01',
-            isActive: dto.is_active !== undefined ? dto.is_active : true,
-            version: dto.version || 1,
-          }));
-          setEmployeesList(mappedEmps);
-        } else if (employees.length > 0) {
-          setEmployeesList(employees);
-        }
-      } catch (err) {
+        const mappedEmps: Employee[] = empData.map((dto: any) => ({
+          id: dto.id,
+          employeeCode: dto.employee_code || dto.employeeCode,
+          fullName: dto.full_name || dto.fullName,
+          email: dto.email,
+          phoneNumber: dto.phone_number || dto.phoneNumber || '',
+          nationalId: dto.national_id || dto.nationalId || '',
+          dateOfBirth: dto.date_of_birth || dto.dateOfBirth || '',
+          gender: dto.gender || 'OTHER',
+          address: dto.address || '',
+          branchId: dto.branch_id || dto.branchId || dto.department_id || 1,
+          positionId: dto.position_id || dto.positionId || 1,
+          managerId: dto.manager_id || dto.managerId || null,
+          employmentStatus: dto.employment_status || dto.employmentStatus || 'OFFICIAL',
+          employmentType: dto.employment_type || dto.employmentType || 'FULL_TIME',
+          hireDate: dto.hire_date || dto.hireDate || '2026-01-01',
+          isActive: dto.is_active !== undefined ? dto.is_active : true,
+          version: dto.version || 1,
+        }));
+        setEmployeesList(mappedEmps);
+      } catch (err: any) {
         if (!isMounted) return;
         console.error('Không tải được dữ liệu nhân sự từ backend:', err);
-        if (employees.length > 0) {
-          setEmployeesList(employees);
-        }
+        setEmployeesList([]);
+        setLoadError('Không thể tải danh sách nhân viên từ máy chủ.');
+        addToast({
+          type: 'error',
+          title: 'Lỗi tải dữ liệu',
+          message: 'Không thể tải danh sách nhân viên từ máy chủ. Danh sách đang trống.',
+        });
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -393,7 +391,19 @@ export const EmployeeListPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {paginatedEmployees.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+                  Đang tải danh sách nhân sự từ máy chủ...
+                </td>
+              </tr>
+            ) : loadError ? (
+              <tr>
+                <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-error)' }}>
+                  {loadError}
+                </td>
+              </tr>
+            ) : paginatedEmployees.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
                   Không tìm thấy nhân viên nào phù hợp với bộ lọc hiện tại.

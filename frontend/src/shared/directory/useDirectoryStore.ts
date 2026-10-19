@@ -3,6 +3,7 @@ import type { Employee, Branch, Position } from '@/types/domain.types';
 import { employeeService } from '@/features/employees/api/employeeService';
 import { branchService } from '@/shared/branch/branchService';
 import { api } from '@/shared/api/apiClient';
+import { isMockEnabled } from '@/config/env.config';
 
 interface DirectoryState {
   employees: Employee[];
@@ -57,9 +58,9 @@ const DEFAULT_EMPLOYEES: Employee[] = [
 ];
 
 export const useDirectoryStore = create<DirectoryState>((set, get) => ({
-  employees: DEFAULT_EMPLOYEES,
-  branches: DEFAULT_BRANCHES,
-  positions: DEFAULT_POSITIONS,
+  employees: isMockEnabled() ? DEFAULT_EMPLOYEES : [],
+  branches: isMockEnabled() ? DEFAULT_BRANCHES : [],
+  positions: isMockEnabled() ? DEFAULT_POSITIONS : [],
   isLoaded: false,
   isLoading: false,
 
@@ -71,16 +72,16 @@ export const useDirectoryStore = create<DirectoryState>((set, get) => ({
       set({ isLoading: true });
 
       const [empRes, branchRes, posRes] = await Promise.all([
-        employeeService.getEmployees({ page: 1, size: 200 }).catch(() => []),
-        branchService.getAllBranches().catch(() => DEFAULT_BRANCHES),
-        api.get<any[]>('/positions').catch(() => []),
+        employeeService.getEmployees({ page: 1, size: 200 }).catch(() => null),
+        branchService.getAllBranches().catch(() => null),
+        api.get<any[]>('/positions').catch(() => null),
       ]);
 
       const empData = toArray(empRes);
       const branchData = toArray(branchRes);
       const posData = toArray(posRes);
 
-      const mappedBranches: Branch[] = (branchData.length > 0 ? branchData : DEFAULT_BRANCHES).map((b: any) => ({
+      const mappedBranches: Branch[] = (branchData.length > 0 ? branchData : (isMockEnabled() ? DEFAULT_BRANCHES : [])).map((b: any) => ({
         id: b.id,
         branchCode: b.branch_code || b.branchCode,
         branchName: b.branch_name || b.branchName,
@@ -90,7 +91,7 @@ export const useDirectoryStore = create<DirectoryState>((set, get) => ({
         isActive: b.is_active !== undefined ? b.is_active : (b.isActive !== undefined ? b.isActive : true),
       }));
 
-      const mappedPositions: Position[] = posData.map((p: any) => ({
+      const mappedPositions: Position[] = (posData.length > 0 ? posData : (isMockEnabled() ? DEFAULT_POSITIONS : [])).map((p: any) => ({
         id: p.id,
         positionCode: p.position_code || p.positionCode,
         positionName: p.position_name || p.positionName,
@@ -117,18 +118,18 @@ export const useDirectoryStore = create<DirectoryState>((set, get) => ({
       }));
 
       set({
-        employees: mappedEmps.length > 0 ? mappedEmps : DEFAULT_EMPLOYEES,
-        branches: mappedBranches.length > 0 ? mappedBranches : DEFAULT_BRANCHES,
-        positions: mappedPositions.length > 0 ? mappedPositions : DEFAULT_POSITIONS,
+        employees: mappedEmps.length > 0 ? mappedEmps : (isMockEnabled() ? DEFAULT_EMPLOYEES : []),
+        branches: mappedBranches.length > 0 ? mappedBranches : (isMockEnabled() ? DEFAULT_BRANCHES : []),
+        positions: mappedPositions.length > 0 ? mappedPositions : (isMockEnabled() ? DEFAULT_POSITIONS : []),
         isLoaded: true,
         isLoading: false,
       });
     } catch (error) {
-      console.warn('Failed to load directory from backend, keeping defaults:', error);
+      console.warn('Failed to load directory from backend:', error);
       set({
-        employees: get().employees.length > 0 ? get().employees : DEFAULT_EMPLOYEES,
-        branches: get().branches.length > 0 ? get().branches : DEFAULT_BRANCHES,
-        positions: get().positions.length > 0 ? get().positions : DEFAULT_POSITIONS,
+        employees: isMockEnabled() ? (get().employees.length > 0 ? get().employees : DEFAULT_EMPLOYEES) : [],
+        branches: isMockEnabled() ? (get().branches.length > 0 ? get().branches : DEFAULT_BRANCHES) : [],
+        positions: isMockEnabled() ? (get().positions.length > 0 ? get().positions : DEFAULT_POSITIONS) : [],
         isLoaded: true,
         isLoading: false,
       });
