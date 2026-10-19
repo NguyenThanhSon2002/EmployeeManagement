@@ -137,8 +137,10 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
   const employeeStatusList = useMemo(() => {
     if (!shiftTemplate || !workDate || !shiftInfo) return [];
 
-    return employees.map((emp) => {
-      const isAlreadyInThisShift = currentAssignedMap.has(Number(emp.id));
+    return employees
+      .filter((emp) => emp.employmentStatus !== 'RESIGNED')
+      .map((emp) => {
+        const isAlreadyInThisShift = currentAssignedMap.has(Number(emp.id));
       const isAvailableForShift = isAvailable(
         Number(emp.id),
         dayOfWeek,
@@ -616,6 +618,22 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                             <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
                               ({item.emp.employeeCode})
                             </span>
+                            {item.emp.employmentStatus === 'ON_LEAVE' && (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  backgroundColor: '#FEF3C7',
+                                  color: '#D97706',
+                                  padding: '1px 6px',
+                                  borderRadius: 4,
+                                  border: '1px solid #FDE68A',
+                                }}
+                                title="Nhân viên đang trong thời gian nghỉ chế độ / tạm hoãn"
+                              >
+                                Nghỉ chế độ
+                              </span>
+                            )}
                             <a
                               href={`/employees/${item.emp.id}?tab=AVAILABILITY`}
                               target="_blank"

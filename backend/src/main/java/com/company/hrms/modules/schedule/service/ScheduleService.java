@@ -97,10 +97,17 @@ public class ScheduleService {
 
         List<WeeklyScheduleResponse.EmployeeScheduleDto> employeeDtos = new ArrayList<>();
         for (Employee emp : employees) {
+            boolean isResigned = "RESIGNED".equalsIgnoreCase(emp.getEmploymentStatus()) || Boolean.FALSE.equals(emp.getIsActive());
+            if (isResigned) {
+                continue;
+            }
+
             WeeklyScheduleResponse.EmployeeScheduleDto empDto = new WeeklyScheduleResponse.EmployeeScheduleDto(
                     emp.getId(),
                     emp.getEmployeeCode(),
-                    emp.getFullName()
+                    emp.getFullName(),
+                    emp.getEmploymentStatus(),
+                    emp.getIsActive()
             );
 
             List<ShiftAssignment> empAssigns = assignmentMap.getOrDefault(emp.getId(), Collections.emptyList());

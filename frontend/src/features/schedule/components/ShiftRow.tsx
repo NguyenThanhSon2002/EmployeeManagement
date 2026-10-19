@@ -122,10 +122,17 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
         const dateStr = formatDateIso(day);
         const isToday = dateStr === todayDateStr;
 
-        // Filter assignments matching this template and date
-        const cellAssignments = allAssignments.filter(
-          (a) => a.workShiftId === template.id && a.workDate === dateStr && a.status !== 'CANCELLED'
-        );
+        // Filter assignments matching this template and date, excluding resigned or inactive employees
+        const cellAssignments = allAssignments.filter((a) => {
+          if (a.workShiftId !== template.id || a.workDate !== dateStr || a.status === 'CANCELLED') {
+            return false;
+          }
+          const emp = employees.find((e) => e.id === a.employeeId);
+          if (!emp || emp.employmentStatus === 'RESIGNED' || emp.isActive === false) {
+            return false;
+          }
+          return true;
+        });
 
         return (
           <ShiftGridCell

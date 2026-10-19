@@ -14,6 +14,10 @@ interface DirectoryState {
 
   fetchDirectory: () => Promise<void>;
   refreshEmployees: () => Promise<void>;
+  createBranch: (data: Partial<Branch>) => Promise<Branch>;
+  updateBranch: (id: number, data: Partial<Branch>) => Promise<Branch>;
+  deleteBranch: (id: number) => Promise<void>;
+  upsertEmployeeInDirectory: (employee: Employee) => void;
   removeEmployeeFromDirectory: (id: number) => void;
   getEmployeeById: (id: number) => Employee | undefined;
   getBranchById: (id: number) => Branch | undefined;
@@ -35,26 +39,23 @@ const DEFAULT_BRANCHES: Branch[] = [
 ];
 
 const DEFAULT_POSITIONS: Position[] = [
-  { id: 1, positionCode: 'STAFF', positionName: 'Nhân viên phục vụ' },
-  { id: 2, positionCode: 'BARISTA', positionName: 'Pha chế / Barista' },
-  { id: 3, positionCode: 'SHIFT_LEADER', positionName: 'Trưởng ca' },
-  { id: 4, positionCode: 'STORE_MANAGER', positionName: 'Quản lý chi nhánh' },
-  { id: 5, positionCode: 'SUPERVISOR', positionName: 'Giám sát vận hành' },
-  { id: 6, positionCode: 'GENERAL_MANAGER', positionName: 'Quản lý tổng' },
+  { id: 1, positionCode: 'POS_DIRECTOR', positionName: 'Giám đốc' },
+  { id: 2, positionCode: 'POS_MANAGER', positionName: 'Quản lý' },
+  { id: 3, positionCode: 'POS_EMPLOYEE', positionName: 'Nhân viên' },
 ];
 
 const DEFAULT_EMPLOYEES: Employee[] = [
-  { id: 1, employeeCode: 'EMP-001', fullName: 'Nguyễn Văn An', email: 'an.nguyen@company.com', phoneNumber: '0901234567', nationalId: '001202001111', dateOfBirth: '1990-05-12', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 6, managerId: null, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2022-03-01', isActive: true, version: 1 },
-  { id: 2, employeeCode: 'EMP-002', fullName: 'Trần Thị Bích', email: 'bich.tran@company.com', phoneNumber: '0902345678', nationalId: '001202001112', dateOfBirth: '1995-08-20', gender: 'FEMALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2023-05-15', isActive: true, version: 1 },
-  { id: 3, employeeCode: 'EMP-003', fullName: 'Lê Văn Cường', email: 'cuong.le@company.com', phoneNumber: '0903456789', nationalId: '001202001113', dateOfBirth: '1998-11-05', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: 1, employmentStatus: 'PROBATION', employmentType: 'FULL_TIME', hireDate: '2026-09-01', isActive: true, version: 1 },
-  { id: 4, employeeCode: 'EMP-004', fullName: 'Phạm Văn Dũng', email: 'dung.pham@company.com', phoneNumber: '0904567890', nationalId: '001202001114', dateOfBirth: '1992-03-15', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 2, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2022-10-10', isActive: true, version: 1 },
-  { id: 5, employeeCode: 'EMP-005', fullName: 'Hoàng Thị Em', email: 'em.hoang@company.com', phoneNumber: '0905678901', nationalId: '001202001115', dateOfBirth: '1996-07-22', gender: 'FEMALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2023-01-05', isActive: true, version: 1 },
-  { id: 6, employeeCode: 'EMP-006', fullName: 'Vũ Văn Giang', email: 'giang.vu@company.com', phoneNumber: '0906789012', nationalId: '001202001116', dateOfBirth: '1994-12-30', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2021-06-18', isActive: true, version: 1 },
-  { id: 7, employeeCode: 'EMP-007', fullName: 'Đỗ Thị Hà', email: 'ha.do@company.com', phoneNumber: '0907890123', nationalId: '001202001117', dateOfBirth: '1997-04-14', gender: 'FEMALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2024-02-01', isActive: true, version: 1 },
-  { id: 8, employeeCode: 'EMP-008', fullName: 'Bùi Văn Hùng', email: 'hung.bui@company.com', phoneNumber: '0908901234', nationalId: '001202001118', dateOfBirth: '1991-09-09', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 2, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2020-11-15', isActive: true, version: 1 },
-  { id: 9, employeeCode: 'EMP-009', fullName: 'Ngô Thị Mai', email: 'mai.ngo@company.com', phoneNumber: '0909012345', nationalId: '001202001119', dateOfBirth: '1999-01-25', gender: 'FEMALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: 1, employmentStatus: 'PROBATION', employmentType: 'FULL_TIME', hireDate: '2026-08-15', isActive: true, version: 1 },
-  { id: 10, employeeCode: 'EMP-010', fullName: 'Dương Văn Nam', email: 'nam.duong@company.com', phoneNumber: '0910123456', nationalId: '001202001120', dateOfBirth: '1993-06-17', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2022-04-20', isActive: true, version: 1 },
-  { id: 21, employeeCode: 'EMP-021', fullName: 'Đinh Thị Uyên', email: 'uyen.dinh@company.com', phoneNumber: '0921234567', nationalId: '001202001121', dateOfBirth: '1988-02-14', gender: 'FEMALE', address: 'Hà Nội', branchId: 2, positionId: 3, managerId: null, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2020-01-01', isActive: true, version: 1 },
+  { id: 1, employeeCode: 'EMP-001', fullName: 'Nguyễn Văn An', email: 'an.nguyen@company.com', phoneNumber: '0901234567', nationalId: '001202001111', dateOfBirth: '1990-05-12', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: null, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2022-03-01', isActive: true, version: 1 },
+  { id: 2, employeeCode: 'EMP-002', fullName: 'Trần Thị Bích', email: 'bich.tran@company.com', phoneNumber: '0902345678', nationalId: '001202001112', dateOfBirth: '1995-08-20', gender: 'FEMALE', address: 'Hà Nội', branchId: 1, positionId: 3, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2023-05-15', isActive: true, version: 1 },
+  { id: 3, employeeCode: 'EMP-003', fullName: 'Lê Văn Cường', email: 'cuong.le@company.com', phoneNumber: '0903456789', nationalId: '001202001113', dateOfBirth: '1998-11-05', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 3, managerId: 1, employmentStatus: 'PROBATION', employmentType: 'FULL_TIME', hireDate: '2026-09-01', isActive: true, version: 1 },
+  { id: 4, employeeCode: 'EMP-004', fullName: 'Phạm Văn Dũng', email: 'dung.pham@company.com', phoneNumber: '0904567890', nationalId: '001202001114', dateOfBirth: '1992-03-15', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 3, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2022-10-10', isActive: true, version: 1 },
+  { id: 5, employeeCode: 'EMP-005', fullName: 'Hoàng Thị Em', email: 'em.hoang@company.com', phoneNumber: '0905678901', nationalId: '001202001115', dateOfBirth: '1996-07-22', gender: 'FEMALE', address: 'Hà Nội', branchId: 1, positionId: 3, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2023-01-05', isActive: true, version: 1 },
+  { id: 6, employeeCode: 'EMP-006', fullName: 'Vũ Văn Giang', email: 'giang.vu@company.com', phoneNumber: '0906789012', nationalId: '001202001116', dateOfBirth: '1994-12-30', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 3, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2021-06-18', isActive: true, version: 1 },
+  { id: 7, employeeCode: 'EMP-007', fullName: 'Đỗ Thị Hà', email: 'ha.do@company.com', phoneNumber: '0907890123', nationalId: '001202001117', dateOfBirth: '1997-04-14', gender: 'FEMALE', address: 'Hà Nội', branchId: 1, positionId: 3, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2024-02-01', isActive: true, version: 1 },
+  { id: 8, employeeCode: 'EMP-008', fullName: 'Bùi Văn Hùng', email: 'hung.bui@company.com', phoneNumber: '0908901234', nationalId: '001202001118', dateOfBirth: '1991-09-09', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 3, managerId: 1, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2020-11-15', isActive: true, version: 1 },
+  { id: 9, employeeCode: 'EMP-009', fullName: 'Ngô Thị Mai', email: 'mai.ngo@company.com', phoneNumber: '0909012345', nationalId: '001202001119', dateOfBirth: '1999-01-25', gender: 'FEMALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: null, employmentStatus: 'RESIGNED', employmentType: 'FULL_TIME', hireDate: '2026-08-15', isActive: false, version: 1 },
+  { id: 10, employeeCode: 'EMP-010', fullName: 'Dương Văn Nam', email: 'nam.duong@company.com', phoneNumber: '0910123456', nationalId: '001202001120', dateOfBirth: '1993-06-17', gender: 'MALE', address: 'Hà Nội', branchId: 1, positionId: 1, managerId: null, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2022-04-20', isActive: true, version: 1 },
+  { id: 21, employeeCode: 'EMP-021', fullName: 'Đinh Thị Uyên', email: 'uyen.dinh@company.com', phoneNumber: '0921234567', nationalId: '001202001121', dateOfBirth: '1988-02-14', gender: 'FEMALE', address: 'Hà Nội', branchId: 2, positionId: 2, managerId: null, employmentStatus: 'OFFICIAL', employmentType: 'FULL_TIME', hireDate: '2020-01-01', isActive: true, version: 1 },
 ];
 
 export const useDirectoryStore = create<DirectoryState>((set, get) => ({
@@ -163,6 +164,70 @@ export const useDirectoryStore = create<DirectoryState>((set, get) => ({
     } catch (err) {
       console.warn('Failed to refresh employees:', err);
     }
+  },
+
+  createBranch: async (data: Partial<Branch>) => {
+    let newBranch: Branch;
+    if (isMockEnabled()) {
+      newBranch = {
+        id: Math.max(...get().branches.map((b) => b.id), 0) + 1,
+        branchCode: data.branchCode || `CN_${Date.now()}`,
+        branchName: data.branchName || 'Chi nhánh mới',
+        address: data.address || '',
+        phoneNumber: data.phoneNumber || '',
+        managerId: data.managerId || null,
+        isActive: data.isActive ?? true,
+      };
+    } else {
+      newBranch = await branchService.createBranch(data);
+    }
+    set({ branches: [...get().branches, newBranch] });
+    return newBranch;
+  },
+
+  updateBranch: async (id: number, data: Partial<Branch>) => {
+    let updatedBranch: Branch;
+    if (isMockEnabled()) {
+      const existing = get().branches.find((b) => b.id === id);
+      if (!existing) throw new Error('Không tìm thấy chi nhánh');
+      updatedBranch = { ...existing, ...data };
+    } else {
+      updatedBranch = await branchService.updateBranch(id, data);
+    }
+    set({
+      branches: get().branches.map((b) => (b.id === id ? updatedBranch : b)),
+    });
+    return updatedBranch;
+  },
+
+  deleteBranch: async (id: number) => {
+    const employeesInBranch = get().employees.filter(
+      (e) => e.branchId === id && e.isActive
+    );
+    if (employeesInBranch.length > 0) {
+      throw new Error(
+        `Không thể xóa chi nhánh vì vẫn còn ${employeesInBranch.length} nhân sự đang trực thuộc. Vui lòng điều chuyển nhân sự trước khi xóa.`
+      );
+    }
+
+    if (!isMockEnabled()) {
+      await branchService.deleteBranch(id);
+    }
+    set({
+      branches: get().branches.filter((b) => b.id !== id),
+    });
+  },
+
+  upsertEmployeeInDirectory: (employee: Employee) => {
+    set((state) => {
+      const idx = state.employees.findIndex((e) => e.id === employee.id);
+      if (idx >= 0) {
+        const next = [...state.employees];
+        next[idx] = { ...next[idx], ...employee };
+        return { employees: next };
+      }
+      return { employees: [employee, ...state.employees] };
+    });
   },
 
   removeEmployeeFromDirectory: (id: number) => {

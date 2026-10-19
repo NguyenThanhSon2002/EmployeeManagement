@@ -97,6 +97,11 @@ export const SchedulePage: React.FC = () => {
     const allAssignmentsList: ShiftAssignment[] = Object.values(assignments).flat();
 
     return employees.filter((emp) => {
+      // 0. Exclude resigned staff completely from scheduling
+      if (emp.employmentStatus === 'RESIGNED') {
+        return false;
+      }
+
       // 1. Branch filter (if not 0)
       if (filterOptions.branchId && emp.branchId !== filterOptions.branchId) {
         return false;
@@ -145,6 +150,10 @@ export const SchedulePage: React.FC = () => {
 
     for (const a of allAssignmentsList) {
       if (a.workDate >= currentStartDate && a.workDate <= sundayStr && a.status !== 'CANCELLED') {
+        const emp = employees.find((e) => e.id === a.employeeId);
+        if (!emp || emp.employmentStatus === 'RESIGNED' || emp.isActive === false) {
+          continue;
+        }
         shiftsCount++;
         const { netHours } = calculateShiftDurations(
           a.snapshotStartTime,
@@ -320,7 +329,7 @@ export const SchedulePage: React.FC = () => {
         shiftCodeFilter={filterOptions.shiftCodeFilter || ''}
         onlyShowConflicts={Boolean(filterOptions.onlyShowConflicts)}
         shiftTemplates={shiftTemplates}
-        totalEmployees={employees.length}
+        totalEmployees={employees.filter((e) => e.isActive && e.employmentStatus !== 'RESIGNED').length}
         filteredCount={filteredEmployees.length}
         onSearchChange={(val) => setFilters({ searchTerm: val })}
         onShiftFilterChange={(val) => setFilters({ shiftCodeFilter: val })}
@@ -335,7 +344,7 @@ export const SchedulePage: React.FC = () => {
         <WeeklyGrid
           baseMonday={baseMonday}
           shiftTemplates={shiftTemplates}
-          employees={employees}
+          employees={filteredEmployees}
           assignmentsMap={assignments}
           conflictsMap={conflicts}
           holidays={holidays}

@@ -11,6 +11,7 @@ import { branchService } from '@/shared/branch/branchService';
 import { isMockEnabled } from '@/config/env.config';
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock } from 'lucide-react';
 import { useAvailabilityStore } from './store/useAvailabilityStore';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 
 const toArray = (res: any): any[] => {
   if (Array.isArray(res)) return res;
@@ -188,9 +189,31 @@ export const EmployeeListPage: React.FC = () => {
       }
     }
 
+    const existingEmp = employeesList.find((e) => e.id === savedId);
+    const updatedEmployee: Employee = {
+      ...(existingEmp || {}),
+      ...data,
+      id: savedId,
+    } as Employee;
+
+    // 1. Đồng bộ tức thời vào useDirectoryStore
+    useDirectoryStore.getState().upsertEmployeeInDirectory(updatedEmployee);
+
+    // 2. Đồng bộ tức thời vào useScheduleStore
+    useScheduleStore.setState((state) => {
+      const idx = state.employees.findIndex((e) => e.id === savedId);
+      if (idx >= 0) {
+        const next = [...state.employees];
+        next[idx] = { ...next[idx], ...updatedEmployee };
+        return { employees: next };
+      }
+      return { employees: [...state.employees, updatedEmployee] };
+    });
+    useScheduleStore.getState().recomputeAllConflicts();
+
     if (data.id) {
       setEmployeesList((prev) =>
-        prev.map((e) => (e.id === data.id ? ({ ...e, ...data } as Employee) : e))
+        prev.map((e) => (e.id === data.id ? updatedEmployee : e))
       );
       addToast({
         type: 'success',
@@ -198,12 +221,11 @@ export const EmployeeListPage: React.FC = () => {
         message: `Đã lưu thông tin nhân viên ${data.fullName}.`,
       });
     } else {
-      const newEmp: Employee = { ...data, id: savedId };
-      setEmployeesList((prev) => [newEmp, ...prev]);
+      setEmployeesList((prev) => [updatedEmployee, ...prev]);
       addToast({
         type: 'success',
         title: 'Thêm mới thành công',
-        message: `Đã thêm nhân viên ${newEmp.fullName} (${newEmp.employeeCode}).`,
+        message: `Đã thêm nhân viên ${updatedEmployee.fullName} (${updatedEmployee.employeeCode}).`,
       });
     }
   };
@@ -411,6 +433,7 @@ export const EmployeeListPage: React.FC = () => {
               </tr>
             ) : (
               paginatedEmployees.map((emp) => {
+                const isResigned = emp.employmentStatus === 'RESIGNED';
                 let badge = (
                   <span className="badge badge-success">
                     <span className="badge-dot" /> Chính thức
@@ -441,10 +464,12 @@ export const EmployeeListPage: React.FC = () => {
                     key={emp.id}
                     style={{
                       borderBottom: '1px solid var(--color-border-subtle)',
-                      transition: 'background-color var(--transition-fast)',
+                      transition: 'background-color var(--transition-fast), opacity var(--transition-fast)',
+                      opacity: isResigned ? 0.55 : 1,
+                      backgroundColor: isResigned ? '#F8FAFC' : 'transparent',
                     }}
                   >
-                    <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 700, color: isResigned ? 'var(--color-text-muted)' : 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
                       {emp.employeeCode}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
@@ -461,10 +486,11 @@ export const EmployeeListPage: React.FC = () => {
                             borderRadius: 'var(--radius-full)',
                             objectFit: 'cover',
                             border: '1.5px solid var(--color-border)',
+                            filter: isResigned ? 'grayscale(100%)' : 'none',
                           }}
                         />
                         <div>
-                          <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{emp.fullName}</div>
+                          <div style={{ fontWeight: 600, color: isResigned ? 'var(--color-text-secondary)' : 'var(--color-text-primary)' }}>{emp.fullName}</div>
                           <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Mail size={11} /> {emp.email}
                           </div>
@@ -494,7 +520,28 @@ export const EmployeeListPage: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px 16px' }}>{badge}</td>
                     <td style={{ padding: '12px 16px' }}>
-                      {(() => {
+                      {isResigned ? (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '4px 10px',
+                            borderRadius: 'var(--radius-md, 6px)',
+                            fontSize: 12,
+                            fontWeight: 500,
+                            backgroundColor: '#F1F5F9',
+                            color: '#94A3B8',
+                            border: '1px solid #E2E8F0',
+                            cursor: 'not-allowed',
+                            userSelect: 'none',
+                          }}
+                          title="Nhân viên đã nghỉ việc không thể đăng ký lịch khả dụng"
+                        >
+                          <Clock size={13} color="#94A3B8" />
+                          Đã nghỉ việc
+                        </span>
+                      ) : (() => {
                         const empAvail = useAvailabilityStore.getState().getAvailability(emp.id);
                         let totalAvailSlots = 0;
                         for (let d = 1; d <= 7; d++) {
@@ -532,15 +579,18 @@ export const EmployeeListPage: React.FC = () => {
                         <button
                           type="button"
                           className="btn btn-default"
-                          onClick={() => navigate(`/employees/${emp.id}?tab=AVAILABILITY`)}
+                          onClick={() => !isResigned && navigate(`/employees/${emp.id}?tab=AVAILABILITY`)}
+                          disabled={isResigned}
                           style={{
                             padding: '0 8px',
                             height: 32,
-                            color: 'var(--color-primary, #2563EB)',
-                            backgroundColor: '#EFF6FF',
-                            borderColor: '#BFDBFE',
+                            color: isResigned ? '#94A3B8' : 'var(--color-primary, #2563EB)',
+                            backgroundColor: isResigned ? '#F1F5F9' : '#EFF6FF',
+                            borderColor: isResigned ? '#E2E8F0' : '#BFDBFE',
+                            cursor: isResigned ? 'not-allowed' : 'pointer',
+                            opacity: isResigned ? 0.6 : 1,
                           }}
-                          title="Khai báo lịch làm việc khả dụng"
+                          title={isResigned ? 'Nhân viên đã nghỉ việc không thể đăng ký lịch' : 'Khai báo lịch làm việc khả dụng'}
                         >
                           <Clock size={14} />
                         </button>

@@ -271,8 +271,25 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
                           </div>
                         )}
                         <div>
-                          <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                            {row.emp.fullName}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                              {row.emp.fullName}
+                            </span>
+                            {row.emp.employmentStatus === 'ON_LEAVE' && (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  backgroundColor: '#FEF3C7',
+                                  color: '#D97706',
+                                  padding: '1px 5px',
+                                  borderRadius: 4,
+                                  border: '1px solid #FDE68A',
+                                }}
+                              >
+                                Nghỉ chế độ
+                              </span>
+                            )}
                           </div>
                           <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
                             {row.emp.employeeCode}
@@ -349,7 +366,25 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
 
                     {/* Status Badge */}
                     <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                      {isOverLimit ? (
+                      {row.emp.employmentStatus === 'ON_LEAVE' ? (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: '#D97706',
+                            backgroundColor: '#FEF3C7',
+                            padding: '3px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            border: '1px solid #FDE68A',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 3,
+                          }}
+                          title="Nhân viên đang trong thời gian nghỉ chế độ"
+                        >
+                          <AlertTriangle size={11} /> Nghỉ chế độ
+                        </span>
+                      ) : isOverLimit ? (
                         <span
                           style={{
                             fontSize: 11,
