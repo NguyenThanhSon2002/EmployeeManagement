@@ -50,6 +50,15 @@ ALTER TABLE schedules DROP INDEX idx_schedules_dept_date;
 ALTER TABLE schedules DROP INDEX uq_schedules_dept_week;
 ALTER TABLE schedules DROP COLUMN department_id;
 
+-- Deduplicate schedules before creating UNIQUE constraint uq_schedules_branch_week
+DELETE s1 FROM schedules s1
+INNER JOIN schedules s2 ON s1.branch_id = s2.branch_id AND s1.start_date = s2.start_date AND s1.id != s2.id
+WHERE NOT EXISTS (SELECT 1 FROM shift_assignments sa1 WHERE sa1.schedule_id = s1.id)
+  AND (
+    EXISTS (SELECT 1 FROM shift_assignments sa2 WHERE sa2.schedule_id = s2.id)
+    OR s1.id > s2.id
+  );
+
 ALTER TABLE schedules ADD CONSTRAINT fk_schedules_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE;
 ALTER TABLE schedules ADD CONSTRAINT uq_schedules_branch_week UNIQUE (branch_id, start_date);
 ALTER TABLE schedules ADD INDEX idx_schedules_branch_date (branch_id, start_date, end_date, status);
