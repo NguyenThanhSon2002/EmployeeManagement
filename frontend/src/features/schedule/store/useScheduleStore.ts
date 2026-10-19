@@ -512,7 +512,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       return { success: true };
     },
 
-    deleteAssignment: (assignmentId, changeReason, actorRole = 'ROLE_ADMIN') => {
+    deleteAssignment: (assignmentId, changeReason, actorRole = 'ROLE_DIRECTOR') => {
       const state = get();
       let targetKey: string | null = null;
       let targetAssignment: ShiftAssignment | null = null;

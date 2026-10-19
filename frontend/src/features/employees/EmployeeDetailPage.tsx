@@ -53,7 +53,7 @@ export const EmployeeDetailPage: React.FC = () => {
 
   const { currentRole } = useAuthStore();
   const { addToast } = useUIStore();
-  const canDelete = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER';
+  const canDelete = currentRole === 'ROLE_DIRECTOR';
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 

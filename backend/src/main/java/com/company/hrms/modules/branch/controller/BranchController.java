@@ -35,21 +35,21 @@ public class BranchController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN')")
+    @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Tạo mới chi nhánh")
     public ApiResponse<BranchDto> createBranch(@Valid @RequestBody BranchDto request) {
         return ApiResponse.success(branchService.createBranch(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN')")
+    @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Cập nhật thông tin chi nhánh")
     public ApiResponse<BranchDto> updateBranch(@PathVariable Long id, @Valid @RequestBody BranchDto request) {
         return ApiResponse.success(branchService.updateBranch(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN')")
+    @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Xóa mềm chi nhánh")
     public ApiResponse<Void> deleteBranch(@PathVariable Long id) {
         branchService.deleteBranch(id);

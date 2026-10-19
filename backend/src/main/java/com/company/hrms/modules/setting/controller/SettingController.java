@@ -40,8 +40,8 @@ public class SettingController {
     }
 
     @PutMapping("/{key}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Cập nhật tham số cấu hình", description = "Chỉ Quản trị viên hệ thống có quyền sửa đổi")
+    @PreAuthorize("hasRole('DIRECTOR')")
+    @Operation(summary = "Cập nhật tham số cấu hình", description = "Chỉ Giám đốc có quyền sửa đổi")
     public ApiResponse<SystemSettingDto> updateSetting(
             @PathVariable String key,
             @Valid @RequestBody UpdateSettingRequest request,

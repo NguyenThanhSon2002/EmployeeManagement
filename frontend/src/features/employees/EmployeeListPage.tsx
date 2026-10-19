@@ -41,7 +41,7 @@ export const EmployeeListPage: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const { currentRole } = useAuthStore();
-  const canDelete = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER';
+  const canDelete = currentRole === 'ROLE_DIRECTOR';
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
