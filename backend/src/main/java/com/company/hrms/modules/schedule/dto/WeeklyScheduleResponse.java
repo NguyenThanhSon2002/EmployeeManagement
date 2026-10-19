@@ -12,11 +12,11 @@ public class WeeklyScheduleResponse {
     @JsonProperty("schedule_id")
     private Long scheduleId;
 
-    @JsonProperty("department_id")
-    private Long departmentId;
+    @JsonProperty("branch_id")
+    private Long branchId;
 
-    @JsonProperty("department_name")
-    private String departmentName;
+    @JsonProperty("branch_name")
+    private String branchName;
 
     @JsonProperty("start_date")
     private LocalDate startDate;
@@ -93,10 +93,10 @@ public class WeeklyScheduleResponse {
 
     public Long getScheduleId() { return scheduleId; }
     public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
-    public Long getDepartmentId() { return departmentId; }
-    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
-    public String getDepartmentName() { return departmentName; }
-    public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
+    public String getBranchName() { return branchName; }
+    public void setBranchName(String branchName) { this.branchName = branchName; }
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public LocalDate getEndDate() { return endDate; }

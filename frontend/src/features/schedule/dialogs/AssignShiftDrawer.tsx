@@ -16,13 +16,14 @@ import {
 } from '@/utils/conflict-detector.utils';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
 import { useModalFocusTrap } from '@/hooks/useModalFocusTrap';
-import { X, AlertTriangle, AlertCircle, Trash2, CheckCircle2, Clock, Moon, Sun, Sunrise, Sunset } from 'lucide-react';
+import { X, AlertTriangle, AlertCircle, Trash2, CheckCircle2, Moon, Sun, Sunrise, Sunset, Info } from 'lucide-react';
 
 interface AssignShiftDrawerProps {
   isOpen: boolean;
   employee: Employee | null;
   workDate: string; // YYYY-MM-DD
   existingAssignment: ShiftAssignment | null;
+  existingDayAssignments?: ShiftAssignment[];
   shiftTemplates: ShiftTemplate[];
   allEmployeeAssignments: ShiftAssignment[];
   employeeLeaves: LeaveRequest[];
@@ -32,12 +33,13 @@ interface AssignShiftDrawerProps {
   currentRole: RoleType;
   onClose: () => void;
   onSave: (payload: {
+    assignmentId?: number;
     workShiftId: number;
     overrideRule?: string | null;
     overrideReason?: string | null;
     changeReason?: string;
   }) => void;
-  onDelete: (changeReason?: string) => void;
+  onDelete: (assignmentId: number, changeReason?: string) => void;
 }
 
 export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
@@ -45,6 +47,7 @@ export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
   employee,
   workDate,
   existingAssignment,
+  existingDayAssignments = [],
   shiftTemplates,
   allEmployeeAssignments,
   employeeLeaves,
@@ -126,11 +129,11 @@ export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
 
   // Validation rules for Save button enablement:
   // 1. Mandatory conflict blocks saving completely
-  // 2. If warnings exist: requires confirmOverride === true AND overrideReason.trim().length >= 10
+  // 2. If warnings exist: requires confirmOverride === true AND overrideReason.trim().length >= 5
   // 3. If week is PUBLISHED: requires changeReason.trim().length >= 5
   const canSave =
     !mandatoryConflict &&
-    (!hasWarnings || (confirmOverride && overrideReason.trim().length >= 10)) &&
+    (!hasWarnings || (confirmOverride && overrideReason.trim().length >= 5)) &&
     (!isPublishedWeek || changeReason.trim().length >= 5);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -138,6 +141,7 @@ export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
     if (!canSave) return;
 
     onSave({
+      assignmentId: existingAssignment ? existingAssignment.id : undefined,
       workShiftId: selectedShiftId,
       overrideRule: hasWarnings ? warningConflicts[0].ruleCode : null,
       overrideReason: hasWarnings ? overrideReason : null,
@@ -151,6 +155,10 @@ export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
     if (t.startTime < '07:00') return <Sunrise size={16} color="var(--shift-early-text)" />;
     return <Sun size={16} color="var(--shift-morning-text)" />;
   };
+
+  const otherShiftsInDay = existingDayAssignments.filter(
+    (a) => existingAssignment === null || a.id !== existingAssignment.id
+  );
 
   return (
     <>
@@ -177,7 +185,11 @@ export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
         >
           <div>
             <h2 id="drawer-heading" style={{ fontSize: 'var(--font-h3)', fontWeight: 600 }}>
-              {existingAssignment ? 'Chỉnh Sửa Phân Ca' : 'Gán Ca Làm Việc'}
+              {existingAssignment
+                ? 'Chỉnh Sửa Phân Ca'
+                : otherShiftsInDay.length > 0
+                ? 'Gán Thêm Ca 2 Trong Ngày'
+                : 'Gán Ca Làm Việc'}
             </h2>
             <div style={{ fontSize: 'var(--font-caption)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
               {employee.fullName} ({employee.employeeCode}) • Ngày {formatDateVi(workDate)}
@@ -199,6 +211,33 @@ export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
 
         {/* Content Form */}
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-lg)' }}>
+          {/* Banner notice if day already has 1 shift */}
+          {otherShiftsInDay.length > 0 && (
+            <div
+              style={{
+                padding: '10px 14px',
+                backgroundColor: '#EFF6FF',
+                border: '1px solid #BFDBFE',
+                borderRadius: '8px',
+                marginBottom: 16,
+                fontSize: '13px',
+                color: '#1E40AF',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+              }}
+            >
+              <Info size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <strong>Ca đã có trong ngày: </strong>
+                {otherShiftsInDay.map((s) => `${s.snapshotShiftName} (${s.snapshotStartTime} - ${s.snapshotEndTime})`).join(', ')}.
+                <div style={{ fontSize: 12, marginTop: 2, color: '#3B82F6' }}>
+                  Hệ thống đang hỗ trợ phân bổ ca thứ 2. Vui lòng đảm bảo 2 ca không bị trùng giờ.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Shift Selection List */}
           <div style={{ marginBottom: 'var(--space-lg)' }}>
             <label style={{ display: 'block', fontWeight: 600, fontSize: 'var(--font-body-md)', marginBottom: 8 }}>
@@ -259,124 +298,120 @@ export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
             </div>
           </div>
 
-          {/* REAL-TIME CONFLICT BANNERS */}
-          {/* Mandatory Error Banner (BR-001) */}
+          {/* Mandatory Conflict Error */}
           {mandatoryConflict && (
             <div
-              role="alert"
               style={{
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-md)',
                 backgroundColor: 'var(--color-error-bg)',
                 border: '1px solid var(--color-error-border)',
-                color: 'var(--shift-night-text)',
-                marginBottom: 'var(--space-md)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-md)',
+                marginBottom: 'var(--space-lg)',
                 display: 'flex',
                 gap: 10,
+                alignItems: 'flex-start',
               }}
             >
               <AlertCircle size={20} color="var(--color-error)" style={{ flexShrink: 0, marginTop: 2 }} />
               <div>
-                <div style={{ fontWeight: 600, fontSize: 'var(--font-caption)' }}>
-                  LỖI NGHIÊM TRỌNG ({mandatoryConflict.ruleCode}) - BẮT BUỘC SỬA
+                <div style={{ fontWeight: 600, color: 'var(--color-error)', fontSize: 'var(--font-body-md)' }}>
+                  Xung đột nghiêm trọng (Chặn lưu):
                 </div>
-                <div style={{ fontSize: 'var(--font-caption)', marginTop: 2 }}>
+                <div style={{ fontSize: 'var(--font-caption)', color: 'var(--color-error)', marginTop: 4 }}>
                   {mandatoryConflict.message}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 4 }}>
-                  Không thể lưu phân ca này do vi phạm quy tắc an toàn ca làm việc.
                 </div>
               </div>
             </div>
           )}
 
-          {/* Policy Warning Banner (BR-006, BR-004, BR-007) */}
+          {/* Warning Conflict Notice */}
           {!mandatoryConflict && hasWarnings && (
             <div
               style={{
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-md)',
                 backgroundColor: 'var(--color-warning-bg)',
                 border: '1px solid var(--color-warning-border)',
-                color: '#874d00',
-                marginBottom: 'var(--space-md)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-md)',
+                marginBottom: 'var(--space-lg)',
               }}
             >
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <AlertTriangle size={20} color="var(--color-warning)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-caption)' }}>
-                    CẢNH BÁO CHÍNH SÁCH ({warningConflicts.map((c) => c.ruleCode).join(', ')})
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, color: '#92400E', fontSize: 'var(--font-body-md)' }}>
+                    Cảnh báo quy tắc xếp ca:
                   </div>
-                  {warningConflicts.map((c) => (
-                    <div key={c.id} style={{ fontSize: 'var(--font-caption)', marginTop: 2 }}>
-                      • {c.message}
-                    </div>
-                  ))}
-                </div>
-              </div>
+                  <ul style={{ margin: '6px 0 0', paddingLeft: 16, fontSize: 'var(--font-caption)', color: '#78350F' }}>
+                    {warningConflicts.map((c, i) => (
+                      <li key={i}>{c.message}</li>
+                    ))}
+                  </ul>
 
-              {/* Override Checkbox & Reason */}
-              <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px dashed #ffe58f' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 'var(--font-caption)', fontWeight: 600 }}>
-                  <input
-                    type="checkbox"
-                    checked={confirmOverride}
-                    onChange={(e) => setConfirmOverride(e.target.checked)}
-                    style={{ accentColor: 'var(--color-warning)' }}
-                  />
-                  <span>Tôi xác nhận đặc cách phân ca này</span>
-                </label>
-
-                {confirmOverride && (
-                  <div style={{ marginTop: 8 }}>
-                    <label style={{ display: 'block', fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
-                      Lý do giải trình đặc cách (bắt buộc tối thiểu 10 ký tự):
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={overrideReason}
-                      onChange={(e) => setOverrideReason(e.target.value)}
-                      placeholder="Ví dụ: Thiếu nhân sự đột xuất do ca trước nghỉ ốm, nhân viên đồng ý hỗ trợ"
+                  {/* Override Confirmation */}
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-warning-border)' }}>
+                    <label
                       style={{
-                        width: '100%',
-                        padding: '6px 8px',
-                        borderRadius: 'var(--radius-sm)',
-                        border: overrideReason.trim().length < 10 ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 8,
                         fontSize: 'var(--font-caption)',
-                        fontFamily: 'inherit',
+                        color: 'var(--color-text-primary)',
+                        cursor: 'pointer',
+                        fontWeight: 600,
                       }}
-                    />
-                    <div style={{ fontSize: 11, textAlign: 'right', color: overrideReason.trim().length < 10 ? 'var(--color-error)' : 'var(--color-text-muted)' }}>
-                      {overrideReason.trim().length}/10 ký tự
-                    </div>
+                    >
+                      <input
+                        type="checkbox"
+                        checked={confirmOverride}
+                        onChange={(e) => setConfirmOverride(e.target.checked)}
+                        style={{ marginTop: 2 }}
+                      />
+                      <span>Xác nhận đặc cách vi phạm quy tắc này</span>
+                    </label>
+
+                    {confirmOverride && (
+                      <div style={{ marginTop: 10 }}>
+                        <label
+                          style={{
+                            display: 'block',
+                            fontSize: 'var(--font-caption)',
+                            fontWeight: 500,
+                            color: 'var(--color-text-secondary)',
+                            marginBottom: 4,
+                          }}
+                        >
+                          Lý do giải trình đặc cách (Tối thiểu 5 ký tự): <span style={{ color: 'var(--color-error)' }}>*</span>
+                        </label>
+                        <textarea
+                          rows={2}
+                          className="input-base"
+                          style={{ width: '100%', height: 'auto', padding: '8px' }}
+                          placeholder="Ví dụ: Nhân viên đăng ký tăng ca tự nguyện giải quyết đơn hàng gấp"
+                          value={overrideReason}
+                          onChange={(e) => setOverrideReason(e.target.value)}
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Published Week Modification Reason */}
+          {/* Published Schedule: Change Reason */}
           {isPublishedWeek && (
             <div
               style={{
-                padding: '12px 14px',
+                backgroundColor: 'var(--color-info-bg)',
+                border: '1px solid var(--color-info-border)',
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: '#e6f7ff',
-                border: '1px solid #91caff',
-                marginBottom: 'var(--space-md)',
+                padding: 'var(--space-md)',
+                marginBottom: 'var(--space-lg)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 'var(--font-caption)', color: '#0050b3' }}>
-                <Clock size={16} />
-                Lịch tuần đã công bố (PUBLISHED)
+              <div style={{ fontWeight: 600, color: 'var(--color-info)', fontSize: 'var(--font-body-md)', marginBottom: 6 }}>
+                Ghi chú điều chỉnh lịch đã công bố:
               </div>
-              <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '4px 0 8px' }}>
-                Thao tác chỉnh sửa sẽ được ghi vết vào nhật ký kiểm toán. Vui lòng nhập lý do điều chỉnh:
-              </p>
               <input
                 type="text"
                 className="input-base"
@@ -407,7 +442,7 @@ export const AssignShiftDrawer: React.FC<AssignShiftDrawerProps> = ({
             <button
               type="button"
               className="btn btn-danger"
-              onClick={() => onDelete(isPublishedWeek ? changeReason : undefined)}
+              onClick={() => onDelete(existingAssignment.id, isPublishedWeek ? changeReason : undefined)}
               style={{ display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <Trash2 size={16} />

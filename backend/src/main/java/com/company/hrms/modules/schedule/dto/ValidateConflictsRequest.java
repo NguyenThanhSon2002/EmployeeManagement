@@ -9,8 +9,8 @@ import java.util.List;
 
 public class ValidateConflictsRequest {
 
-    @JsonProperty("department_id")
-    private Long departmentId;
+    @JsonProperty("branch_id")
+    private Long branchId;
 
     @NotEmpty(message = "Danh sách phân ca cần kiểm tra không được để trống")
     private List<CandidateAssignmentItem> assignments;
@@ -47,8 +47,8 @@ public class ValidateConflictsRequest {
         public void setExcludeAssignmentId(Long id) { this.excludeAssignmentId = id; }
     }
 
-    public Long getDepartmentId() { return departmentId; }
-    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
     public List<CandidateAssignmentItem> getAssignments() { return assignments; }
     public void setAssignments(List<CandidateAssignmentItem> assignments) { this.assignments = assignments; }
 }

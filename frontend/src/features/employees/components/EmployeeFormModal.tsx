@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import type { Employee, Department, Position, EmploymentStatus } from '@/types/domain.types';
+import type { Employee, Branch, Position, EmploymentStatus } from '@/types/domain.types';
 import { useModalFocusTrap } from '@/hooks/useModalFocusTrap';
 import { X, Check } from 'lucide-react';
 
 interface EmployeeFormModalProps {
   isOpen: boolean;
   initialData: Employee | null;
-  departments: Department[];
+  branches: Branch[];
   positions: Position[];
   onClose: () => void;
   onSubmit: (employee: Omit<Employee, 'id'> & { id?: number }) => void;
@@ -15,7 +15,7 @@ interface EmployeeFormModalProps {
 export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   isOpen,
   initialData,
-  departments,
+  branches,
   positions,
   onClose,
   onSubmit,
@@ -26,7 +26,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     fullName: '',
     email: '',
     phoneNumber: '',
-    departmentId: 2,
+    branchId: 1,
     positionId: 2,
     employmentStatus: 'OFFICIAL' as EmploymentStatus,
     hireDate: '2024-01-01',
@@ -42,7 +42,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
         fullName: initialData.fullName,
         email: initialData.email,
         phoneNumber: initialData.phoneNumber,
-        departmentId: initialData.departmentId,
+        branchId: initialData.branchId,
         positionId: initialData.positionId,
         employmentStatus: initialData.employmentStatus,
         hireDate: initialData.hireDate,
@@ -54,7 +54,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
         fullName: '',
         email: '',
         phoneNumber: '',
-        departmentId: 2,
+        branchId: 1,
         positionId: 2,
         employmentStatus: 'OFFICIAL',
         hireDate: new Date().toISOString().split('T')[0],
@@ -98,29 +98,41 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
         ref={modalRef}
         className="modal-dialog"
         role="dialog"
-        aria-labelledby="employee-form-heading"
         aria-modal="true"
-        style={{ width: 640 }}
+        aria-labelledby="employee-form-modal-title"
       >
-        <div
-          style={{
-            padding: 'var(--space-md) var(--space-lg)',
-            borderBottom: '1px solid var(--color-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <h2 id="employee-form-heading" style={{ fontSize: 'var(--font-h3)', fontWeight: 600 }}>
-            {initialData ? 'Chỉnh Sửa Hồ Sơ Nhân Viên' : 'Thêm Nhân Viên Mới'}
+        <div className="modal-header">
+          <h2 id="employee-form-modal-title" style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>
+            {initialData ? 'Cập Nhật Hồ Sơ Nhân Viên' : 'Thêm Nhân Viên Mới'}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Đóng form">
-            <X size={20} />
+          <button
+            type="button"
+            className="btn-icon"
+            onClick={onClose}
+            aria-label="Đóng biểu mẫu nhân viên"
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
+          >
+            <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: 'var(--space-lg)', overflowY: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Employee Code */}
+            <div>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: 'var(--font-caption)', marginBottom: 4 }}>
+                Mã Nhân Viên *
+              </label>
+              <input
+                type="text"
+                className="input-base"
+                style={{ width: '100%', fontFamily: 'monospace' }}
+                value={formData.employeeCode}
+                onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value.toUpperCase() })}
+                disabled={!!initialData}
+              />
+            </div>
+
             {/* Full Name */}
             <div>
               <label style={{ display: 'block', fontWeight: 600, fontSize: 'var(--font-caption)', marginBottom: 4 }}>
@@ -137,20 +149,6 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
               {errors.fullName && <div style={{ fontSize: 11, color: 'var(--color-error)', marginTop: 2 }}>{errors.fullName}</div>}
             </div>
 
-            {/* Employee Code */}
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: 'var(--font-caption)', marginBottom: 4 }}>
-                Mã Nhân Viên *
-              </label>
-              <input
-                type="text"
-                className="input-base"
-                style={{ width: '100%' }}
-                value={formData.employeeCode}
-                onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
-              />
-            </div>
-
             {/* Email */}
             <div>
               <label style={{ display: 'block', fontWeight: 600, fontSize: 'var(--font-caption)', marginBottom: 4 }}>
@@ -160,7 +158,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                 type="email"
                 className="input-base"
                 style={{ width: '100%', borderColor: errors.email ? 'var(--color-error)' : undefined }}
-                placeholder="user@company.com"
+                placeholder="an.nguyen@company.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
@@ -183,20 +181,20 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
               {errors.phoneNumber && <div style={{ fontSize: 11, color: 'var(--color-error)', marginTop: 2 }}>{errors.phoneNumber}</div>}
             </div>
 
-            {/* Department */}
+            {/* Branch */}
             <div>
               <label style={{ display: 'block', fontWeight: 600, fontSize: 'var(--font-caption)', marginBottom: 4 }}>
-                Phòng Ban *
+                Chi Nhánh / Cơ Sở Làm Việc *
               </label>
               <select
                 className="input-base"
                 style={{ width: '100%' }}
-                value={formData.departmentId}
-                onChange={(e) => setFormData({ ...formData, departmentId: Number(e.target.value) })}
+                value={formData.branchId}
+                onChange={(e) => setFormData({ ...formData, branchId: Number(e.target.value) })}
               >
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.departmentName}
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.branchName}
                   </option>
                 ))}
               </select>
@@ -232,17 +230,17 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                 value={formData.employmentStatus}
                 onChange={(e) => setFormData({ ...formData, employmentStatus: e.target.value as EmploymentStatus })}
               >
-                <option value="OFFICIAL">Chính thức (Official)</option>
-                <option value="PROBATION">Thử việc (Probation)</option>
-                <option value="ON_LEAVE">Nghỉ thai sản / chế độ</option>
-                <option value="RESIGNED">Đã thôi việc (Resigned)</option>
+                <option value="OFFICIAL">Chính thức</option>
+                <option value="PROBATION">Thử việc</option>
+                <option value="ON_LEAVE">Nghỉ chế độ / Tạm hoãn</option>
+                <option value="RESIGNED">Đã nghỉ việc</option>
               </select>
             </div>
 
             {/* Hire Date */}
             <div>
               <label style={{ display: 'block', fontWeight: 600, fontSize: 'var(--font-caption)', marginBottom: 4 }}>
-                Ngày Vào Làm
+                Ngày Vào Làm *
               </label>
               <input
                 type="date"
@@ -252,31 +250,31 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
               />
             </div>
+
+            {/* Active Status Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+              <input
+                type="checkbox"
+                id="emp-is-active"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                style={{ width: 16, height: 16 }}
+              />
+              <label htmlFor="emp-is-active" style={{ fontSize: '13px', cursor: 'pointer', userSelect: 'none' }}>
+                Kích hoạt tài khoản người dùng ngay lập tức
+              </label>
+            </div>
+          </div>
+
+          <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+            <button type="button" className="btn btn-default" onClick={onClose}>
+              Hủy
+            </button>
+            <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Check size={16} /> Lưu hồ sơ
+            </button>
           </div>
         </form>
-
-        <div
-          style={{
-            padding: 'var(--space-md) var(--space-lg)',
-            borderTop: '1px solid var(--color-border)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 8,
-            backgroundColor: '#fafafa',
-          }}
-        >
-          <button type="button" className="btn btn-default" onClick={onClose}>
-            Hủy bỏ
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <Check size={16} /> Lưu hồ sơ
-          </button>
-        </div>
       </div>
     </>
   );

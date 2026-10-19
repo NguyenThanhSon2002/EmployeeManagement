@@ -1,10 +1,10 @@
-import type { Employee, ShiftAssignment, Department } from '@/types/domain.types';
+import type { Employee, ShiftAssignment, Branch } from '@/types/domain.types';
 import { formatDateVi, formatDateIso, getWeekDays } from './date.utils';
 import { calculateShiftDurations } from './schedule-calc.utils';
 
 export interface ExportWeeklyRosterCsvParams {
   monday: Date;
-  department: Department | null;
+  branch: Branch | null;
   employees: Employee[];
   assignments: ShiftAssignment[];
 }
@@ -26,14 +26,14 @@ export function escapeCsvCell(value: string | number | null | undefined): string
  * Generates CSV content string with UTF-8 BOM (\uFEFF) for Vietnamese Excel compatibility.
  */
 export function buildWeeklyRosterCsv(params: ExportWeeklyRosterCsvParams): string {
-  const { monday, department, employees, assignments } = params;
+  const { monday, branch, employees, assignments } = params;
   const weekDays = getWeekDays(monday);
 
   const lines: string[] = [];
 
   // Metadata headers
   lines.push(`${escapeCsvCell('BẢNG PHÂN CA LÀM VIỆC TUẦN')},${escapeCsvCell(`Từ ngày ${formatDateVi(weekDays[0])} đến ${formatDateVi(weekDays[6])}`)}`);
-  lines.push(`${escapeCsvCell('Phòng ban:')},${escapeCsvCell(department ? department.departmentName : 'Tất cả phòng ban')}`);
+  lines.push(`${escapeCsvCell('Chi nhánh:')},${escapeCsvCell(branch ? branch.branchName : 'Tất cả chi nhánh')}`);
   lines.push(''); // Blank row
 
   // Table Column Headers
@@ -131,4 +131,3 @@ export function exportToCsv<T extends Record<string, any>>(
   const content = '\uFEFF' + lines.join('\r\n');
   downloadCsvFile(content, filename);
 }
-

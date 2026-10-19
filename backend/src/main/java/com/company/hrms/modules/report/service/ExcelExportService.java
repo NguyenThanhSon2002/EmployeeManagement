@@ -31,7 +31,7 @@ public class ExcelExportService {
 
             // Header row
             String[] headers = {
-                    "STT", "Mã nhân viên", "Họ và tên", "Phòng ban",
+                    "STT", "Mã nhân viên", "Họ và tên", "Chi nhánh",
                     "Số ngày làm", "Tổng giờ thực tế", "Giờ công chuẩn",
                     "Giờ tăng ca (OT)", "Giờ làm đêm", "Lần đi muộn", "Lần về sớm"
             };
@@ -71,7 +71,7 @@ public class ExcelExportService {
                 Cell c0 = row.createCell(0); c0.setCellValue(stt++); c0.setCellStyle(dataStyle);
                 Cell c1 = row.createCell(1); c1.setCellValue(s.getEmployeeCode()); c1.setCellStyle(dataStyle);
                 Cell c2 = row.createCell(2); c2.setCellValue(s.getFullName()); c2.setCellStyle(dataStyle);
-                Cell c3 = row.createCell(3); c3.setCellValue(s.getDepartmentName()); c3.setCellStyle(dataStyle);
+                Cell c3 = row.createCell(3); c3.setCellValue(s.getBranchName()); c3.setCellStyle(dataStyle);
                 Cell c4 = row.createCell(4); c4.setCellValue(s.getTotalWorkingDays()); c4.setCellStyle(dataStyle);
                 Cell c5 = row.createCell(5); c5.setCellValue(s.getTotalActualHours().doubleValue()); c5.setCellStyle(dataStyle);
                 Cell c6 = row.createCell(6); c6.setCellValue(s.getTotalRegularHours().doubleValue()); c6.setCellStyle(dataStyle);
@@ -96,14 +96,14 @@ public class ExcelExportService {
         sb.append("\uFEFF");
 
         // Header
-        sb.append("STT,Mã nhân viên,Họ và tên,Phòng ban,Số ngày làm,Tổng giờ thực tế,Giờ công chuẩn,Giờ tăng ca (OT),Giờ làm đêm,Lần đi muộn,Lần về sớm\n");
+        sb.append("STT,Mã nhân viên,Họ và tên,Chi nhánh,Số ngày làm,Tổng giờ thực tế,Giờ công chuẩn,Giờ tăng ca (OT),Giờ làm đêm,Lần đi muộn,Lần về sớm\n");
 
         int stt = 1;
         for (AttendanceSummaryDto s : summaries) {
             sb.append(stt++).append(",")
                     .append(escapeCsv(s.getEmployeeCode())).append(",")
                     .append(escapeCsv(s.getFullName())).append(",")
-                    .append(escapeCsv(s.getDepartmentName())).append(",")
+                    .append(escapeCsv(s.getBranchName())).append(",")
                     .append(s.getTotalWorkingDays()).append(",")
                     .append(s.getTotalActualHours()).append(",")
                     .append(s.getTotalRegularHours()).append(",")

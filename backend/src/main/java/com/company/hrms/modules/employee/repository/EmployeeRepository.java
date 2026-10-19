@@ -24,16 +24,16 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     boolean existsByEmailAndDeletedAtIsNull(String email);
 
-    List<Employee> findAllByDepartmentIdAndDeletedAtIsNull(Long departmentId);
+    List<Employee> findAllByBranchIdAndDeletedAtIsNull(Long branchId);
 
     @Query("SELECT e FROM Employee e WHERE e.deletedAt IS NULL " +
-            "AND (:departmentId IS NULL OR e.departmentId = :departmentId) " +
+            "AND (:branchId IS NULL OR e.branchId = :branchId) " +
             "AND (:status IS NULL OR e.employmentStatus = :status) " +
             "AND (:keyword IS NULL OR LOWER(e.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "     OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "     OR LOWER(e.email) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Employee> findEmployeesWithFilter(
-            @Param("departmentId") Long departmentId,
+            @Param("branchId") Long branchId,
             @Param("status") String status,
             @Param("keyword") String keyword,
             Pageable pageable

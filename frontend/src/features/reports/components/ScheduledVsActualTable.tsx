@@ -9,16 +9,16 @@ import { Download, Search } from 'lucide-react';
 export const ScheduledVsActualTable: React.FC = () => {
   const { assignments } = useScheduleStore();
   const { records } = useAttendanceStore();
-  const { employees, departments } = useDirectoryStore();
+  const { employees, branches } = useDirectoryStore();
 
-  const [departmentFilter, setDepartmentFilter] = useState<number | null>(null);
+  const [branchFilter, setBranchFilter] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const comparisonData = employees.map((emp) => {
-    const dept = departments.find((d) => d.id === emp.departmentId);
+    const branch = branches.find((b) => b.id === emp.branchId);
 
     // Sum scheduled hours
-    const empAssignments = Object.values(assignments).filter(
+    const empAssignments = Object.values(assignments).flat().filter(
       (a) => a.employeeId === emp.id && a.status === 'ASSIGNED'
     );
     let scheduledHours = 0;
@@ -46,15 +46,15 @@ export const ScheduledVsActualTable: React.FC = () => {
       employeeId: emp.id,
       employeeCode: emp.employeeCode,
       fullName: emp.fullName,
-      departmentId: emp.departmentId,
-      departmentName: dept?.departmentName || '',
+      branchId: emp.branchId,
+      branchName: branch?.branchName || '',
       scheduledHours,
       actualHours,
       diffHours,
       fulfillmentRate,
     };
   }).filter((item) => {
-    if (departmentFilter && item.departmentId !== departmentFilter) return false;
+    if (branchFilter && item.branchId !== branchFilter) return false;
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       return item.fullName.toLowerCase().includes(q) || item.employeeCode.toLowerCase().includes(q);
@@ -66,7 +66,7 @@ export const ScheduledVsActualTable: React.FC = () => {
     const columns = [
       { key: 'employeeCode', header: 'Mã NV' },
       { key: 'fullName', header: 'Họ và tên' },
-      { key: 'departmentName', header: 'Phòng ban' },
+      { key: 'branchName', header: 'Chi nhánh' },
       { key: 'scheduledHours', header: 'Giờ Kế Hoạch (h)' },
       { key: 'actualHours', header: 'Giờ Thực Tế (h)' },
       { key: 'diffHours', header: 'Chênh Lệch (h)' },
@@ -76,7 +76,7 @@ export const ScheduledVsActualTable: React.FC = () => {
     const dataRows = comparisonData.map((d) => ({
       employeeCode: d.employeeCode,
       fullName: d.fullName,
-      departmentName: d.departmentName,
+      branchName: d.branchName,
       scheduledHours: d.scheduledHours.toFixed(1),
       actualHours: d.actualHours.toFixed(1),
       diffHours: (d.diffHours > 0 ? `+${d.diffHours.toFixed(1)}` : d.diffHours.toFixed(1)),
@@ -108,14 +108,14 @@ export const ScheduledVsActualTable: React.FC = () => {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             className="input"
-            style={{ width: 200 }}
-            value={departmentFilter || ''}
-            onChange={(e) => setDepartmentFilter(e.target.value ? Number(e.target.value) : null)}
+            style={{ width: 220 }}
+            value={branchFilter || ''}
+            onChange={(e) => setBranchFilter(e.target.value ? Number(e.target.value) : null)}
           >
-            <option value="">-- Tất cả phòng ban --</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.departmentName}
+            <option value="">-- Tất cả cơ sở / chi nhánh --</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.branchName}
               </option>
             ))}
           </select>
@@ -145,7 +145,7 @@ export const ScheduledVsActualTable: React.FC = () => {
             <tr>
               <th>Mã NV</th>
               <th>Họ và tên</th>
-              <th>Phòng ban</th>
+              <th>Chi nhánh</th>
               <th style={{ textAlign: 'right' }}>Kế hoạch (Scheduled)</th>
               <th style={{ textAlign: 'right' }}>Thực tế (Actual)</th>
               <th style={{ textAlign: 'right' }}>Chênh lệch (Diff)</th>
@@ -164,7 +164,7 @@ export const ScheduledVsActualTable: React.FC = () => {
                     <span style={{ fontWeight: 600 }}>{d.employeeCode}</span>
                   </td>
                   <td>{d.fullName}</td>
-                  <td>{d.departmentName}</td>
+                  <td>{d.branchName}</td>
                   <td style={{ textAlign: 'right', fontWeight: 500 }}>{d.scheduledHours.toFixed(1)}h</td>
                   <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-primary)' }}>
                     {d.actualHours.toFixed(1)}h

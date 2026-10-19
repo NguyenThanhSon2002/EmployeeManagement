@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import type { Employee, Department } from '@/types/domain.types';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import type { Employee, Branch } from '@/types/domain.types';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
+import { EmployeeAvailabilityTab } from './components/EmployeeAvailabilityTab';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { employeeService } from './api/employeeService';
-import { departmentService } from '@/shared/department/departmentService';
+import { branchService } from '@/shared/branch/branchService';
 import { isMockEnabled } from '@/config/env.config';
 import { formatDateVi } from '@/utils/date.utils';
 import {
@@ -19,24 +20,45 @@ import {
   Mail,
   Phone,
   Briefcase,
-  Building,
+  Store,
   Trash2,
+  CalendarCheck,
 } from 'lucide-react';
 
 export const EmployeeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<'PROFILE' | 'SCHEDULE' | 'ATTENDANCE' | 'LEAVE'>('PROFILE');
+  const tabParam = searchParams.get('tab');
+  const initialTab =
+    tabParam === 'AVAILABILITY'
+      ? 'AVAILABILITY'
+      : tabParam === 'SCHEDULE'
+      ? 'SCHEDULE'
+      : tabParam === 'ATTENDANCE'
+      ? 'ATTENDANCE'
+      : tabParam === 'LEAVE'
+      ? 'LEAVE'
+      : 'PROFILE';
+
+  const [activeTab, setActiveTab] = useState<'PROFILE' | 'SCHEDULE' | 'ATTENDANCE' | 'LEAVE' | 'AVAILABILITY'>(initialTab);
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t === 'AVAILABILITY') {
+      setActiveTab('AVAILABILITY');
+    }
+  }, [searchParams]);
 
   const { currentRole } = useAuthStore();
   const { addToast } = useUIStore();
-  const canDelete = currentRole === 'ROLE_ADMIN' || currentRole === 'ROLE_HR_MANAGER';
+  const canDelete = currentRole === 'ROLE_DIRECTOR';
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { assignments, approvedLeaves } = useScheduleStore();
-  const { getEmployeeById, departments, positions } = useDirectoryStore();
+  const { getEmployeeById, branches, positions } = useDirectoryStore();
   const cachedEmployee = id ? getEmployeeById(Number(id)) : undefined;
 
   const fallbackEmp: Employee = {
@@ -45,7 +67,7 @@ export const EmployeeDetailPage: React.FC = () => {
     fullName: 'Đang tải thông tin...',
     email: '',
     phoneNumber: '',
-    departmentId: 1,
+    branchId: 1,
     positionId: 1,
     managerId: null,
     employmentStatus: 'OFFICIAL',
@@ -53,30 +75,39 @@ export const EmployeeDetailPage: React.FC = () => {
     isActive: true,
   };
 
-  const [employee, setEmployee] = useState<Employee>(cachedEmployee || fallbackEmp);
-  const [departmentsList, setDepartmentsList] = useState<Department[]>(departments);
+  const [employee, setEmployee] = useState<Employee | null>(
+    isMockEnabled() ? (cachedEmployee || fallbackEmp) : null
+  );
+  const [branchesList, setBranchesList] = useState<Branch[]>(isMockEnabled() ? branches : []);
+  const [isLoading, setIsLoading] = useState<boolean>(!isMockEnabled());
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isMockEnabled() || !id) return;
 
     let isMounted = true;
     const fetchEmployee = async () => {
+      setIsLoading(true);
+      setLoadError(null);
       try {
-        const [empData, deptData] = await Promise.all([
-          employeeService.getEmployeeById(Number(id)).catch(() => null),
-          departmentService.getAllDepartments().catch(() => null),
+        const [empData, branchData] = await Promise.all([
+          employeeService.getEmployeeById(Number(id)),
+          branchService.getAllBranches().catch(() => null),
         ]);
 
         if (!isMounted) return;
 
-        if (deptData && Array.isArray(deptData) && deptData.length > 0) {
-          const mappedDepts: Department[] = deptData.map((d: any) => ({
-            id: d.id,
-            departmentCode: d.department_code || d.departmentCode,
-            departmentName: d.department_name || d.departmentName,
-            managerId: d.manager_id || d.managerId || null,
+        if (branchData && Array.isArray(branchData) && branchData.length > 0) {
+          const mappedBranches: Branch[] = branchData.map((b: any) => ({
+            id: b.id,
+            branchCode: b.branch_code || b.branchCode,
+            branchName: b.branch_name || b.branchName,
+            address: b.address || '',
+            phoneNumber: b.phone_number || b.phoneNumber || '',
+            managerId: b.manager_id || b.managerId || null,
+            isActive: b.is_active !== undefined ? b.is_active : true,
           }));
-          setDepartmentsList(mappedDepts);
+          setBranchesList(mappedBranches);
         }
 
         if (empData) {
@@ -90,7 +121,7 @@ export const EmployeeDetailPage: React.FC = () => {
             dateOfBirth: empData.date_of_birth || (empData as any).dateOfBirth || '',
             gender: empData.gender || 'OTHER',
             address: empData.address || '',
-            departmentId: empData.department_id || (empData as any).departmentId || 1,
+            branchId: empData.branch_id || (empData as any).branchId || 1,
             positionId: empData.position_id || (empData as any).positionId || 1,
             managerId: empData.manager_id || (empData as any).managerId || null,
             employmentStatus: empData.employment_status || (empData as any).employmentStatus || 'OFFICIAL',
@@ -99,9 +130,27 @@ export const EmployeeDetailPage: React.FC = () => {
             isActive: empData.is_active !== undefined ? empData.is_active : true,
             version: empData.version || 1,
           });
+        } else {
+          setEmployee(null);
+          setLoadError('Không tìm thấy thông tin nhân viên.');
+          addToast({
+            type: 'error',
+            title: 'Lỗi tải dữ liệu',
+            message: 'Không tìm thấy thông tin nhân viên trên hệ thống.',
+          });
         }
-      } catch (err) {
-        console.warn('Could not fetch employee by id from API:', err);
+      } catch (err: any) {
+        if (!isMounted) return;
+        console.error('Could not fetch employee by id from API:', err);
+        setEmployee(null);
+        setLoadError('Không thể tải thông tin nhân sự từ máy chủ.');
+        addToast({
+          type: 'error',
+          title: 'Lỗi tải dữ liệu',
+          message: 'Không thể kết nối máy chủ để tải thông tin nhân viên.',
+        });
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -109,18 +158,22 @@ export const EmployeeDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, addToast]);
 
-  const dept = (departmentsList.length > 0 ? departmentsList : departments).find((d) => d.id === employee.departmentId);
-  const position = positions.find((p) => p.id === employee.positionId);
+  const branch = employee ? (branchesList.length > 0 ? branchesList : branches).find((b) => b.id === employee.branchId) : undefined;
+  const position = employee ? positions.find((p) => p.id === employee.positionId) : undefined;
 
   // Shifts of this employee
-  const employeeShifts = Object.values(assignments).filter(
-    (a) => a.employeeId === employee.id && a.status !== 'CANCELLED'
-  );
+  const employeeShifts = employee
+    ? Object.values(assignments).flat().filter(
+        (a) => a.employeeId === employee.id && a.status !== 'CANCELLED'
+      )
+    : [];
 
   // Leaves of this employee
-  const employeeLeaves = approvedLeaves.filter((l) => l.employeeId === employee.id);
+  const employeeLeaves = employee
+    ? approvedLeaves.filter((l) => l.employeeId === employee.id)
+    : [];
 
   const handleConfirmDelete = async () => {
     if (!employee || !employee.id) return;
@@ -171,9 +224,24 @@ export const EmployeeDetailPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Profile Header Banner */}
-      <div
-        className="card"
+      {isLoading ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+          Đang tải thông tin nhân sự...
+        </div>
+      ) : !employee ? (
+        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
+          <p style={{ color: 'var(--color-error)', marginBottom: 16 }}>
+            {loadError || 'Không tìm thấy hồ sơ nhân sự trên hệ thống.'}
+          </p>
+          <button className="btn btn-primary" onClick={() => navigate('/employees')}>
+            Quay lại danh sách nhân viên
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Profile Header Banner */}
+          <div
+            className="card"
         style={{
           padding: '20px 24px',
           display: 'flex',
@@ -215,7 +283,7 @@ export const EmployeeDetailPage: React.FC = () => {
 
             <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 'var(--font-caption)', color: 'var(--color-text-secondary)', flexWrap: 'wrap' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Building size={14} color="var(--color-primary)" /> {dept?.departmentName}
+                <Store size={14} color="var(--color-primary)" /> {branch?.branchName}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Briefcase size={14} color="var(--color-primary)" /> {position?.positionName}
@@ -230,33 +298,58 @@ export const EmployeeDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {canDelete && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={() => setIsDeleteModalOpen(true)}
+            onClick={() => setActiveTab('AVAILABILITY')}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
               padding: '8px 14px',
-              backgroundColor: '#FEF2F2',
-              color: '#DC2626',
-              border: '1px solid #FECACA',
+              backgroundColor: activeTab === 'AVAILABILITY' ? '#EFF6FF' : '#FFFFFF',
+              color: 'var(--color-primary, #2563EB)',
+              border: '1.5px solid var(--color-primary, #2563EB)',
               borderRadius: 'var(--radius-md, 6px)',
               fontWeight: 600,
               fontSize: '13px',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
+              boxShadow: activeTab === 'AVAILABILITY' ? '0 1px 3px rgba(37,99,235,0.2)' : 'none',
             }}
-            title="Xóa hồ sơ nhân viên"
-            aria-label={`Xóa hồ sơ ${employee.fullName}`}
+            title="Đăng ký hoặc chỉnh sửa lịch làm việc khả dụng trong tuần"
           >
-            <Trash2 size={15} /> Xóa hồ sơ
+            <CalendarCheck size={16} /> Đăng Ký Lịch Làm Việc
           </button>
-        )}
+
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => setIsDeleteModalOpen(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 14px',
+                backgroundColor: '#FEF2F2',
+                color: '#DC2626',
+                border: '1px solid #FECACA',
+                borderRadius: 'var(--radius-md, 6px)',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title="Xóa hồ sơ nhân viên"
+              aria-label={`Xóa hồ sơ ${employee.fullName}`}
+            >
+              <Trash2 size={15} /> Xóa hồ sơ
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* 4 Tabs Bar */}
+      {/* 5 Tabs Bar */}
       <div
         style={{
           display: 'flex',
@@ -355,6 +448,29 @@ export const EmployeeDetailPage: React.FC = () => {
         >
           <Palmtree size={16} /> Nghỉ Phép ({employeeLeaves.length})
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('AVAILABILITY')}
+          style={{
+            padding: '10px 16px',
+            fontSize: 'var(--font-body-md)',
+            fontWeight: activeTab === 'AVAILABILITY' ? 600 : 500,
+            color: activeTab === 'AVAILABILITY' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+            borderBottom: activeTab === 'AVAILABILITY' ? '3px solid var(--color-primary)' : '3px solid transparent',
+            marginBottom: -2,
+            background: 'none',
+            borderTop: 'none',
+            borderLeft: 'none',
+            borderRight: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <CalendarCheck size={16} /> Lịch Khả Dụng / Đăng Ký Ca
+        </button>
       </div>
 
       {/* Tab 1: Profile & Organization */}
@@ -373,8 +489,8 @@ export const EmployeeDetailPage: React.FC = () => {
               <div style={{ fontWeight: 600, marginTop: 2 }}>{employee.fullName}</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Phòng ban trực thuộc</div>
-              <div style={{ fontWeight: 600, marginTop: 2 }}>{dept?.departmentName}</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Chi nhánh / Cơ sở làm việc</div>
+              <div style={{ fontWeight: 600, marginTop: 2 }}>{branch?.branchName}</div>
             </div>
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Chức danh chuyên môn</div>
@@ -499,15 +615,26 @@ export const EmployeeDetailPage: React.FC = () => {
         </div>
       )}
 
+      {/* Tab 5: Availability / Shift Registration */}
+      {activeTab === 'AVAILABILITY' && (
+        <EmployeeAvailabilityTab
+          employeeId={employee.id}
+          employeeName={employee.fullName}
+          canEdit={true}
+        />
+      )}
+
       {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
         employee={employee}
-        departmentName={dept?.departmentName}
+        branchName={branch?.branchName}
         isDeleting={isDeleting}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
       />
-    </div>
+    </>
+  )}
+</div>
   );
 };

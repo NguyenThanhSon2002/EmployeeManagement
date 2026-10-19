@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import type { RoleType } from '@/types/domain.types';
-import { ShieldCheck, UserCheck, User, ChevronDown } from 'lucide-react';
+import { Crown, Briefcase, User, ChevronDown } from 'lucide-react';
 
 interface RoleOption {
   role: RoleType;
@@ -13,22 +13,22 @@ interface RoleOption {
 
 const ROLES: RoleOption[] = [
   {
-    role: 'ROLE_ADMIN',
-    label: 'Quản Trị Viên (Admin)',
-    badge: 'Toàn quyền điều hành',
-    icon: <ShieldCheck size={16} color="#2563EB" />,
+    role: 'ROLE_DIRECTOR',
+    label: 'Giám Đốc (Director)',
+    badge: 'Toàn quyền điều hành đa cơ sở',
+    icon: <Crown size={16} color="#7C3AED" />,
   },
   {
-    role: 'ROLE_DEPT_MANAGER',
-    label: 'Trưởng Nhóm / Quản Lý',
-    badge: 'Duyệt đơn & Phân ca',
-    icon: <UserCheck size={16} color="#10B981" />,
+    role: 'ROLE_MANAGER',
+    label: 'Quản Lý Cơ Sở (Manager)',
+    badge: 'Xếp ca & Quản trị cơ sở',
+    icon: <Briefcase size={16} color="#2563EB" />,
   },
   {
     role: 'ROLE_EMPLOYEE',
     label: 'Nhân Viên (Employee)',
-    badge: 'Chỉ xem lịch & Điểm danh',
-    icon: <User size={16} color="#F59E0B" />,
+    badge: 'Đăng ký khả dụng & Xem ca',
+    icon: <User size={16} color="#10B981" />,
   },
 ];
 

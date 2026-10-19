@@ -40,7 +40,7 @@ export const Topbar: React.FC = () => {
         boxShadow: 'var(--shadow-xs)',
       }}
     >
-      {/* Left: System Title, Department Scope & Operational Status */}
+      {/* Left: System Title, Branch Scope & Operational Status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>
@@ -48,7 +48,7 @@ export const Topbar: React.FC = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
             <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-              Phòng Vận hành Dịch vụ (DEPT-OPS)
+              Chi nhánh Cầu Giấy (CN_CAUGIAY)
             </span>
             <span style={{ color: 'var(--color-border)' }}>•</span>
             <span className="pulse-dot-green" />

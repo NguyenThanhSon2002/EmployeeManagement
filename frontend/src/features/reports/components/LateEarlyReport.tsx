@@ -6,7 +6,7 @@ import { Download, Search } from 'lucide-react';
 
 export const LateEarlyReport: React.FC = () => {
   const { records } = useAttendanceStore();
-  const { employees, departments } = useDirectoryStore();
+  const { employees, branches } = useDirectoryStore();
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -29,7 +29,7 @@ export const LateEarlyReport: React.FC = () => {
     const columns = [
       { key: 'employeeCode', header: 'Mã NV' },
       { key: 'fullName', header: 'Họ và tên' },
-      { key: 'departmentName', header: 'Phòng ban' },
+      { key: 'branchName', header: 'Chi nhánh' },
       { key: 'workDate', header: 'Ngày vi phạm' },
       { key: 'violationType', header: 'Hành vi vi phạm' },
       { key: 'minutes', header: 'Thời lượng (phút)' },
@@ -40,7 +40,7 @@ export const LateEarlyReport: React.FC = () => {
 
     const dataRows = filteredViolations.map((r) => {
       const emp = employees.find((e) => e.id === r.employeeId);
-      const dept = departments.find((d) => d.id === emp?.departmentId);
+      const branch = branches.find((b) => b.id === emp?.branchId);
 
       let vType = 'Đi muộn';
       let mins = r.lateMinutes;
@@ -55,7 +55,7 @@ export const LateEarlyReport: React.FC = () => {
       return {
         employeeCode: emp?.employeeCode || '',
         fullName: emp?.fullName || '',
-        departmentName: dept?.departmentName || '',
+        branchName: branch?.branchName || '',
         workDate: r.workDate,
         violationType: vType,
         minutes: mins > 0 ? mins.toString() : '-',
@@ -111,7 +111,7 @@ export const LateEarlyReport: React.FC = () => {
             <tr>
               <th>Mã NV</th>
               <th>Họ và tên</th>
-              <th>Phòng ban</th>
+              <th>Chi nhánh</th>
               <th>Ngày</th>
               <th>Giờ vào / ra</th>
               <th>Hành vi</th>
@@ -129,7 +129,7 @@ export const LateEarlyReport: React.FC = () => {
             ) : (
               filteredViolations.map((r) => {
                 const emp = employees.find((e) => e.id === r.employeeId);
-                const dept = departments.find((d) => d.id === emp?.departmentId);
+                const branch = branches.find((b) => b.id === emp?.branchId);
 
                 const inStr = r.checkInTime ? r.checkInTime.split('T')[1]?.substring(0, 5) : '--:--';
                 const outStr = r.checkOutTime ? r.checkOutTime.split('T')[1]?.substring(0, 5) : '--:--';
@@ -142,7 +142,7 @@ export const LateEarlyReport: React.FC = () => {
                       <span style={{ fontWeight: 600 }}>{emp?.employeeCode}</span>
                     </td>
                     <td>{emp?.fullName}</td>
-                    <td>{dept?.departmentName}</td>
+                    <td>{branch?.branchName}</td>
                     <td>{r.workDate}</td>
                     <td>
                       <span>{inStr} - {outStr}</span>

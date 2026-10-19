@@ -8,11 +8,11 @@ interface AttendanceState {
   records: AttendanceRecord[];
   corrections: AttendanceCorrection[];
   selectedDate: string; // YYYY-MM-DD
-  departmentFilter: number | null;
+  branchFilter: number | null;
 
-  fetchRecords: (workDate?: string, departmentId?: number) => Promise<void>;
+  fetchRecords: (workDate?: string, branchId?: number) => Promise<void>;
   setSelectedDate: (date: string) => void;
-  setDepartmentFilter: (deptId: number | null) => void;
+  setBranchFilter: (branchId: number | null) => void;
 
   submitCorrection: (
     payload: Omit<AttendanceCorrection, 'id' | 'status' | 'reviewedBy' | 'reviewedAt' | 'rejectionReason'>
@@ -32,12 +32,12 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
     records: [],
     corrections: [],
     selectedDate: todayStr,
-    departmentFilter: null,
+    branchFilter: null,
 
-    fetchRecords: async (date?: string, departmentId?: number) => {
+    fetchRecords: async (date?: string, branchId?: number) => {
       if (isMockEnabled()) return;
       try {
-        const data = await attendanceService.getRecords({ work_date: date, department_id: departmentId });
+        const data = await attendanceService.getRecords({ work_date: date, branch_id: branchId });
         if (data && Array.isArray(data) && data.length > 0) {
           const mapped: AttendanceRecord[] = data.map((d: any) => ({
             id: d.id,
@@ -64,7 +64,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
     },
 
     setSelectedDate: (date) => set({ selectedDate: date }),
-    setDepartmentFilter: (deptId) => set({ departmentFilter: deptId }),
+    setBranchFilter: (branchId) => set({ branchFilter: branchId }),
 
     submitCorrection: (payload) => {
       const state = get();

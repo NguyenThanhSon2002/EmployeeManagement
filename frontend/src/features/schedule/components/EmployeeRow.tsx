@@ -7,13 +7,13 @@ import { formatDateIso } from '@/utils/date.utils';
 interface EmployeeRowProps {
   employee: Employee;
   weekDays: Date[];
-  assignmentsMap: Record<string, ShiftAssignment>;
+  assignmentsMap: Record<string, ShiftAssignment[]>;
   conflictsMap: Record<string, ScheduleConflict[]>;
   approvedLeaves: LeaveRequest[];
   holidays: CompanyHoliday[];
   todayDateStr: string;
   canEdit: boolean;
-  onOpenAssign: (employeeId: number, workDate: string) => void;
+  onOpenAssign: (employeeId: number, workDate: string, targetAssignment?: ShiftAssignment | null) => void;
 }
 
 export const EmployeeRow: React.FC<EmployeeRowProps> = ({
@@ -31,8 +31,12 @@ export const EmployeeRow: React.FC<EmployeeRowProps> = ({
   const employeeWeekAssignments: ShiftAssignment[] = [];
   for (const day of weekDays) {
     const key = `${employee.id}_${formatDateIso(day)}`;
-    const a = assignmentsMap[key];
-    if (a) employeeWeekAssignments.push(a);
+    const list = assignmentsMap[key];
+    if (list && Array.isArray(list)) {
+      employeeWeekAssignments.push(...list);
+    } else if (list && typeof list === 'object') {
+      employeeWeekAssignments.push(list as any);
+    }
   }
 
   const weeklyHours = sumWeeklyScheduledHours(employeeWeekAssignments);
@@ -130,7 +134,10 @@ export const EmployeeRow: React.FC<EmployeeRowProps> = ({
       {weekDays.map((day) => {
         const dateStr = formatDateIso(day);
         const cellKey = `${employee.id}_${dateStr}`;
-        const assignment = assignmentsMap[cellKey] || null;
+        const rawAssignments = assignmentsMap[cellKey];
+        const cellAssignments: ShiftAssignment[] = Array.isArray(rawAssignments)
+          ? rawAssignments
+          : (rawAssignments ? [rawAssignments as any] : []);
         const conflicts = conflictsMap[cellKey] || [];
         const leave =
           approvedLeaves.find(
@@ -143,14 +150,14 @@ export const EmployeeRow: React.FC<EmployeeRowProps> = ({
             key={cellKey}
             employeeId={employee.id}
             workDate={dateStr}
-            assignment={assignment}
+            assignments={cellAssignments}
             conflicts={conflicts}
             approvedLeave={leave}
             holiday={holiday}
             isToday={dateStr === todayDateStr}
             isLocked={isResigned}
             canEdit={canEdit && !isResigned}
-            onOpenAssign={() => onOpenAssign(employee.id, dateStr)}
+            onOpenAssign={(targetAssignment) => onOpenAssign(employee.id, dateStr, targetAssignment)}
           />
         );
       })}

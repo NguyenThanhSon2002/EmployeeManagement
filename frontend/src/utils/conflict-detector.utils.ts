@@ -7,7 +7,7 @@ import type {
   CompanyHoliday,
   DemoSettings,
 } from '@/types/domain.types';
-import { sumWeeklyScheduledHours } from './schedule-calc.utils';
+import { calculateShiftDurations, sumWeeklyScheduledHours } from './schedule-calc.utils';
 
 export interface ShiftTimeRange {
   id?: number;
@@ -349,6 +349,33 @@ export function validateAllShiftConflicts(params: {
     });
   }
 
+  // BR-DAILY: Daily hours limit (> 12h/day warning under VN Labor Code 2019)
+  const existingSameDayShifts = existingShifts.filter(
+    (s) => s.status !== 'CANCELLED' && s.workDate === newShiftRange.workDate && (newShiftRange.id === undefined || s.id !== newShiftRange.id)
+  );
+  let existingSameDayHours = 0;
+  for (const s of existingSameDayShifts) {
+    const { netHours } = calculateShiftDurations(
+      s.snapshotStartTime,
+      s.snapshotEndTime,
+      s.snapshotBreakMinutes,
+      s.snapshotCrossMidnight
+    );
+    existingSameDayHours += netHours;
+  }
+  const totalDayHours = Math.round((existingSameDayHours + newShiftNetHours) * 10) / 10;
+  if (totalDayHours > 12.0) {
+    conflicts.push({
+      id: `BR-DAILY_${employee.id}_${newShiftRange.workDate}`,
+      ruleCode: 'BR-DAILY-LIMIT',
+      severity: 'WARNING',
+      employeeId: employee.id,
+      workDate: newShiftRange.workDate,
+      message: `Tổng thời gian làm việc trong ngày đạt ${totalDayHours.toFixed(1)}h, vượt quá 12h/ngày theo Điều 107 Luật Lao Động 2019. Yêu cầu nhập lý do giải trình đặc cách.`,
+      canOverride: true,
+    });
+  }
+
   // BR-007: Holiday
   const holidayCheck = checkHolidayConflict(newShiftRange.workDate, holidays);
   if (holidayCheck.isHoliday) {
@@ -365,3 +392,4 @@ export function validateAllShiftConflicts(params: {
 
   return conflicts;
 }
+

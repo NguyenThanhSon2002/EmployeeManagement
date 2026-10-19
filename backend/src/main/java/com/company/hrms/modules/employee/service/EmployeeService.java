@@ -2,8 +2,8 @@ package com.company.hrms.modules.employee.service;
 
 import com.company.hrms.common.exception.ResourceConflictException;
 import com.company.hrms.common.exception.ResourceNotFoundException;
-import com.company.hrms.modules.department.domain.Department;
-import com.company.hrms.modules.department.repository.DepartmentRepository;
+import com.company.hrms.modules.branch.domain.Branch;
+import com.company.hrms.modules.branch.repository.BranchRepository;
 import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.dto.EmployeeDto;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
@@ -20,22 +20,22 @@ import java.util.stream.Collectors;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
-    private final DepartmentRepository departmentRepository;
+    private final BranchRepository branchRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository, DepartmentRepository departmentRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, BranchRepository branchRepository) {
         this.employeeRepository = employeeRepository;
-        this.departmentRepository = departmentRepository;
+        this.branchRepository = branchRepository;
     }
 
     @Transactional(readOnly = true)
-    public Page<EmployeeDto> getEmployees(Long departmentId, String status, String keyword, Pageable pageable) {
-        return employeeRepository.findEmployeesWithFilter(departmentId, status, keyword, pageable)
+    public Page<EmployeeDto> getEmployees(Long branchId, String status, String keyword, Pageable pageable) {
+        return employeeRepository.findEmployeesWithFilter(branchId, status, keyword, pageable)
                 .map(this::toDto);
     }
 
     @Transactional(readOnly = true)
-    public List<EmployeeDto> getEmployeesByDepartment(Long departmentId) {
-        return employeeRepository.findAllByDepartmentIdAndDeletedAtIsNull(departmentId).stream()
+    public List<EmployeeDto> getEmployeesByBranch(Long branchId) {
+        return employeeRepository.findAllByBranchIdAndDeletedAtIsNull(branchId).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
@@ -92,12 +92,12 @@ public class EmployeeService {
         Employee employee = employeeRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", id));
 
-        List<Department> managedDepartments = departmentRepository.findAllByManagerIdAndDeletedAtIsNull(id);
-        if (!managedDepartments.isEmpty()) {
-            String deptNames = managedDepartments.stream()
-                    .map(Department::getDepartmentName)
+        List<Branch> managedBranches = branchRepository.findAllByManagerIdAndDeletedAtIsNull(id);
+        if (!managedBranches.isEmpty()) {
+            String branchNames = managedBranches.stream()
+                    .map(Branch::getBranchName)
                     .collect(Collectors.joining(", "));
-            throw new ResourceConflictException("Không thể xóa nhân viên đang giữ vị trí Trưởng phòng (" + deptNames + "). Vui lòng chuyển giao chức vụ trước khi xóa.");
+            throw new ResourceConflictException("Không thể xóa nhân sự đang là Quản lý chi nhánh (" + branchNames + "). Vui lòng chuyển giao chức vụ trước khi xóa.");
         }
 
         employee.softDelete();
@@ -113,7 +113,7 @@ public class EmployeeService {
         entity.setDateOfBirth(dto.getDateOfBirth());
         entity.setGender(dto.getGender());
         entity.setAddress(dto.getAddress());
-        entity.setDepartmentId(dto.getDepartmentId());
+        entity.setBranchId(dto.getBranchId());
         entity.setPositionId(dto.getPositionId());
         entity.setManagerId(dto.getManagerId());
         if (dto.getEmploymentStatus() != null) {
@@ -141,7 +141,7 @@ public class EmployeeService {
         dto.setDateOfBirth(entity.getDateOfBirth());
         dto.setGender(entity.getGender());
         dto.setAddress(entity.getAddress());
-        dto.setDepartmentId(entity.getDepartmentId());
+        dto.setBranchId(entity.getBranchId());
         dto.setPositionId(entity.getPositionId());
         dto.setManagerId(entity.getManagerId());
         dto.setEmploymentStatus(entity.getEmploymentStatus());

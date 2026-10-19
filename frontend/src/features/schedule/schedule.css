@@ -127,6 +127,34 @@
   transform: scale(1.02);
 }
 
+/* Add Second Shift Mini Button */
+.cell-add-mini-btn {
+  display: none;
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  border: 1px dashed #CBD5E1;
+  border-radius: var(--radius-sm);
+  background-color: #F8FAFC;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+  margin-top: 2px;
+}
+
+.schedule-cell:hover .cell-add-mini-btn {
+  display: flex;
+}
+
+.cell-add-mini-btn:hover {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
 /* Shift Card Component */
 .shift-card {
   border-radius: var(--radius-md);
@@ -292,3 +320,31 @@
     display: block !important;
   }
 }
+
+/* Shift-Centric Matrix Enhancements */
+.shift-grid-cell {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.shift-grid-cell:hover {
+  background-color: #F8FAFC !important;
+}
+
+.shift-cell-quick-add-btn:hover {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+
+.staff-shift-chip {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.staff-shift-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.staff-chip-remove-btn:hover {
+  color: #EF4444 !important;
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+

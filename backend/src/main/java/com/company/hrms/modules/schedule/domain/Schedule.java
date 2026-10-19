@@ -13,8 +13,8 @@ public class Schedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "department_id", nullable = false)
-    private Long departmentId;
+    @Column(name = "branch_id", nullable = false)
+    private Long branchId;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
@@ -44,8 +44,8 @@ public class Schedule {
     public Schedule() {
     }
 
-    public Schedule(Long departmentId, LocalDate startDate, LocalDate endDate) {
-        this.departmentId = departmentId;
+    public Schedule(Long branchId, LocalDate startDate, LocalDate endDate) {
+        this.branchId = branchId;
         this.startDate = startDate;
         this.endDate = endDate;
         this.status = "DRAFT";
@@ -61,8 +61,8 @@ public class Schedule {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Long getDepartmentId() { return departmentId; }
-    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public LocalDate getEndDate() { return endDate; }

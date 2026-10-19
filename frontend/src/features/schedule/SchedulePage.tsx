@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
-import { formatDateVi } from '@/utils/date.utils';
+import { getWeekDays } from '@/utils/date.utils';
 import { useScheduleStore } from './store/useScheduleStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useSettingsStore } from '@/features/settings/store/useSettingsStore';
@@ -11,16 +11,16 @@ import { ScheduleSummaryCards } from './components/ScheduleSummaryCards';
 import { ScheduleFiltersBar } from './components/ScheduleFiltersBar';
 import { WeeklyGrid } from './components/WeeklyGrid';
 import { MonthViewGrid } from './components/MonthViewGrid';
-import { MobileDayView } from './components/MobileDayView';
 import { ScheduleLegend } from './components/ScheduleLegend';
-import { AssignShiftDrawer } from './dialogs/AssignShiftDrawer';
+import { EmployeeWeeklyHoursTable } from './components/EmployeeWeeklyHoursTable';
+import { AssignStaffDrawer } from './dialogs/AssignStaffDrawer';
 import { BulkAssignDialog } from './dialogs/BulkAssignDialog';
 import { CopyWeekDialog } from './dialogs/CopyWeekDialog';
 import { PublishConfirmDialog } from './dialogs/PublishConfirmDialog';
 import { ChangeHistoryDrawer } from './dialogs/ChangeHistoryDrawer';
 import { buildWeeklyRosterCsv, downloadCsvFile } from '@/utils/csv-exporter.utils';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
-import { useIsMobile } from '@/hooks/useMediaQuery';
+import type { ShiftAssignment } from '@/types/domain.types';
 import './schedule.css';
 
 export const SchedulePage: React.FC = () => {
@@ -51,17 +51,19 @@ export const SchedulePage: React.FC = () => {
   const { currentRole } = useAuthStore();
   const { settings } = useSettingsStore();
   const { addToast } = useUIStore();
-  const { departments } = useDirectoryStore();
-  const isMobile = useIsMobile(768);
+  const { branches } = useDirectoryStore();
 
-  // Auto-fetch weekly schedule from backend if real API mode is active
+  // Auto-fetch weekly schedule from backend / storage
   React.useEffect(() => {
-    fetchWeeklySchedule(filterOptions.departmentId || 1, currentStartDate);
-  }, [filterOptions.departmentId, currentStartDate, fetchWeeklySchedule]);
+    fetchWeeklySchedule(filterOptions.branchId || 1, currentStartDate);
+  }, [filterOptions.branchId, currentStartDate, fetchWeeklySchedule]);
 
   // Dialog & Drawer Visibility State
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedCell, setSelectedCell] = useState<{ employeeId: number; workDate: string } | null>(null);
+  const [selectedShiftCell, setSelectedShiftCell] = useState<{
+    shiftTemplateId: number;
+    workDate: string;
+  } | null>(null);
 
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
@@ -92,9 +94,11 @@ export const SchedulePage: React.FC = () => {
 
   // Filter Employees
   const filteredEmployees = useMemo(() => {
+    const allAssignmentsList: ShiftAssignment[] = Object.values(assignments).flat();
+
     return employees.filter((emp) => {
-      // 1. Department filter (if not 0)
-      if (filterOptions.departmentId && emp.departmentId !== filterOptions.departmentId) {
+      // 1. Branch filter (if not 0)
+      if (filterOptions.branchId && emp.branchId !== filterOptions.branchId) {
         return false;
       }
 
@@ -108,7 +112,7 @@ export const SchedulePage: React.FC = () => {
 
       // 3. Shift code filter
       if (filterOptions.shiftCodeFilter) {
-        const hasMatchingShift = Object.values(assignments).some((a) => {
+        const hasMatchingShift = allAssignmentsList.some((a) => {
           if (a.employeeId !== emp.id || a.status === 'CANCELLED') return false;
           const template = shiftTemplates.find((t) => t.id === a.workShiftId);
           return template?.shiftCode === filterOptions.shiftCodeFilter;
@@ -137,8 +141,9 @@ export const SchedulePage: React.FC = () => {
     let hoursCount = 0;
 
     const dailyStaffCountMap: Record<string, number> = {};
+    const allAssignmentsList: ShiftAssignment[] = Object.values(assignments).flat();
 
-    for (const a of Object.values(assignments)) {
+    for (const a of allAssignmentsList) {
       if (a.workDate >= currentStartDate && a.workDate <= sundayStr && a.status !== 'CANCELLED') {
         shiftsCount++;
         const { netHours } = calculateShiftDurations(
@@ -171,99 +176,78 @@ export const SchedulePage: React.FC = () => {
 
     return {
       totalShifts: shiftsCount,
-      totalHours: hoursCount,
+      totalHours: Math.round(hoursCount * 10) / 10,
       conflictCount: conflictsTotal,
       understaffedDaysCount: understaffed,
     };
   }, [assignments, conflicts, currentStartDate, baseMonday]);
 
-  // Drawer Opening
-  const handleOpenAssign = (employeeId: number, workDate: string) => {
-    setSelectedCell({ employeeId, workDate });
+  // Shift-Centric Drawer Opening Handlers
+  const handleOpenAssignStaff = (shiftTemplateId: number, workDate: string) => {
+    setSelectedShiftCell({ shiftTemplateId, workDate });
     setDrawerOpen(true);
   };
 
-  const handleCloseDrawer = () => {
+  const handleCloseAssignStaff = () => {
     setDrawerOpen(false);
-    setSelectedCell(null);
+    setSelectedShiftCell(null);
   };
 
-  // Selected cell data for Drawer
-  const activeEmployee = selectedCell
-    ? employees.find((e) => e.id === selectedCell.employeeId) || null
+  const activeShiftTemplate = selectedShiftCell
+    ? shiftTemplates.find((t) => t.id === selectedShiftCell.shiftTemplateId) || null
     : null;
 
-  const activeAssignment = selectedCell
-    ? assignments[`${selectedCell.employeeId}_${selectedCell.workDate}`] || null
-    : null;
-
-  const activeEmployeeAssignments = activeEmployee
-    ? Object.values(assignments).filter((a) => a.employeeId === activeEmployee.id)
-    : [];
-
-  const activeEmployeeLeaves = activeEmployee
-    ? approvedLeaves.filter((l) => l.employeeId === activeEmployee.id)
-    : [];
-
-  // Save Shift Handler
-  const handleSaveShift = (payload: {
+  const handleAssignEmployee = (payload: {
+    employeeId: number;
     workShiftId: number;
+    workDate: string;
     overrideRule?: string | null;
     overrideReason?: string | null;
-    changeReason?: string;
   }) => {
-    if (!selectedCell) return;
-
     const res = assignShift({
-      employeeId: selectedCell.employeeId,
+      employeeId: payload.employeeId,
       workShiftId: payload.workShiftId,
-      workDate: selectedCell.workDate,
+      workDate: payload.workDate,
       overrideRule: payload.overrideRule,
       overrideReason: payload.overrideReason,
-      changeReason: payload.changeReason,
       actorRole: currentRole,
     });
-
     if (res.success) {
       addToast({
         type: 'success',
         title: 'Phân ca thành công',
-        message: `Đã lưu ca làm việc ngày ${formatDateVi(selectedCell.workDate)} vào CSDL MySQL.`,
+        message: 'Đã gán nhân viên vào ca làm việc.',
       });
-      handleCloseDrawer();
     } else {
       addToast({
         type: 'error',
-        title: 'Không thể phân ca',
-        message: res.error || 'Đã có lỗi xảy ra',
+        title: 'Lỗi phân ca',
+        message: res.error || 'Không thể phân ca',
       });
     }
   };
 
-  // Delete Shift Handler
-  const handleDeleteShift = (changeReason?: string) => {
-    if (!activeAssignment) return;
-
-    deleteAssignment(activeAssignment.id, changeReason, currentRole);
+  const handleRemoveAssignment = (assignmentId: number) => {
+    deleteAssignment(assignmentId, undefined, currentRole);
     addToast({
       type: 'info',
-      title: 'Đã xóa phân ca',
-      message: `Đã hủy phân ca ngày ${formatDateVi(activeAssignment.workDate)} khỏi CSDL MySQL.`,
+      title: 'Đã gỡ nhân viên',
+      message: 'Đã xóa nhân viên khỏi ca làm việc.',
     });
-    handleCloseDrawer();
   };
 
   // CSV Export Handler
   const handleExportCsv = () => {
-    const dept = departments.find((d) => d.id === filterOptions.departmentId) || null;
+    const branch = branches.find((b) => b.id === filterOptions.branchId) || null;
     const csvContent = buildWeeklyRosterCsv({
       monday: baseMonday,
-      department: dept,
+      branch: branch,
       employees: filteredEmployees,
-      assignments: Object.values(assignments),
+      assignments: Object.values(assignments).flat(),
     });
 
-    const filename = `Lich_Phan_Ca_${format(baseMonday, 'yyyyMMdd')}.csv`;
+    const branchPrefix = branch?.branchCode ? `${branch.branchCode}_` : '';
+    const filename = `Lich_Phan_Ca_${branchPrefix}${format(baseMonday, 'yyyyMMdd')}.csv`;
     downloadCsvFile(csvContent, filename);
 
     addToast({
@@ -279,8 +263,9 @@ export const SchedulePage: React.FC = () => {
     addToast({
       type: 'success',
       title: 'Sao chép tuần hoàn tất',
-      message: `Đã sao chép ${res.copiedCount} ca, bỏ qua ${res.skippedCount} ca đã có.`,
+      message: `Đã sao chép ${res.copiedCount} ca làm việc (Bỏ qua ${res.skippedCount} ca đã có).`,
     });
+    setCopyDialogOpen(false);
   };
 
   // Publish Schedule Handler
@@ -288,83 +273,76 @@ export const SchedulePage: React.FC = () => {
     publishSchedule();
     addToast({
       type: 'success',
-      title: 'Công bố lịch thành công',
-      message: 'Lịch tuần đã được chuyển sang trạng thái PUBLISHED và lưu vào CSDL MySQL.',
+      title: 'Đã công bố lịch làm việc',
+      message: 'Lịch phân ca tuần đã chuyển sang trạng thái PUBLISHED chính thức.',
     });
+    setPublishDialogOpen(false);
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-      {/* 1. Schedule Toolbar */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+      {/* 1. Top Action Toolbar */}
       <ScheduleToolbar
         baseMonday={baseMonday}
-        departments={departments}
-        selectedDeptId={filterOptions.departmentId}
+        branches={branches}
+        selectedBranchId={filterOptions.branchId || (branches[0]?.id || 1)}
         scheduleStatus={scheduleStatus}
         viewMode={viewMode}
         currentRole={currentRole}
         onPrevWeek={handlePrevWeek}
         onNextWeek={handleNextWeek}
         onToday={handleToday}
-        onSelectDept={(deptId) => setFilters({ departmentId: deptId })}
+        onSelectBranch={(branchId) => setFilters({ branchId })}
         onToggleViewMode={setViewMode}
         onOpenPublish={() => setPublishDialogOpen(true)}
         onOpenCopyWeek={() => setCopyDialogOpen(true)}
         onOpenBulkAssign={() => setBulkDialogOpen(true)}
         onExportCsv={handleExportCsv}
         onOpenHistory={() => setHistoryDrawerOpen(true)}
-        onResetDemo={() => {
-          resetDemoData();
-          addToast({
-            type: 'info',
-            title: 'Khôi phục dữ liệu demo',
-            message: 'Toàn bộ dữ liệu phân ca đã được trả về trạng thái hạt giống ban đầu.',
-          });
-        }}
+        onResetDemo={resetDemoData}
       />
 
-      {/* 2. Summary KPI Cards */}
+      {/* 2. Executive Summary Metrics Cards */}
       <ScheduleSummaryCards
         totalShifts={totalShifts}
         totalHours={totalHours}
         conflictCount={conflictCount}
         understaffedDaysCount={understaffedDaysCount}
-        onlyShowConflicts={filterOptions.onlyShowConflicts}
-        onToggleConflictFilter={() => setFilters({ onlyShowConflicts: !filterOptions.onlyShowConflicts })}
+        onlyShowConflicts={Boolean(filterOptions.onlyShowConflicts)}
+        onToggleConflictFilter={() =>
+          setFilters({ onlyShowConflicts: !filterOptions.onlyShowConflicts })
+        }
       />
 
-      {/* 3. Filters Bar */}
+      {/* 3. Filter and Search Controls */}
       <ScheduleFiltersBar
-        searchTerm={filterOptions.searchTerm}
-        shiftCodeFilter={filterOptions.shiftCodeFilter}
-        onlyShowConflicts={filterOptions.onlyShowConflicts}
+        searchTerm={filterOptions.searchTerm || ''}
+        shiftCodeFilter={filterOptions.shiftCodeFilter || ''}
+        onlyShowConflicts={Boolean(filterOptions.onlyShowConflicts)}
         shiftTemplates={shiftTemplates}
         totalEmployees={employees.length}
         filteredCount={filteredEmployees.length}
-        onSearchChange={(searchTerm) => setFilters({ searchTerm })}
-        onShiftFilterChange={(shiftCodeFilter) => setFilters({ shiftCodeFilter })}
-        onToggleConflicts={(onlyShowConflicts) => setFilters({ onlyShowConflicts })}
+        onSearchChange={(val) => setFilters({ searchTerm: val })}
+        onShiftFilterChange={(val) => setFilters({ shiftCodeFilter: val })}
+        onToggleConflicts={(val) => setFilters({ onlyShowConflicts: val })}
         onResetFilters={() =>
           setFilters({ searchTerm: '', shiftCodeFilter: '', onlyShowConflicts: false })
         }
       />
 
-      {/* 4. Matrix View (Week Grid or Month Grid) */}
+      {/* 4. Matrix View (Shift-Centric Week Grid or Month Grid) */}
       {viewMode === 'WEEK' ? (
-        isMobile ? (
-          <MobileDayView onOpenAssignDrawer={handleOpenAssign} />
-        ) : (
-          <WeeklyGrid
-            baseMonday={baseMonday}
-            employees={filteredEmployees}
-            assignmentsMap={assignments}
-            conflictsMap={conflicts}
-            approvedLeaves={approvedLeaves}
-            holidays={holidays}
-            canEdit={currentRole !== 'ROLE_EMPLOYEE'}
-            onOpenAssign={handleOpenAssign}
-          />
-        )
+        <WeeklyGrid
+          baseMonday={baseMonday}
+          shiftTemplates={shiftTemplates}
+          employees={employees}
+          assignmentsMap={assignments}
+          conflictsMap={conflicts}
+          holidays={holidays}
+          canEdit={currentRole !== 'ROLE_EMPLOYEE'}
+          onOpenAssignStaff={handleOpenAssignStaff}
+          onRemoveAssignment={handleRemoveAssignment}
+        />
       ) : (
         <MonthViewGrid
           currentDate={baseMonday}
@@ -382,26 +360,32 @@ export const SchedulePage: React.FC = () => {
         />
       )}
 
-      {/* 5. Color Legend & Shortcuts */}
+      {/* 5. Employee Weekly Hours Summary Table (Part-time & Shifts Summary) */}
+      <EmployeeWeeklyHoursTable
+        employees={filteredEmployees}
+        weekDays={getWeekDays(baseMonday)}
+        assignmentsMap={assignments}
+        searchTerm={filterOptions.searchTerm || ''}
+      />
+
+      {/* 6. Color Legend & Shortcuts */}
       <ScheduleLegend shiftTemplates={shiftTemplates} />
 
-      {/* 6. Drawers & Dialogs */}
-      {/* SCR-12 Assign Shift Drawer */}
-      <AssignShiftDrawer
+      {/* 7. Drawers & Dialogs */}
+      {/* Shift-Centric Assign Staff Drawer */}
+      <AssignStaffDrawer
         isOpen={drawerOpen}
-        employee={activeEmployee}
-        workDate={selectedCell?.workDate || ''}
-        existingAssignment={activeAssignment}
-        shiftTemplates={shiftTemplates}
-        allEmployeeAssignments={activeEmployeeAssignments}
-        employeeLeaves={activeEmployeeLeaves}
+        onClose={handleCloseAssignStaff}
+        shiftTemplate={activeShiftTemplate}
+        workDate={selectedShiftCell?.workDate || ''}
+        employees={filteredEmployees}
+        allAssignments={Object.values(assignments).flat()}
+        approvedLeaves={approvedLeaves}
         holidays={holidays}
         settings={settings}
-        isPublishedWeek={scheduleStatus === 'PUBLISHED'}
-        currentRole={currentRole}
-        onClose={handleCloseDrawer}
-        onSave={handleSaveShift}
-        onDelete={handleDeleteShift}
+        canEdit={currentRole !== 'ROLE_EMPLOYEE'}
+        onAssignEmployee={handleAssignEmployee}
+        onRemoveAssignment={handleRemoveAssignment}
       />
 
       {/* Bulk Assign Dialog */}

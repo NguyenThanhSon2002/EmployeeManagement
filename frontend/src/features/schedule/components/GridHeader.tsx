@@ -7,7 +7,7 @@ interface GridHeaderProps {
   weekDays: Date[];
   todayDateStr: string;
   holidays: CompanyHoliday[];
-  assignmentsMap: Record<string, ShiftAssignment>;
+  assignmentsMap: Record<string, ShiftAssignment[]>;
 }
 
 export const GridHeader: React.FC<GridHeaderProps> = ({
@@ -19,8 +19,12 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
   // Count total assigned staff per day
   const dailyStaffCount = (dateStr: string) => {
     let count = 0;
-    for (const a of Object.values(assignmentsMap)) {
-      if (a.workDate === dateStr && a.status !== 'CANCELLED') {
+    for (const list of Object.values(assignmentsMap)) {
+      if (Array.isArray(list)) {
+        for (const a of list) {
+          if (a.workDate === dateStr && a.status !== 'CANCELLED') count++;
+        }
+      } else if (list && (list as any).workDate === dateStr && (list as any).status !== 'CANCELLED') {
         count++;
       }
     }
@@ -32,10 +36,10 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
       {/* Column 1: Sticky Column Header */}
       <div role="columnheader" className="schedule-header-cell sticky-col">
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>
-          Nhân Viên & Định Biên
+          Mẫu Ca Làm Việc
         </div>
         <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-muted)', marginTop: 2 }}>
-          Giới hạn trần: 48h/tuần
+          Định biên nhân sự
         </div>
       </div>
 

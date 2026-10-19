@@ -27,10 +27,10 @@ export const attendanceService = {
     return api.post<AttendanceRecord>('/attendance/check-out', { note, work_date: workDate });
   },
 
-  async getRecords(params?: { employee_id?: number; department_id?: number; work_date?: string; status?: string; page?: number; size?: number }): Promise<AttendanceRecord[]> {
+  async getRecords(params?: { employee_id?: number; branch_id?: number; work_date?: string; status?: string; page?: number; size?: number }): Promise<AttendanceRecord[]> {
     const query = new URLSearchParams();
     if (params?.employee_id) query.set('employee_id', params.employee_id.toString());
-    if (params?.department_id) query.set('department_id', params.department_id.toString());
+    if (params?.branch_id) query.set('branch_id', params.branch_id.toString());
     if (params?.work_date) query.set('work_date', params.work_date);
     if (params?.status) query.set('status', params.status);
     if (params?.page) query.set('page', params.page.toString());
