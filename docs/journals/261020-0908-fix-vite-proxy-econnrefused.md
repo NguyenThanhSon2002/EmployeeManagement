@@ -25,3 +25,25 @@ khi mở trang web Frontend.
   - Bổ sung cấu hình `configure(proxy)` để bắt sự kiện lỗi, ghi log cảnh báo thân thiện thay vì ném stacktrace thô.
   - Cập nhật tài liệu quy trình chuẩn: Bật MySQL -> Chờ Spring Boot khởi động hoàn tất -> Mở/reload Frontend.
 - Đã khởi tạo hoàn tất báo cáo kỹ thuật và triển khai bộ hồ sơ kế hoạch (`plan.md`, `phase-01`, `phase-02`).
+
+---
+
+## 4. Kết Quả Triển Khai & Kiểm Thử (/xd:cook)
+- **Triển khai Code:**
+  - `frontend/vite.config.ts`: Cấu hình target `process.env.VITE_BACKEND_URL || 'http://127.0.0.1:8080'`. Bổ sung hook `configure(proxy)` bọc an toàn `try-catch` kiểm tra stream status (`!res.destroyed && !res.writableEnded`), phản hồi HTTP 503 JSON chuẩn envelope `{ success: false, error: { code: 'BACKEND_UNAVAILABLE', ... } }`. Tích hợp cấu hình Vitest (`environment: 'jsdom'`).
+  - `frontend/src/utils/code-generator.utils.ts`: Sửa lỗi fallback an toàn khi chuỗi đầu vào chỉ chứa ký tự đặc biệt.
+  - `frontend/package.json`: Thêm scripts `"test": "vitest run"` và `"test:watch": "vitest"`.
+  - `frontend/src/utils/__tests__/`: Bổ sung 15 unit tests cho các hàm xử lý ngày tháng và sinh mã slug.
+- **QA Verification (`tester`):**
+  - Vitest: 15/15 tests passed (100%).
+  - `npm run build`: Thành công sạch sẽ không lỗi TypeScript.
+  - Proxy forwarding: Chuyển tiếp HTTP requests qua cổng 5173 đến Spring Boot 8080 thông suốt.
+- **Adversarial Code Review (`code-reviewer`):**
+  - Vòng 1: 6.5/10 (phát hiện 2 critical về unhandled stream abort & response envelope).
+  - Khắc phục & Vòng 2: **9.8/10 - Production-Ready**.
+- **Đồng bộ Tài liệu & Kế hoạch:**
+  - Cập nhật `README.md`, `docs/05-architecture-and-tech-stack.md`, `docs/18-project-structure-and-modules-guide.md`, `frontend/README.md`.
+  - Kế hoạch `plan.md` cập nhật `status: completed`.
+- **Git Commit (`git-manager`):**
+  - Commit `d045e25` trên nhánh `dev`: `fix(frontend): resolve vite dev proxy econnrefused with ipv4 target and error handler`.
+
