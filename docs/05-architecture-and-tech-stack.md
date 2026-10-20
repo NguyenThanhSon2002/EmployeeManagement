@@ -40,7 +40,8 @@ Khác với mô hình cổ điển "Package-by-Layer" (gom tất cả Controller
 ### 2.2. Frontend Tech Stack
 - **Ngôn ngữ:** TypeScript 5.4+ (Strict mode bật 100%).
 - **Thư viện UI Core:** React 18.3+ (hoặc 19 stable).
-- **Build & Dev Tool:** Vite 5.x (Hỗ trợ Fast Refresh, build siêu tốc qua esbuild và Rollup).
+- **Build & Dev Tool:** Vite 5.x / Vite 6.x (Hỗ trợ Fast Refresh, build siêu tốc qua esbuild và Rollup).
+- **Kiểm thử Đơn vị & Tích hợp (Testing):** **Vitest 5.x** (Test runner chạy song song siêu tốc dựa trên Vite, môi trường DOM ảo `jsdom`, hỗ trợ globals, tương thích bộ test tại `src/utils/__tests__/`).
 - **Định tuyến (Routing):** React Router DOM v6.
 - **UI Component Framework:** **Ant Design 5.x** (Bản địa hóa `vi_VN` trọn vẹn, hệ thống Table/Form phong phú).
 - **Quản lý Server State & Caching:** **TanStack Query v5 (React Query)** (Tự động caching, refetch on window focus, optimistic mutation).
@@ -51,6 +52,19 @@ Khác với mô hình cổ điển "Package-by-Layer" (gom tất cả Controller
   - Biểu đồ Dashboard: **Recharts** (Lightweight, tương thích React hoàn hảo).
 - **Xử lý Ngày giờ:** **Day.js** (kèm plugins: timezone, utc, customParseFormat).
 - **Icons:** `@ant-design/icons` và `lucide-react`.
+
+### 2.3. Cơ Chế Vite Dev Proxy & Thứ Tự Khởi Động (Development Proxy & Startup Sequence)
+Trong môi trường phát triển cục bộ (Local Development), Frontend chạy tại `http://localhost:5173` và chuyển tiếp các yêu cầu `/api/*` tới Backend Spring Boot qua proxy cấu hình tại `vite.config.ts`:
+1. **Chuẩn hóa Địa chỉ IPv4 (`http://127.0.0.1:8080`):**
+   - Cấu hình proxy `target` được trỏ trực tiếp tới `http://127.0.0.1:8080` (hoặc biến môi trường `VITE_BACKEND_URL`).
+   - *Lý do kỹ thuật:* Trên hệ điều hành Windows kết hợp Node.js 18+, việc cấu hình `localhost` kích hoạt cơ chế `internalConnectMultiple` ưu tiên phân giải IPv6 `::1`, dễ dẫn đến lỗi kết nối bị từ chối `AggregateError [ECONNREFUSED]` khi Backend chỉ lắng nghe trên IPv4.
+2. **Bộ Xử Lý Lỗi Proxy Thân Thiện (Proxy Error Interceptor):**
+   - Tích hợp hook `configure(proxy)` lắng nghe sự kiện `error` của proxy socket.
+   - Khi Backend chưa hoàn tất khởi động hoặc ngoại tuyến, Vite tự động ghi nhận cảnh báo ngắn gọn trên terminal và phản hồi HTTP `503 Service Unavailable` dạng JSON chuẩn (`code: BACKEND_UNAVAILABLE`) thay vì ném stacktrace lỗi thô gây treo socket trình duyệt.
+3. **Quy Tắc Thứ Tự Khởi Động Dịch Vụ (Strict Startup Dependency Order):**
+   - **Bước 1:** Khởi động cơ sở dữ liệu MySQL 8.0 (cổng 3306).
+   - **Bước 2:** Khởi chạy Backend Spring Boot (`mvn clean spring-boot:run`) và **bắt buộc chờ cho đến khi console xuất hiện thông báo `Started HrmsApplication in ... seconds`** (xác nhận CSDL đã nạp xong Flyway migrations từ V1 đến V6).
+   - **Bước 3:** Khởi chạy Frontend Vite (`npm run dev`) và truy cập `http://localhost:5173`.
 
 ---
 
@@ -152,6 +166,8 @@ frontend/
     │   ├── leaves/                           <-- Đơn xin nghỉ phép, Phê duyệt
     │   ├── reports/                          <-- Báo cáo tháng, Báo cáo đối chiếu, Nút Xuất
     │   └── settings/                         <-- Quản lý tài khoản & Tham số hệ thống
+    ├── utils/                                <-- Hàm tiện ích (date.utils, code-generator.utils)
+    │   └── __tests__/                        <-- Bộ bài kiểm thử đơn vị Vitest (15 unit tests)
     └── types/                                <-- Kiểu dữ liệu TypeScript dùng chung
         └── api.types.ts                      <-- ApiResponse, PaginationMeta, UserRole
 ```

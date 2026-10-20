@@ -14,6 +14,7 @@ import {
   Sparkles,
   RotateCcw,
 } from 'lucide-react';
+import { DatePickerPopover } from './DatePickerPopover';
 
 interface ScheduleToolbarProps {
   baseMonday: Date;
@@ -29,6 +30,7 @@ interface ScheduleToolbarProps {
   onPrevMonth?: () => void;
   onNextMonth?: () => void;
   onCurrentMonth?: () => void;
+  onSelectDate?: (date: Date) => void;
   onSelectBranch: (branchId: number) => void;
   onToggleViewMode: (mode: 'WEEK' | 'MONTH') => void;
   onOpenPublish: () => void;
@@ -53,6 +55,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   onPrevMonth,
   onNextMonth,
   onCurrentMonth,
+  onSelectDate,
   onSelectBranch,
   onToggleViewMode,
   onOpenPublish,
@@ -62,6 +65,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   onExportCsv,
   onOpenHistory,
 }) => {
+  const [isPickerOpen, setIsPickerOpen] = React.useState(false);
   const sunday = offsetWeeks(baseMonday, 0);
   sunday.setDate(baseMonday.getDate() + 6);
 
@@ -93,13 +97,13 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
           {/* Navigation Button Group */}
           <div
             style={{
+              position: 'relative',
               display: 'inline-flex',
               alignItems: 'center',
               backgroundColor: '#F8FAFC',
               border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-md)',
               boxShadow: 'var(--shadow-xs)',
-              overflow: 'hidden',
             }}
           >
             <button
@@ -117,6 +121,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 backgroundColor: 'transparent',
                 color: 'var(--color-text-secondary)',
                 cursor: 'pointer',
+                borderRadius: 'var(--radius-md) 0 0 var(--radius-md)',
                 transition: 'background-color var(--transition-fast)',
               }}
             >
@@ -124,24 +129,32 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
             </button>
             <button
               type="button"
-              onClick={viewMode === 'MONTH' ? (onCurrentMonth || onToday) : onToday}
-              title={viewMode === 'MONTH' ? 'Về tháng hiện tại' : 'Về tuần hiện tại'}
+              onClick={() => setIsPickerOpen((prev) => !prev)}
+              title="Click để chọn nhanh mốc thời gian"
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
                 borderTop: 'none',
                 borderBottom: 'none',
                 borderLeft: '1px solid var(--color-border)',
                 borderRight: '1px solid var(--color-border)',
-                backgroundColor: 'var(--color-surface)',
+                backgroundColor: isPickerOpen ? '#F1F5F9' : 'var(--color-surface)',
                 height: 34,
-                padding: '0 12px',
-                fontSize: '12.5px',
+                padding: '0 14px',
+                fontSize: '13px',
                 fontWeight: 600,
                 color: 'var(--color-text-primary)',
                 cursor: 'pointer',
                 transition: 'background-color var(--transition-fast)',
               }}
             >
-              Hôm nay
+              <Calendar size={15} color="var(--color-primary)" />
+              <span>
+                {viewMode === 'MONTH'
+                  ? `Tháng ${format(monthDate || baseMonday, 'MM/yyyy')}`
+                  : `${formatDateVi(baseMonday)} — ${formatDateVi(sunday)}`}
+              </span>
             </button>
             <button
               type="button"
@@ -158,34 +171,32 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 backgroundColor: 'transparent',
                 color: 'var(--color-text-secondary)',
                 cursor: 'pointer',
+                borderRadius: '0 var(--radius-md) var(--radius-md) 0',
                 transition: 'background-color var(--transition-fast)',
               }}
             >
               <ChevronRight size={16} />
             </button>
-          </div>
 
-          {/* Current Date Range / Month Display */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontWeight: 600,
-              fontSize: '13.5px',
-              color: 'var(--color-text-primary)',
-              padding: '4px 10px',
-              backgroundColor: '#F8FAFC',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-border-subtle)',
-            }}
-          >
-            <Calendar size={16} color="var(--color-primary)" />
-            <span>
-              {viewMode === 'MONTH'
-                ? `Tháng ${format(monthDate || baseMonday, 'MM/yyyy')}`
-                : `${formatDateVi(baseMonday)} — ${formatDateVi(sunday)}`}
-            </span>
+            {/* Mini Calendar DatePicker Popover */}
+            <DatePickerPopover
+              isOpen={isPickerOpen}
+              onClose={() => setIsPickerOpen(false)}
+              currentDate={viewMode === 'MONTH' ? (monthDate || baseMonday) : baseMonday}
+              viewMode={viewMode}
+              onSelectDate={(selectedDate) => {
+                onSelectDate?.(selectedDate);
+                setIsPickerOpen(false);
+              }}
+              onToday={() => {
+                if (viewMode === 'MONTH') {
+                  (onCurrentMonth || onToday)();
+                } else {
+                  onToday();
+                }
+                setIsPickerOpen(false);
+              }}
+            />
           </div>
 
           {/* Status Badge */}

@@ -87,7 +87,7 @@ D:\Project\Employee Management\
 │   ├── Dockerfile                 # Multi-stage build Node 20 + Nginx Alpine
 │   ├── nginx.conf                 # Cấu hình reverse proxy /api/ và SPA fallback
 │   ├── package.json               # Khai báo dependencies (React 19, Zustand, Lucide, Vitest)
-│   ├── vite.config.ts             # Thiết lập Vite server & Proxy reverse (/api -> localhost:8080)
+│   ├── vite.config.ts             # Thiết lập Vite server & Proxy reverse (/api -> 127.0.0.1:8080 kèm error handling & cấu hình Vitest)
 │   ├── tsconfig.json              # Thiết lập TypeScript Strict Mode
 │   ├── .env.development           # Biến môi trường dev (VITE_USE_MOCK=false)
 │   ├── .env.production            # Biến môi trường production
@@ -158,9 +158,10 @@ D:\Project\Employee Management\
 │       │       ├── store/useSettingsStore.ts # Quản lý tham số cấu hình
 │       │       └── components/            # SettingRuleForm,...
 │       ├── hooks/                 # Custom React Hooks (useMediaQuery, useModalFocusTrap)
-│       ├── utils/                 # Hàm tiện ích thuần túy (date.utils, conflict-detector, copy-merge, csv-exporter)
+│       ├── utils/                 # Hàm tiện ích thuần túy (date.utils, code-generator.utils, conflict-detector,...)
+│       │   └── __tests__/         # Bộ 15 bài kiểm thử đơn vị Vitest (code-generator, date.utils)
 │       ├── styles/                # Hệ thống CSS Design Tokens (tokens.css, global.css, reset.css)
-│       └── test/                  # Thiết lập Vitest (setupTests.ts, vitest.config, fixtures/ cho test cô lập)
+│       └── test/                  # Cấu hình kiểm thử Vitest (setupTests.ts, vitest.config, fixtures/ cho test cô lập)
 │
 ├── docs/                          # Kho 19 tài liệu kỹ thuật chuẩn mực của dự án (DOC-00 -> DOC-18)
 ├── plans/                         # Kế hoạch phát triển và nhật ký kiểm toán qua các phase
@@ -291,24 +292,33 @@ Cơ sở dữ liệu được quản lý tự động thông qua **Flyway Migrat
 Yêu cầu: Đã cài MySQL 8.0 lắng nghe cổng 3306 (database `hrms_db`, user `root`, password `123456`).
 ```powershell
 cd "D:\Project\Employee Management\backend"
-mvn spring-boot:run
+mvn clean spring-boot:run
 ```
 - Máy chủ Spring Boot chạy tại: `http://localhost:8080`.
+- Flyway sẽ tự động chạy migration từ V1 đến V6 khởi tạo bảng và nạp dữ liệu mẫu ban đầu.
+- **Lưu ý quan trọng về thứ tự khởi động (Startup Dependency Order):** Hãy đợi cho đến khi console hiển thị `Started HrmsApplication in ... seconds` trước khi mở hoặc reload Frontend trên trình duyệt. Điều này đảm bảo CSDL và toàn bộ Bean dịch vụ đã sẵn sàng, ngăn chặn triệt để lỗi kết nối bị từ chối (`ECONNREFUSED`) từ Vite dev proxy.
 - Tài liệu tương tác API Swagger UI: `http://localhost:8080/swagger-ui.html`.
 
 ### 2. Khởi động Phân hệ Frontend
 ```powershell
 cd "D:\Project\Employee Management\frontend"
+npm install
 npm run dev
 ```
 - Ứng dụng web mở tại: `http://localhost:5173`.
-- Proxy reverse tự động chuyển tiếp request `/api/*` tới backend cổng 8080.
+- **Cấu hình Vite Dev Proxy (`vite.config.ts`):**
+  - Proxy reverse được cấu hình trỏ tới `http://127.0.0.1:8080` (hoặc biến môi trường `VITE_BACKEND_URL`).
+  - *Khắc phục lỗi IPv6 Windows:* Sử dụng địa chỉ IPv4 `127.0.0.1` thay vì `localhost` để triệt tiêu lỗi phân giải `::1` trên Node.js 18+.
+  - *Cơ chế Proxy Error Handler:* Tích hợp hook `configure(proxy)` tự động bắt lỗi khi Backend offline, trả về HTTP `503 Service Unavailable` kèm phản hồi JSON chuẩn (`code: BACKEND_UNAVAILABLE`) và ghi log cảnh báo thân thiện thay vì dump lỗi thô ra console.
 
 ### 3. Chạy Toàn Bộ Kiểm Thử Tự Động (Automated Testing)
 ```powershell
-# Chạy 35 bài kiểm thử Frontend Vitest:
+# Chạy toàn bộ bài kiểm thử Frontend Vitest (15 unit tests):
 cd "D:\Project\Employee Management\frontend"
-npm test -- --run
+npm test
+
+# Chạy kiểm thử Frontend ở chế độ tương tác theo dõi file (Watch mode):
+npm run test:watch
 
 # Biên dịch kiểm tra lỗi TypeScript & Build Production:
 npm run build

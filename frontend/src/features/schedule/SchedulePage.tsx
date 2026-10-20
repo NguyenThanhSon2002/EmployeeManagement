@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { addDays, format, parseISO, startOfMonth, addMonths } from 'date-fns';
-import { getWeekDays } from '@/utils/date.utils';
+import { getWeekDays, getCurrentMonday } from '@/utils/date.utils';
 import { useScheduleStore } from './store/useScheduleStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useSettingsStore } from '@/features/settings/store/useSettingsStore';
@@ -11,7 +11,6 @@ import { ScheduleSummaryCards } from './components/ScheduleSummaryCards';
 import { ScheduleFiltersBar } from './components/ScheduleFiltersBar';
 import { WeeklyGrid } from './components/WeeklyGrid';
 import { MonthViewGrid } from './components/MonthViewGrid';
-import { ScheduleLegend } from './components/ScheduleLegend';
 import { EmployeeWeeklyHoursTable } from './components/EmployeeWeeklyHoursTable';
 import { AssignStaffDrawer } from './dialogs/AssignStaffDrawer';
 import { BulkAssignDialog } from './dialogs/BulkAssignDialog';
@@ -123,6 +122,19 @@ export const SchedulePage: React.FC = () => {
     const diff = now.getDate() - day + (day === 0 ? -6 : 1);
     const currMonday = new Date(now.setDate(diff));
     setWeek(format(currMonday, 'yyyy-MM-dd'));
+  };
+
+  const handleSelectDate = (selectedDate: Date) => {
+    if (viewMode === 'WEEK') {
+      const monday = getCurrentMonday(selectedDate);
+      setWeek(format(monday, 'yyyy-MM-dd'));
+      setMonthDate(startOfMonth(selectedDate));
+    } else {
+      const firstDay = startOfMonth(selectedDate);
+      setMonthDate(firstDay);
+      const monday = getCurrentMonday(firstDay);
+      setWeek(format(monday, 'yyyy-MM-dd'));
+    }
   };
 
   // Filter Employees
@@ -349,6 +361,7 @@ export const SchedulePage: React.FC = () => {
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}
         onCurrentMonth={handleCurrentMonth}
+        onSelectDate={handleSelectDate}
         onSelectBranch={(branchId) => setFilters({ branchId })}
         onToggleViewMode={(mode) => {
           setViewMode(mode);
@@ -393,37 +406,42 @@ export const SchedulePage: React.FC = () => {
       />
 
       {/* 4. Matrix View (Shift-Centric Week Grid or Month Grid) */}
-      {viewMode === 'WEEK' ? (
-        <WeeklyGrid
-          baseMonday={baseMonday}
-          shiftTemplates={shiftTemplates}
-          employees={filteredEmployees}
-          assignmentsMap={assignments}
-          conflictsMap={conflicts}
-          holidays={holidays}
-          canEdit={currentRole !== 'ROLE_EMPLOYEE'}
-          onOpenAssignStaff={handleOpenAssignStaff}
-          onRemoveAssignment={handleRemoveAssignment}
-        />
-      ) : (
-        <MonthViewGrid
-          currentDate={monthDate}
-          employees={filteredEmployees}
-          assignmentsMap={assignments}
-          holidays={holidays}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          onCurrentMonth={handleCurrentMonth}
-          onSelectDay={(dateStr) => {
-            const d = parseISO(dateStr);
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-            const mon = new Date(d.setDate(diff));
-            setWeek(format(mon, 'yyyy-MM-dd'));
-            setViewMode('WEEK');
-          }}
-        />
-      )}
+      <div
+        key={`${viewMode}-${viewMode === 'WEEK' ? currentStartDate : format(monthDate, 'yyyy-MM')}`}
+        className="schedule-view-animated"
+      >
+        {viewMode === 'WEEK' ? (
+          <WeeklyGrid
+            baseMonday={baseMonday}
+            shiftTemplates={shiftTemplates}
+            employees={filteredEmployees}
+            assignmentsMap={assignments}
+            conflictsMap={conflicts}
+            holidays={holidays}
+            canEdit={currentRole !== 'ROLE_EMPLOYEE'}
+            onOpenAssignStaff={handleOpenAssignStaff}
+            onRemoveAssignment={handleRemoveAssignment}
+          />
+        ) : (
+          <MonthViewGrid
+            currentDate={monthDate}
+            employees={filteredEmployees}
+            assignmentsMap={assignments}
+            holidays={holidays}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+            onCurrentMonth={handleCurrentMonth}
+            onSelectDay={(dateStr) => {
+              const d = parseISO(dateStr);
+              const day = d.getDay();
+              const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+              const mon = new Date(d.setDate(diff));
+              setWeek(format(mon, 'yyyy-MM-dd'));
+              setViewMode('WEEK');
+            }}
+          />
+        )}
+      </div>
 
       {/* 5. Employee Weekly Hours Summary Table (Part-time & Shifts Summary) */}
       <EmployeeWeeklyHoursTable
@@ -433,10 +451,7 @@ export const SchedulePage: React.FC = () => {
         searchTerm={filterOptions.searchTerm || ''}
       />
 
-      {/* 6. Color Legend & Shortcuts */}
-      <ScheduleLegend shiftTemplates={shiftTemplates} />
-
-      {/* 7. Drawers & Dialogs */}
+      {/* 6. Drawers & Dialogs */}
       {/* Shift-Centric Assign Staff Drawer */}
       <AssignStaffDrawer
         isOpen={drawerOpen}

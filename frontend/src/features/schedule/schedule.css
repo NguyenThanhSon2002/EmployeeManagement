@@ -348,3 +348,61 @@
   background-color: rgba(239, 68, 68, 0.1) !important;
 }
 
+/* Smooth Transition & Motion Design Standards */
+
+/* Popover Spring-In Animation */
+@keyframes popover-spring-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.date-picker-popover-animated {
+  animation: popover-spring-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top left;
+}
+
+/* Schedule Grid Transition Animation */
+@keyframes schedule-view-enter {
+  from {
+    opacity: 0.65;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.schedule-view-animated {
+  animation: schedule-view-enter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Popover Day Button Hover Effect */
+.popover-day-btn {
+  transition: transform 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+}
+
+.popover-day-btn:hover {
+  transform: scale(1.1);
+}
+
+.popover-day-cell {
+  transition: background-color 0.12s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .date-picker-popover-animated,
+  .schedule-view-animated,
+  .popover-day-btn,
+  .popover-day-cell {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
