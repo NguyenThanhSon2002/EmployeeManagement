@@ -31,12 +31,16 @@ cd "D:\Project\Employee Management\frontend"
 # 2. Cài đặt các gói phụ thuộc (nếu chưa cài)
 npm install
 
-# 3. Khởi chạy máy chủ phát triển cục bộ
+# 3. Khởi chạy máy chủ phát triển cục bộ (Vite Proxy chuyển tiếp tới http://127.0.0.1:8080)
+# Lưu ý: Hãy đảm bảo Spring Boot Backend đã khởi động hoàn tất trước khi mở trình duyệt
 npm run dev
 # Mở trình duyệt tại: http://localhost:5173
 
-# 4. Chạy toàn bộ bộ kiểm thử tự động (Unit & Integration tests)
+# 4. Chạy toàn bộ bộ kiểm thử tự động (Unit tests)
 npm test
+
+# Hoặc chế độ theo dõi file tự động re-test:
+npm run test:watch
 
 # 5. Biên dịch sản phẩm xuất xưởng (Production Build)
 npm run build
@@ -149,6 +153,7 @@ frontend/
 │   ├── styles/                                 # tokens.css, reset.css, global.css
 │   ├── test/                                   # Vitest suites (Foundation, A11y, Integration...)
 │   └── utils/                                  # conflict-detector, schedule-calc, csv-exporter...
+│       └── __tests__/                          # Unit tests Vitest (code-generator, date.utils)
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts

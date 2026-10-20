@@ -20,6 +20,11 @@ export const generateSlugCode = (text: string, prefix = ''): string => {
     .replace(/[^A-Z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
 
+  // Fallback an toàn nếu sau khi lọc ký tự đặc biệt mà slug bị rỗng
+  if (!slug) {
+    return `${prefix}${Date.now().toString(36).toUpperCase()}`;
+  }
+
   // 3. Đảm bảo có tiền tố nếu yêu cầu
   if (prefix) {
     const cleanPrefix = prefix.toUpperCase();
@@ -28,6 +33,5 @@ export const generateSlugCode = (text: string, prefix = ''): string => {
     }
   }
 
-  // Fallback an toàn nếu slug rỗng
-  return slug || `${prefix}${Date.now().toString(36).toUpperCase()}`;
+  return slug;
 };

@@ -60,20 +60,20 @@ Hệ thống Quản lý Nhân sự, Ma trận Phân ca Thông minh & Chấm côn
 - Node.js 20+ & npm
 - MySQL Server 8.0 đang chạy tại port 3306 (CSDL: `hrms_db`)
 
-#### Bước 1: Khởi chạy Backend
+#### Bước 1: Khởi chạy Backend (Spring Boot)
 ```bash
 cd backend
 mvn clean spring-boot:run
 ```
-*(Flyway sẽ tự động chạy migration V1, V2, V3 khởi tạo bảng và nạp dữ liệu mẫu ban đầu)*
+*(Flyway sẽ tự động chạy migration từ V1 đến V6 khởi tạo bảng và nạp dữ liệu mẫu ban đầu. Hãy đợi cho đến khi console hiển thị `Started HrmsApplication in ... seconds` trước khi mở Frontend để tránh lỗi Vite dev proxy `ECONNREFUSED`)*.
 
-#### Bước 2: Khởi chạy Frontend
+#### Bước 2: Khởi chạy Frontend (Vite React)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Trình duyệt sẽ mở tại [http://localhost:5173](http://localhost:5173).
+Truy cập ứng dụng tại [http://localhost:5173](http://localhost:5173). Vite proxy được cấu hình trỏ tới `http://127.0.0.1:8080`.
 
 ---
 
@@ -94,7 +94,7 @@ Trình duyệt sẽ mở tại [http://localhost:5173](http://localhost:5173).
 - **Frontend Unit & Component Tests (Vitest):**
   ```bash
   cd frontend
-  npm test -- --run
+  npm test
   npm run build
   ```
 - **Backend Integration Tests (Maven Surefire):**
