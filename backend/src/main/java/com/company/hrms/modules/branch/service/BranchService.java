@@ -5,6 +5,7 @@ import com.company.hrms.common.exception.ResourceNotFoundException;
 import com.company.hrms.modules.branch.domain.Branch;
 import com.company.hrms.modules.branch.dto.BranchDto;
 import com.company.hrms.modules.branch.repository.BranchRepository;
+import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,6 +86,18 @@ public class BranchService {
 
         branch.softDelete();
         branchRepository.save(branch);
+    }
+
+    private void validateManager(Long managerId, Long branchId) {
+        if (managerId == null) {
+            return;
+        }
+        Employee manager = employeeRepository.findById(managerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhân sự", managerId));
+        if (branchId == null || !branchId.equals(manager.getBranchId())) {
+            throw new ResourceConflictException(
+                    "Quản lý phụ trách phải là nhân sự thuộc chính chi nhánh này");
+        }
     }
 
     private BranchDto toDto(Branch branch) {
