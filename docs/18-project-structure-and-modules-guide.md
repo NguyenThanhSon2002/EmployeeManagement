@@ -2,7 +2,7 @@
 *(Human Resource Management & Shift Scheduling System)*
 
 **Tài liệu mã số:** `DOC-18`  
-**Ngày cập nhật:** 16/10/2026  
+**Ngày cập nhật:** 20/10/2026  
 **Phiên bản:** 2.0 (Synchronized Feature-Driven Architecture)  
 **Trạng thái:** Chính thức (Official Architecture Reference)  
 
@@ -66,7 +66,7 @@ D:\Project\Employee Management\
 │   │   │   │       ├── auth/                # Xác thực, cấp phát Access Token & Refresh Token
 │   │   │   │       ├── department/          # Danh mục phòng ban & cây phân cấp tổ chức
 │   │   │   │       ├── position/            # Danh mục chức danh, vị trí việc làm
-│   │   │   │       ├── employee/            # Quản lý hồ sơ nhân sự, phân trang, Optimistic Lock
+│   │   │   │       ├── employee/            # Quản lý hồ sơ nhân sự, tự động cấp phát tài khoản User (runner), Optimistic Lock
 │   │   │   │       ├── shift/               # Danh mục mẫu ca làm việc chuẩn & cờ qua đêm
 │   │   │   │       ├── schedule/            # Xếp ca tuần & Conflict Detection Engine (8 rules BLLĐ)
 │   │   │   │       ├── attendance/          # Chấm công, tính giờ công đêm & giải trình quẹt thẻ
@@ -76,10 +76,14 @@ D:\Project\Employee Management\
 │   │   │   └── resources/
 │   │   │       ├── application.yml          # Cấu hình CSDL MySQL, JPA Hibernate, JWT, Port 8080
 │   │   │       ├── application-dev.yml      # Cấu hình profile môi trường phát triển
-│   │   │       └── db/migration/            # Quản lý phiên bản CSDL Flyway
+│   │   │       └── db/migration/            # Quản lý phiên bản CSDL Flyway (V1 -> V7)
 │   │   │           ├── V1__init_schema.sql  # Khởi tạo toàn bộ 17 bảng quan hệ và khóa ngoại FK
 │   │   │           ├── V2__seed_master_data.sql # Dữ liệu mẫu (ca làm, phòng ban, ngày lễ công ty)
-│   │   │           └── V3__seed_admin_user.sql  # Tài khoản mẫu admin, manager, employee
+│   │   │           ├── V3__seed_admin_user.sql  # Tài khoản mẫu admin, manager, employee
+│   │   │           ├── V4__replace_department_with_branch.sql # Chuyển đổi phòng ban sang mô hình chi nhánh
+│   │   │           ├── V5__add_table_column_comments.sql # Bổ sung chú thích bảng và cột
+│   │   │           ├── V6__standardize_positions_to_3_canonical_titles.sql # Chuẩn hóa 3 chức danh chuẩn
+│   │   │           └── V7__seed_employee_user_accounts.sql # Cấp phát tài khoản đăng nhập theo mã nhân sự (EMP-xxx)
 │   │   └── test/java/com/company/hrms/      # 36 bài kiểm thử tích hợp (Spring Boot Test, 100% Pass)
 │   └── target/                              # Thư mục build artifact (JAR)
 │
@@ -154,7 +158,7 @@ D:\Project\Employee Management\
 │       │   ├── reports/           # Trung tâm xuất báo cáo & Dữ liệu
 │       │   │   ├── ReportsPage.tsx        # Bảng điều khiển xuất báo cáo
 │       │   │   ├── api/reportService.ts   # Gọi API tải file Excel .xlsx & CSV UTF-8
-│       │   │   └── components/            # MonthlyAttendanceReport,...
+│       │   │   └── components/            # MonthlyAttendanceReport, ScheduledVsActualTable, LateEarlyReport
 │       │   └── settings/          # Cài đặt tham số hệ thống & Ngưỡng luật lao động
 │       │       ├── SettingsPage.tsx       # Màn hình cấu hình tham số
 │       │       ├── store/useSettingsStore.ts # Quản lý tham số cấu hình
@@ -203,16 +207,16 @@ Hệ thống Backend áp dụng triệt để kiến trúc **Package-by-Feature*
 
 | Module | Đường dẫn gói | Thành phần chính & Thực thể JPA | Nghiệp vụ cốt lõi |
 | :--- | :--- | :--- | :--- |
-| **`auth`** | `modules.auth` | `User`, `Role`, `AuthController`, `AuthService` | Đăng nhập tài khoản, cấp phát cặp Access Token (24h) và Refresh Token (7 ngày), endpoint `/api/v1/auth/login`, `/refresh`, `/me`. |
+| **`auth`** | `modules.auth` | `User`, `Role`, `AuthController`, `AuthService` | Đăng nhập tài khoản, cấp phát cặp Access Token (24h) và Refresh Token (7 ngày), endpoint `/api/v1/auth/login`, `/refresh`, `/me`. DTO `AuthResponse.UserInfo` trả về đầy đủ `branch_id` và `branch_name` của nhân sự. **Dynamic Role Synchronization (Single Source of Truth):** Tự động đối chiếu chức danh nhân sự (`position_id`: `1 -> ROLE_DIRECTOR`, `2 -> ROLE_MANAGER`, `3 -> ROLE_EMPLOYEE`) để tự sửa/cập nhật vai trò người dùng trong CSDL và tái tạo quyền hạn (`UserPrincipal`) cấp JWT chuẩn xác ngay khi đăng nhập. |
 | **`department`** | `modules.department` | `Department`, `DepartmentController`, `DepartmentService` | Quản lý danh mục phòng ban, mô hình cây phân cấp (`parent_department_id`), chỉ định trưởng phòng (`manager_id`), ngăn xóa phòng ban còn nhân viên. |
 | **`position`** | `modules.position` | `Position`, `PositionController`, `PositionService` | Quản lý danh mục chức danh, vị trí công việc chuyên môn trong doanh nghiệp. |
-| **`employee`** | `modules.employee` | `Employee`, `EmployeeController`, `EmployeeService` | Quản lý toàn diện hồ sơ nhân viên (Mã NV, CCCD, thông tin liên lạc, hợp đồng, trạng thái). Hỗ trợ tìm kiếm động (Search Specification), phân trang, khóa lạc quan `@Version`. |
+| **`employee`** | `modules.employee` | `Employee`, `EmployeeController`, `EmployeeService`, `EmployeeUserProvisioningRunner` | Quản lý hồ sơ nhân sự (Mã NV, CCCD, thông tin liên lạc, hợp đồng). **Tự động cấp phát tài khoản User** (`users.username = employees.employee_code`) theo mã nhân viên khi tạo mới, đồng bộ trạng thái khi cập nhật, vô hiệu hóa khi xóa mềm. Tích hợp **Self-healing runner** tự động kiểm tra và bù đắp tài khoản khi khởi động Spring Boot. Khóa lạc quan `@Version`. |
 | **`shift`** | `modules.shift` | `WorkShift`, `ShiftController`, `ShiftService` | Quản lý danh mục mẫu ca chuẩn (Sáng, Hành chính, Chiều, Đêm). Hỗ trợ ca qua đêm (`is_cross_midnight`), định mức quân số (`min_staffing`, `max_staffing`), mã màu hiển thị. |
 | **`schedule`** | `modules.schedule` | `Schedule`, `ShiftAssignment`, `ScheduleChangeHistory`, `ScheduleConflictEngine` | Xếp ca tuần phòng ban. **Snapshot Isolation** đóng băng ca vào bản ghi gán ca. **Conflict Engine** kiểm tra 8 quy tắc Luật Lao Động 2019 (BR-001 -> BR-008). Kiểm toán lịch sử thay đổi sau khi công bố (`PUBLISHED`). |
 | **`attendance`** | `modules.attendance` | `AttendanceRecord`, `AttendanceCorrection`, `AttendanceService` | Ghi nhận chấm công quẹt thẻ vào/ra. Tự động tính phút đi muộn (ân hạn 5p), về sớm, tách bạch giờ làm ban đêm (`22:00 - 06:00`). Xử lý đơn giải trình quên quẹt thẻ. |
 | **`leave`** | `modules.leave` | `LeaveType`, `LeaveBalance`, `LeaveRequest`, `LeaveService` | Quản lý loại nghỉ phép, sổ cái quỹ phép năm cá nhân, quy trình nộp đơn, chặn trùng ngày (`BR-009`) và phê duyệt phân cấp của Quản lý. |
 | **`setting`** | `modules.setting` | `SystemSetting`, `SettingController`, `SettingService` | Lưu trữ cấu hình tham số động hệ thống (ngưỡng nghỉ giữa ca 11h/12h, trần 48h tuần, mức độ cảnh báo vi phạm). |
-| **`report`** | `modules.report` | `ReportController`, `ExcelExportService`, `CsvExportService` | Tổng hợp bảng công tháng. Xuất file Microsoft Excel `.xlsx` nguyên bản bằng **Apache POI** và file `.csv` chuẩn RFC-4180 có tiền tố **UTF-8 BOM (`\uFEFF`)** chống lỗi font tiếng Việt. |
+| **`report`** | `modules.report` | `ReportController`, `ExcelExportService`, `CsvExportService` | Tổng hợp bảng công tháng. Xuất file Microsoft Excel `.xlsx` nguyên bản bằng **Apache POI** và file `.csv` chuẩn RFC-4180 có tiền tố **UTF-8 BOM (`\uFEFF`)** chống lỗi font tiếng Việt. **Kiểm soát phạm vi chi nhánh (Branch Isolation):** `ReportController` thực thi cơ chế phân giải `effectiveBranchId` qua `@AuthenticationPrincipal UserPrincipal`. Với `ROLE_MANAGER`, bắt buộc cô lập phạm vi báo cáo theo `branch_id` trực thuộc của người quản lý; chỉ `ROLE_DIRECTOR` mới có quyền truy vấn toàn chuỗi hoặc tự do chọn chi nhánh. |
 
 ---
 
@@ -227,9 +231,9 @@ Frontend áp dụng triết lý **Feature-Driven Architecture** kết hợp mô 
   - Tự động phát hiện kiểu `Content-Type` nhị phân (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `text/csv`) để chuyển thành `Blob` và kích hoạt tải file tự động trên trình duyệt.
 - **`shared/auth/`**:
   - `authService.ts`: Các phương thức gọi API xác thực (`login`, `refreshToken`, `getCurrentUser`).
-  - `useAuthStore.ts`: Zustand store quản lý trạng thái đăng nhập, lưu token, khôi phục phiên (`initAuth`), giải mã thông tin `currentUser` và phân quyền RBAC.
+  - `useAuthStore.ts`: Zustand store quản lý trạng thái đăng nhập, lưu token, khôi phục phiên (`initAuth`), giải mã phân quyền RBAC. Tiếp nhận `branch_id` và `branch_name` từ `UserInfo` để duy trì cơ sở làm việc trực thuộc của người dùng. Tích hợp cơ chế thanh lọc token giả (**Stale Mock Token Purging**) khi chạy với Backend thực giúp loại bỏ hoàn toàn lỗi HTTP `403 Forbidden`, bảo đảm 100% sử dụng JWT chuẩn do Spring Boot cấp phát. Đồng thời tích hợp **Dynamic Role & Profile Synchronization** (Single Source of Truth) kết hợp với `useDirectoryStore`: tự động ánh xạ chức danh sang vai trò (`positionId 1 -> ROLE_DIRECTOR`, `2 -> ROLE_MANAGER`, `3 -> ROLE_EMPLOYEE`) và làm giàu hồ sơ `currentUser` phục vụ cơ chế kiểm soát phạm vi chi nhánh (Branch Scoping).
 - **`shared/department/departmentService.ts`**: Cung cấp hàm nạp danh mục phòng ban toàn cục dùng chung cho bộ lọc ca, bảng nhân sự và báo cáo.
-- **`shared/directory/useDirectoryStore.ts`**: Zustand store quản lý bộ nhớ đệm danh mục toàn hệ thống (Nhân viên, Phòng ban, Vị trí chức danh). Tự động nạp trực tiếp 100% từ API MySQL khi ứng dụng khởi động và cung cấp tra cứu O(1) theo ID cho toàn bộ các màn hình nghiệp vụ.
+- **`shared/directory/useDirectoryStore.ts`**: Zustand store quản lý bộ nhớ đệm danh mục toàn hệ thống (Nhân viên, Chi nhánh, Chức danh). Đóng vai trò **Single Source of Truth** danh mục thực tế từ MySQL khi ứng dụng khởi động, cung cấp dữ liệu tức thì cho việc đồng bộ vai trò và tra cứu O(1) theo ID cho toàn bộ các màn hình nghiệp vụ.
 - **`shared/store/useUIStore.ts`**: Quản lý hàng đợi thông báo Toast toàn cục (Success, Warning, Error, Info).
 
 ### 2. Chi tiết các Phân hệ Giao diện (`src/features/*`)
@@ -246,14 +250,14 @@ src/features/<feature-name>/
 
 | Phân hệ (Feature) | Thư mục | Các file then chốt | Chức năng nghiệp vụ & Trải nghiệm UI |
 | :--- | :--- | :--- | :--- |
-| **`auth`** | `features/auth` | `LoginPage.tsx` | - Màn hình đăng nhập tập trung, tinh gọn (Centered Card tối giản).<br>- Biểu mẫu xác thực chuẩn với tài khoản công việc / mật khẩu, hiển thị cảnh báo lỗi trực quan, tùy chọn ghi nhớ tài khoản (`saved_username`). |
+| **`auth`** | `features/auth` | `LoginPage.tsx` | - Màn hình đăng nhập tập trung, tinh gọn (Centered Card tối giản).<br>- Đăng nhập linh hoạt bằng **Mã nhân viên** (`EMP-001`, `EMP-002`, `EMP-021`,...) hoặc tài khoản quản trị tối cao `admin`.<br>- Quy tắc mật khẩu mặc định: Mã nhân viên viết thường + `@123` (ví dụ `emp001@123`), hiển thị chú thích trực quan ngay trên form.<br>- Kiến trúc **Single Source of Truth**: Vai trò đăng nhập và quyền hạn phân cấp được quyết định động theo chức danh nhân sự (`position_id 1 -> Giám đốc`, `2 -> Quản lý`, `3 -> Nhân viên`). Tự động cấp phát tài khoản User liên kết khi thêm mới nhân sự và tự phục hồi khi khởi động qua `EmployeeUserProvisioningRunner`. |
 | **`schedule`** *(Trọng tâm)* | `features/schedule` | `SchedulePage.tsx`, `WeeklyGrid.tsx`, `scheduleService.ts`, `useScheduleStore.ts`, `AssignShiftDrawer.tsx` | - Ma trận 8 cột (Nhân viên + 7 ngày trong tuần).<br>- Hiển thị thẻ ca có mã màu, biểu tượng ca đêm, thẻ phép `[🏖️ PHÉP NĂM]`.<br>- Thanh tiến độ tổng giờ công tuần cảnh báo đỏ khi chạm/vượt trần 48h.<br>- Drawer gán ca kiểm tra vi phạm luật lao động realtime.<br>- Bộ lọc phòng ban, lọc nhân viên có xung đột, tìm kiếm.<br>- Hộp thoại phân ca hàng loạt, sao chép lịch tuần, công bố lịch, xem lịch sử thay đổi. |
 | **`dashboard`** | `features/dashboard` | `DashboardPage.tsx`, `QuickAttendanceCard.tsx` | - Tổng hợp KPI vận hành: Tổng quân số, nhân sự đang làm hôm nay, ca trực đêm, tỷ lệ đúng giờ.<br>- Thẻ Điểm Danh Nhanh: Nút 1-click Check-in/Check-out và đồng hồ bấm giờ công làm việc.<br>- **Kiểm soát truy cập (RBAC):** Chỉ mở cho `ROLE_DIRECTOR`. Đối với `ROLE_MANAGER` và `ROLE_EMPLOYEE`, hệ thống tự động ẩn menu trên Sidebar và kích hoạt Safe Fallback Redirect về `/schedule`. |
 | **`employees`** | `features/employees` | `EmployeeListPage.tsx`, `EmployeeDetailPage.tsx`, `employeeService.ts` | - Bảng danh sách nhân viên: Tìm kiếm realtime, phân quyền phạm vi chi nhánh (`Branch Scoping`): Quản lý và Nhân viên cố định theo chi nhánh trực thuộc, Giám đốc xem/lọc toàn chuỗi.<br>- Phân quyền thao tác: `ROLE_EMPLOYEE` chỉ đọc (ẩn nút Thêm & Sửa); `ROLE_MANAGER` được thêm/sửa nhân sự trong chi nhánh; `ROLE_DIRECTOR` toàn quyền (thêm/sửa mọi trường, xóa nhân sự).<br>- Modal thêm mới/sửa hồ sơ (`EmployeeFormModal`): Khóa trường Chi nhánh và Trạng thái hợp đồng đối với Non-director, tích hợp cơ chế phòng vệ đa tầng (Defense-in-depth).<br>- Trang hồ sơ chi tiết gồm 4 tab: Lý lịch cá nhân, Lịch sử phân ca, Bảng chấm công, Đơn xin nghỉ phép. |
 | **`attendance`** | `features/attendance` | `AttendanceOverviewPage.tsx`, `attendanceService.ts`, `useAttendanceStore.ts`, `AttendanceCorrectionModal.tsx` | - Bảng giám sát chấm công toàn công ty theo ngày: Có mặt, Đi muộn, Về sớm, Quên quẹt thẻ ra.<br>- Modal nộp đơn và duyệt giải trình giờ công của nhân viên. |
 | **`leaves`** | `features/leaves` | `LeaveRequestsPage.tsx`, `leaveService.ts`, `useLeaveStore.ts`, `LeaveApprovalModal.tsx` | - Sổ cái quỹ phép cá nhân: Hạn mức, Đã dùng, Đang chờ, Còn lại.<br>- Nộp đơn xin nghỉ tự động tính số ngày và chặn trùng lịch.<br>- Phê duyệt đơn phép phân cấp: Duyệt đơn tự động trừ quỹ phép và đồng bộ sang lưới xếp ca. |
 | **`shifts`** | `features/shifts` | `ShiftTemplatesPage.tsx`, `ShiftTemplateCard.tsx`, `ShiftTemplateFormModal.tsx` | - Quản lý mẫu ca chuẩn: Giờ bắt đầu/kết thúc, thời gian nghỉ, định mức nhân sự tối thiểu/tối đa, bảng chọn màu trực quan (Color Picker).<br>- **Phân quyền thao tác (RBAC):** `ROLE_EMPLOYEE` chỉ đọc (ẩn và chặn nút Thêm/Sửa/Xóa với cơ chế phòng vệ đa tầng); `ROLE_MANAGER` và `ROLE_DIRECTOR` có toàn quyền quản trị mẫu ca (thêm mới, chỉnh sửa, xóa mềm). |
-| **`reports`** | `features/reports` | `ReportsPage.tsx`, `reportService.ts`, `MonthlyAttendanceReport.tsx` | - Xem bảng chấm công tổng hợp tháng.<br>- Nút tải file Excel `.xlsx` nguyên bản kẻ bảng định dạng đẹp.<br>- Nút tải file CSV UTF-8 BOM hiển thị chuẩn tiếng Việt trên mọi hệ điều hành.<br>- **Kiểm soát truy cập (RBAC):** Chỉ dành cho `ROLE_DIRECTOR` và `ROLE_MANAGER`. Đối với `ROLE_EMPLOYEE`, menu Báo Cáo trên Sidebar được ẩn và route `/reports` được bảo vệ bằng `RoleRoute` (chuyển hướng an toàn về `/schedule`). |
+| **`reports`** | `features/reports` | `ReportsPage.tsx`, `reportService.ts`, `MonthlyAttendanceReport.tsx`, `ScheduledVsActualTable.tsx`, `LateEarlyReport.tsx` | - Tổng hợp 3 báo cáo phân tích vận hành: Bảng chấm công tháng (`MonthlyAttendanceReport`), Đối soát lịch xếp vs thực tế (`ScheduledVsActualTable`), Báo cáo vi phạm đi muộn/về sớm (`LateEarlyReport`).<br>- Nút xuất dữ liệu Excel `.xlsx` nguyên bản kẻ bảng định dạng đẹp và CSV UTF-8 BOM chống lỗi font tiếng Việt.<br>- **Kiểm soát truy cập (RBAC) & Phân quyền phạm vi chi nhánh (Branch Scoping):** Chỉ dành cho `ROLE_DIRECTOR` và `ROLE_MANAGER`. Với `ROLE_MANAGER`, cả 3 bảng báo cáo tự động khóa cứng bộ lọc chi nhánh theo đúng cơ sở trực thuộc của quản lý (vô hiệu hóa dropdown chọn chi nhánh, có tooltip giải thích), đồng thời đồng bộ tham số tải file CSV/Excel tương ứng. `ROLE_DIRECTOR` toàn quyền xem và chuyển đổi giữa tất cả chi nhánh trong chuỗi. Đối với `ROLE_EMPLOYEE`, menu Báo Cáo trên Sidebar được ẩn và route `/reports` được bảo vệ bằng `RoleRoute` (chuyển hướng an toàn về `/schedule`). |
 | **`settings`** | `features/settings` | `SettingsPage.tsx`, `useSettingsStore.ts` | - Cấu hình linh hoạt: Thời gian nghỉ tối thiểu giữa 2 ca liên tiếp (11h hoặc 12h), thời gian ân hạn điểm danh, trần giờ làm việc tối đa trong tuần.<br>- **Kiểm soát truy cập (RBAC):** Chỉ dành cho `ROLE_DIRECTOR` và `ROLE_MANAGER`. Đối với `ROLE_EMPLOYEE`, menu Cài Đặt trên Sidebar được ẩn (nhóm "PHÂN TÍCH & THIẾT LẬP" tự động ẩn hoàn toàn khi không có mục con) và route `/settings` được bảo vệ bằng `RoleRoute` (chuyển hướng an toàn về `/schedule`). |
 
 ---
@@ -263,8 +267,8 @@ src/features/<feature-name>/
 Cơ sở dữ liệu được quản lý tự động thông qua **Flyway Migrations** tại thư mục [`backend/src/main/resources/db/migration`](file:///D:/Project/Employee%20Management/backend/src/main/resources/db/migration):
 
 ```
-[V1__init_schema.sql] ──> [V2__seed_master_data.sql] ──> [V3__seed_admin_user.sql]
-  (Khởi tạo 17 bảng)         (Ca mẫu, phòng ban, ngày lễ)        (Tài khoản & phân quyền)
+[V1__init_schema] ──> [V2__seed_master] ──> [V3__seed_admin] ──> [V4..V6] ──> [V7__seed_employee_users]
+ (Khởi tạo 17 bảng)    (Ca mẫu & ngày lễ)    (Admin dự phòng)     (Chi nhánh)   (Tài khoản theo Mã NV)
 ```
 
 | Tên Bảng (Table) | Mô tả Nghiệp Vụ | Ràng Buộc Khóa Ngoại (Foreign Keys) |
@@ -298,7 +302,7 @@ cd "D:\Project\Employee Management\backend"
 mvn clean spring-boot:run
 ```
 - Máy chủ Spring Boot chạy tại: `http://localhost:8080`.
-- Flyway sẽ tự động chạy migration từ V1 đến V6 khởi tạo bảng và nạp dữ liệu mẫu ban đầu.
+- Flyway sẽ tự động chạy migration từ V1 đến V7 khởi tạo bảng, thiết lập chi nhánh, chuẩn hóa chức danh và cấp phát tài khoản đăng nhập theo mã nhân viên.
 - **Lưu ý quan trọng về thứ tự khởi động (Startup Dependency Order):** Hãy đợi cho đến khi console hiển thị `Started HrmsApplication in ... seconds` trước khi mở hoặc reload Frontend trên trình duyệt. Điều này đảm bảo CSDL và toàn bộ Bean dịch vụ đã sẵn sàng, ngăn chặn triệt để lỗi kết nối bị từ chối (`ECONNREFUSED`) từ Vite dev proxy.
 - Tài liệu tương tác API Swagger UI: `http://localhost:8080/swagger-ui.html`.
 
@@ -313,6 +317,7 @@ npm run dev
   - Proxy reverse được cấu hình trỏ tới `http://127.0.0.1:8080` (hoặc biến môi trường `VITE_BACKEND_URL`).
   - *Khắc phục lỗi IPv6 Windows:* Sử dụng địa chỉ IPv4 `127.0.0.1` thay vì `localhost` để triệt tiêu lỗi phân giải `::1` trên Node.js 18+.
   - *Cơ chế Proxy Error Handler:* Tích hợp hook `configure(proxy)` tự động bắt lỗi khi Backend offline, trả về HTTP `503 Service Unavailable` kèm phản hồi JSON chuẩn (`code: BACKEND_UNAVAILABLE`) và ghi log cảnh báo thân thiện thay vì dump lỗi thô ra console.
+- **Cơ chế xác thực JWT & Triệt tiêu lỗi 403 Forbidden:** Khi vận hành với Backend thực (`VITE_USE_MOCK=false`), `useAuthStore` loại bỏ hoàn toàn cơ chế tự sinh mock token khi lỗi; hàm `initAuth()` chủ động thu hồi và thanh lọc stale mock token trong `localStorage`, đảm bảo 100% request API đều sử dụng JWT chính thức do Spring Boot HMAC-SHA512 ký phát trên cổng 8080.
 
 ### 3. Chạy Toàn Bộ Kiểm Thử Tự Động (Automated Testing)
 ```powershell
@@ -332,8 +337,19 @@ mvn test
 ```
 
 ### 4. Tài Khoản Khởi Tạo Mẫu (Seed Accounts)
-| Tài khoản (Username) | Mật khẩu (Password) | Vai trò (Role) | Nhân viên đại diện | Quyền hạn chính |
+Hệ thống hỗ trợ đăng nhập trực tiếp bằng **Mã Nhân Viên** hoặc tài khoản quản trị `admin`. Mật khẩu mặc định tuân theo quy tắc: `<mã_viết_thường>@123`.
+
+Theo kiến trúc **Single Source of Truth**, vai trò hệ thống được liên kết chặt chẽ và tự động đồng bộ theo chức danh nhân sự (`position_id`):
+- **`position_id = 1` (Giám đốc)** $\rightarrow$ `ROLE_DIRECTOR`
+- **`position_id = 2` (Quản lý)** $\rightarrow$ `ROLE_MANAGER`
+- **`position_id = 3` (Nhân viên)** $\rightarrow$ `ROLE_EMPLOYEE`
+
+| Tài khoản (Username) | Mật khẩu (Password) | Vai trò (Role) | Chức danh & Đại diện | Quyền hạn chính |
 | :--- | :--- | :--- | :--- | :--- |
-| `admin` | `Admin@123` | **ROLE_ADMIN** | Đinh Thị Uyên (EMP-021) | Toàn quyền quản trị hệ thống, cấu hình tham số, xuất báo cáo, phân quyền |
-| `manager` | `Admin@123` | **ROLE_DEPT_MANAGER** | Nguyễn Văn An (EMP-001) | Quản lý phòng ban, xếp ca tuần, phê duyệt đơn phép và giải trình chấm công |
-| `employee` | `Admin@123` | **ROLE_EMPLOYEE** | Trần Thị Bích (EMP-002) | Xem lịch cá nhân, bấm điểm danh nhanh vào/ra ca, nộp đơn xin nghỉ phép |
+| `EMP-021` | `emp021@123` | **ROLE_DIRECTOR** | Giám đốc - Đinh Thị Uyên (EMP-021) | Giám đốc điều hành: Toàn quyền mọi chi nhánh, xem KPI Dashboard, cấu hình tham số, xuất báo cáo |
+| `EMP-001` | `emp001@123` | **ROLE_MANAGER** | Quản lý - Nguyễn Văn An (EMP-001) | Quản lý chi nhánh: Xếp ca tuần, quản lý nhân sự & xem báo cáo trong phạm vi chi nhánh trực thuộc, duyệt đơn phép & giải trình chấm công |
+| `EMP-003` | `emp003@123` | **ROLE_EMPLOYEE** | Nhân viên - Lê Văn Cường (EMP-003) | Nhân viên: Xem lịch phân ca cá nhân, điểm danh vào/ra ca, gửi đơn xin nghỉ phép (Chế độ chỉ đọc) |
+| `admin` | `Admin@123` | **ROLE_DIRECTOR** | Quản trị viên hệ thống | Tài khoản Super Admin tối cao dự phòng (đầy đủ quyền quản trị kỹ thuật) |
+
+> [!NOTE]
+> Các nhân viên khác từ `EMP-002` đến `EMP-010` (như `EMP-002`, `EMP-004`, `EMP-008` vai trò Quản lý; `EMP-005`, `EMP-006`, `EMP-007`... vai trò Nhân viên) đều được cấp phát tự động với mật khẩu `<mã_viết_thường>@123` (ví dụ `emp002@123`, `emp004@123`).

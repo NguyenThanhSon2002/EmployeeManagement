@@ -33,7 +33,7 @@ export const LoginPage: React.FC = () => {
 
     const userClean = username.trim();
     if (!userClean) {
-      setErrorMessage('Vui lòng nhập tên tài khoản hoặc email công việc.');
+      setErrorMessage('Vui lòng nhập mã nhân viên hoặc tài khoản.');
       return;
     }
     if (!password) {
@@ -169,6 +169,15 @@ export const LoginPage: React.FC = () => {
           outline: 2px solid var(--color-primary, #2563EB);
           border-radius: 4px;
         }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
       `}</style>
 
       {/* Top Header: System Title & Icon */}
@@ -231,7 +240,7 @@ export const LoginPage: React.FC = () => {
         )}
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {/* Username / Email Field */}
+          {/* Username / Employee Code Field */}
           <div>
             <label
               htmlFor="login-username-input"
@@ -243,7 +252,7 @@ export const LoginPage: React.FC = () => {
                 marginBottom: 6,
               }}
             >
-              Tài khoản hoặc Email công việc
+              Tài khoản / Mã nhân viên
             </label>
             <div style={{ position: 'relative' }}>
               <Mail
@@ -261,7 +270,7 @@ export const LoginPage: React.FC = () => {
                 id="login-username-input"
                 type="text"
                 className="input-group-field"
-                placeholder="name@company.com hoặc username"
+                placeholder="Ví dụ: EMP-001 hoặc admin"
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value);
@@ -390,6 +399,25 @@ export const LoginPage: React.FC = () => {
               </>
             )}
           </button>
+
+          {/* Default Password Hint */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              fontSize: '12px',
+              color: 'var(--color-text-muted, #64748B)',
+              textAlign: 'center',
+              lineHeight: 1.4,
+              paddingTop: 4,
+            }}
+          >
+            <span>
+              💡 Mật khẩu mặc định: Mã nhân viên viết thường + <strong>@123</strong> (Ví dụ: <code style={{ backgroundColor: 'var(--color-bg-subtle, #F1F5F9)', padding: '1px 5px', borderRadius: 4, fontFamily: 'monospace', color: 'var(--color-text-primary, #0F172A)' }}>emp001@123</code>)
+            </span>
+          </div>
         </form>
       </div>
     </div>

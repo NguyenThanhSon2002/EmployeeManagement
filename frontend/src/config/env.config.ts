@@ -4,14 +4,31 @@
  * to make real HTTP API calls or fallback to in-memory mock datasets.
  */
 
+const getProcessEnv = (): Record<string, string | undefined> | undefined => {
+  return typeof globalThis !== 'undefined'
+    ? (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    : undefined;
+};
+
 export const isMockEnabled = (): boolean => {
-  return import.meta.env.VITE_USE_MOCK === 'true';
+  return (
+    import.meta.env?.VITE_USE_MOCK === 'true' ||
+    getProcessEnv()?.VITE_USE_MOCK === 'true'
+  );
 };
 
 export const getApiBaseUrl = (): string => {
-  return import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  return (
+    import.meta.env?.VITE_API_BASE_URL ||
+    getProcessEnv()?.VITE_API_BASE_URL ||
+    '/api/v1'
+  );
 };
 
 export const getDefaultAuthPassword = (): string => {
-  return import.meta.env.VITE_DEFAULT_AUTH_PASSWORD || 'Admin@123';
+  return (
+    import.meta.env?.VITE_DEFAULT_AUTH_PASSWORD ||
+    getProcessEnv()?.VITE_DEFAULT_AUTH_PASSWORD ||
+    'Admin@123'
+  );
 };

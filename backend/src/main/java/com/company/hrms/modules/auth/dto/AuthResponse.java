@@ -43,11 +43,19 @@ public class AuthResponse {
         private String fullName;
         @JsonProperty("must_change_password")
         private Boolean mustChangePassword;
+        @JsonProperty("branch_id")
+        private Long branchId;
+        @JsonProperty("branch_name")
+        private String branchName;
 
         public UserInfo() {
         }
 
         public UserInfo(Long id, String username, String email, List<String> roles, Long employeeId, String fullName, Boolean mustChangePassword) {
+            this(id, username, email, roles, employeeId, fullName, mustChangePassword, null, null);
+        }
+
+        public UserInfo(Long id, String username, String email, List<String> roles, Long employeeId, String fullName, Boolean mustChangePassword, Long branchId, String branchName) {
             this.id = id;
             this.username = username;
             this.email = email;
@@ -55,6 +63,8 @@ public class AuthResponse {
             this.employeeId = employeeId;
             this.fullName = fullName;
             this.mustChangePassword = mustChangePassword;
+            this.branchId = branchId;
+            this.branchName = branchName;
         }
 
         public Long getId() { return id; }
@@ -71,6 +81,10 @@ public class AuthResponse {
         public void setFullName(String fullName) { this.fullName = fullName; }
         public Boolean getMustChangePassword() { return mustChangePassword; }
         public void setMustChangePassword(Boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
+        public Long getBranchId() { return branchId; }
+        public void setBranchId(Long branchId) { this.branchId = branchId; }
+        public String getBranchName() { return branchName; }
+        public void setBranchName(String branchName) { this.branchName = branchName; }
     }
 
     public String getAccessToken() { return accessToken; }
