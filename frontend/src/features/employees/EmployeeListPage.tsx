@@ -306,7 +306,7 @@ export const EmployeeListPage: React.FC = () => {
       <PageHeader
         icon={<Users size={20} />}
         title="Quản Lý Hồ Sơ Nhân Sự"
-        subtitle="Danh mục hồ sơ nhân viên, chức danh, chi nhánh làm việc và lịch khả dụng theo ma trận ca."
+        subtitle="Danh mục hồ sơ nhân viên, chức danh, chi nhánh làm việc và lịch khả dụng theo ca."
         action={
           canManageStaff ? (
             <button

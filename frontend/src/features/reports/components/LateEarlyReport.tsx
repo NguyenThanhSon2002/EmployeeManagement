@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
 import { Download, Search } from 'lucide-react';
 
 export const LateEarlyReport: React.FC = () => {
   const { records } = useAttendanceStore();
   const { employees, branches } = useDirectoryStore();
+  const { currentRole, currentUser } = useAuthStore();
 
+  const isDirector = currentRole === 'ROLE_DIRECTOR';
+  const userBranchId = currentUser?.branchId || 1;
+
+  const [branchFilter, setBranchFilter] = useState<number | null>(!isDirector ? userBranchId : null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const effectiveBranchId = !isDirector ? userBranchId : branchFilter;
 
   // Collect records with infractions
   const violationRecords = records.filter(
@@ -18,6 +26,7 @@ export const LateEarlyReport: React.FC = () => {
   const filteredViolations = violationRecords.filter((r) => {
     const emp = employees.find((e) => e.id === r.employeeId);
     if (!emp) return false;
+    if (effectiveBranchId && emp.branchId !== effectiveBranchId) return false;
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       return emp.fullName.toLowerCase().includes(q) || emp.employeeCode.toLowerCase().includes(q);
@@ -87,16 +96,47 @@ export const LateEarlyReport: React.FC = () => {
           justifyContent: 'space-between',
         }}
       >
-        <div style={{ position: 'relative', width: 280 }}>
-          <Search size={16} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--color-text-muted)' }} />
-          <input
-            type="text"
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select
             className="input"
-            placeholder="Tìm theo tên hoặc mã NV..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: 34, width: '100%' }}
-          />
+            style={{
+              width: 220,
+              backgroundColor: !isDirector ? '#F1F5F9' : '#FFFFFF',
+              color: !isDirector ? '#475569' : 'inherit',
+              cursor: !isDirector ? 'not-allowed' : 'pointer',
+              borderColor: 'var(--color-border-subtle, #E2E8F0)',
+            }}
+            value={effectiveBranchId || ''}
+            disabled={!isDirector}
+            title={
+              !isDirector
+                ? 'Bạn chỉ có quyền xem báo cáo nhân sự thuộc chi nhánh làm việc của mình.'
+                : 'Lọc báo cáo theo chi nhánh'
+            }
+            onChange={(e) => {
+              if (!isDirector) return;
+              setBranchFilter(e.target.value ? Number(e.target.value) : null);
+            }}
+          >
+            {isDirector && <option value="">-- Tất cả cơ sở / chi nhánh --</option>}
+            {(!isDirector ? branches.filter((b) => b.id === userBranchId) : branches).map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.branchName}
+              </option>
+            ))}
+          </select>
+
+          <div style={{ position: 'relative', width: 280 }}>
+            <Search size={16} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--color-text-muted)' }} />
+            <input
+              type="text"
+              className="input"
+              placeholder="Tìm theo tên hoặc mã NV..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ paddingLeft: 34, width: '100%' }}
+            />
+          </div>
         </div>
 
         <button type="button" className="btn btn-primary" onClick={handleExportCsv}>

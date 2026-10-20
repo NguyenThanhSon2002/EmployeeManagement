@@ -8,6 +8,8 @@ export interface UserInfo {
   employee_id?: number;
   full_name?: string;
   must_change_password?: boolean;
+  branch_id?: number;
+  branch_name?: string;
 }
 
 export interface AuthResponse {
