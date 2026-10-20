@@ -5,10 +5,6 @@
  */
 
 export const isMockEnabled = (): boolean => {
-  // In test runner (Vitest/Jest), always use mock datasets for isolation and speed
-  if (import.meta.env.MODE === 'test') {
-    return true;
-  }
   return import.meta.env.VITE_USE_MOCK === 'true';
 };
 

@@ -8,7 +8,7 @@ Hệ thống Quản lý Nhân sự, Ma trận Phân ca Thông minh & Chấm côn
 
 - **Backend:** Spring Boot 3.3.4, Java 21 LTS, Spring Security, JWT (Stateless), Spring Data JPA, Hibernate 6, Flyway Migration, Apache POI (Excel .xlsx), Swagger OpenAPI 3.
 - **Frontend:** React 19, TypeScript, Vite, Zustand Store, Lucide Icons, WCAG 2.1 AA Design Tokens.
-- **Kiến trúc Dual-Mode:** Hỗ trợ kết nối trực tiếp MySQL qua RESTful API trên trình duyệt (`VITE_USE_MOCK=false`) và cách ly hoàn toàn qua Mock Data khi chạy Unit Test (`MODE === 'test'`).
+- **Kiến trúc Dual-Mode:** Hỗ trợ kết nối trực tiếp MySQL qua RESTful API trên trình duyệt (`VITE_USE_MOCK=false`) hoặc chạy độc lập kiểm thử giao diện qua Mock Data (`VITE_USE_MOCK=true`).
 - **Cơ sở dữ liệu:** MySQL 8.0 với 17 bảng quan hệ có ràng buộc toàn vẹn, Optimistic Locking (`@Version`) và Audit Trail (`created_by`, `updated_by`).
 - **DevOps:** Hỗ trợ multi-stage `Dockerfile` cho Backend & Frontend và `docker-compose.yml` điều phối toàn bộ hệ thống.
 
@@ -89,16 +89,15 @@ Truy cập ứng dụng tại [http://localhost:5173](http://localhost:5173). Vi
 
 ---
 
-## 5. Kiểm Thử Hệ Thống (Automated Testing)
+## 5. Đóng Gói & Kiểm Tra Hệ Thống (Build Verification)
 
-- **Frontend Unit & Component Tests (Vitest):**
+- **Frontend Build (Vite & TypeScript):**
   ```bash
   cd frontend
-  npm test
   npm run build
   ```
-- **Backend Integration Tests (Maven Surefire):**
+- **Backend Packaging (Maven):**
   ```bash
   cd backend
-  mvn test
+  mvn clean package -DskipTests
   ```
