@@ -23,6 +23,7 @@ public class WorkShiftController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE')")
     @Operation(summary = "Lấy danh sách mẫu ca làm việc", description = "Trả về danh sách tất cả các ca làm việc đang hoạt động")
     public ApiResponse<List<WorkShiftDto>> getAllWorkShifts() {
         List<WorkShiftDto> shifts = workShiftService.getAllWorkShifts();
@@ -30,6 +31,7 @@ public class WorkShiftController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE')")
     @Operation(summary = "Lấy thông tin chi tiết một ca làm việc", description = "Trả về chi tiết ca theo ID")
     public ApiResponse<WorkShiftDto> getWorkShiftById(@PathVariable Long id) {
         WorkShiftDto shift = workShiftService.getWorkShiftById(id);
@@ -37,15 +39,15 @@ public class WorkShiftController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('DIRECTOR')")
-    @Operation(summary = "Tạo mẫu ca làm việc mới", description = "Dành riêng cho Giám đốc")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
+    @Operation(summary = "Tạo mẫu ca làm việc mới", description = "Dành cho Giám đốc và Quản lý")
     public ApiResponse<WorkShiftDto> createWorkShift(@Valid @RequestBody WorkShiftDto request) {
         WorkShiftDto created = workShiftService.createWorkShift(request);
         return ApiResponse.success(created);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('DIRECTOR')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Cập nhật mẫu ca làm việc", description = "Sửa thông tin ca (không làm sai lệch lịch sử nhờ snapshotting)")
     public ApiResponse<WorkShiftDto> updateWorkShift(
             @PathVariable Long id,
@@ -55,7 +57,7 @@ public class WorkShiftController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('DIRECTOR')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Xóa mềm mẫu ca làm việc", description = "Ẩn mẫu ca khỏi danh sách phân ca mới")
     public ApiResponse<Void> deleteWorkShift(@PathVariable Long id) {
         workShiftService.deleteWorkShift(id);

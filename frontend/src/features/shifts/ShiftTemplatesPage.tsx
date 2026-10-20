@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useUIStore } from '@/shared/store/useUIStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
 import type { ShiftTemplate } from '@/types/domain.types';
 import { ShiftTemplateCard } from './components/ShiftTemplateCard';
 import { ShiftTemplateFormModal } from './components/ShiftTemplateFormModal';
@@ -18,6 +19,8 @@ export const ShiftTemplatesPage: React.FC = () => {
   const { shiftTemplates, fetchShiftTemplates, addShiftTemplate, updateShiftTemplate, deleteShiftTemplate } =
     useScheduleStore();
   const { addToast } = useUIStore();
+  const { currentRole } = useAuthStore();
+  const canManageShifts = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_MANAGER';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ShiftTemplate | null>(null);
@@ -27,16 +30,40 @@ export const ShiftTemplatesPage: React.FC = () => {
   }, [fetchShiftTemplates]);
 
   const handleCreateNew = () => {
+    if (!canManageShifts) {
+      addToast({
+        type: 'error',
+        title: 'Từ chối quyền hạn',
+        message: 'Tài khoản nhân viên chỉ có quyền xem danh mục mẫu ca.',
+      });
+      return;
+    }
     setEditingTemplate(null);
     setIsModalOpen(true);
   };
 
   const handleEdit = (template: ShiftTemplate) => {
+    if (!canManageShifts) {
+      addToast({
+        type: 'error',
+        title: 'Từ chối quyền hạn',
+        message: 'Tài khoản nhân viên chỉ có quyền xem danh mục mẫu ca.',
+      });
+      return;
+    }
     setEditingTemplate(template);
     setIsModalOpen(true);
   };
 
   const handleDelete = async (id: number) => {
+    if (!canManageShifts) {
+      addToast({
+        type: 'error',
+        title: 'Từ chối quyền hạn',
+        message: 'Tài khoản nhân viên không có quyền xóa mẫu ca.',
+      });
+      return;
+    }
     const target = shiftTemplates.find((t) => t.id === id);
     if (!target) return;
 
@@ -59,6 +86,14 @@ export const ShiftTemplatesPage: React.FC = () => {
   };
 
   const handleSave = async (data: Omit<ShiftTemplate, 'id'>, editId?: number) => {
+    if (!canManageShifts) {
+      addToast({
+        type: 'error',
+        title: 'Từ chối quyền hạn',
+        message: 'Tài khoản nhân viên không có quyền tạo hoặc chỉnh sửa mẫu ca.',
+      });
+      return;
+    }
     try {
       if (editId) {
         await updateShiftTemplate(editId, data);
@@ -101,23 +136,25 @@ export const ShiftTemplatesPage: React.FC = () => {
         title="Danh Mục Mẫu Ca Làm Việc"
         subtitle="Quản lý chuẩn hóa khung giờ ca làm việc, định biên nhân sự tối thiểu/tối đa và màu sắc nhận diện trực quan."
         action={
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleCreateNew}
-            style={{
-              height: 42,
-              padding: '0 20px',
-              fontSize: 14,
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-            }}
-          >
-            <Plus size={18} strokeWidth={2.5} /> Thêm Mẫu Ca Mới
-          </button>
+          canManageShifts ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleCreateNew}
+              style={{
+                height: 42,
+                padding: '0 20px',
+                fontSize: 14,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+              }}
+            >
+              <Plus size={18} strokeWidth={2.5} /> Thêm Mẫu Ca Mới
+            </button>
+          ) : undefined
         }
       />
 
@@ -296,9 +333,11 @@ export const ShiftTemplatesPage: React.FC = () => {
           <p style={{ color: '#64748B', fontSize: 13.5, maxWidth: 400, margin: '6px auto 16px' }}>
             Hệ thống cần ít nhất một mẫu ca làm việc để tiến hành xếp lịch trên Ma Trận Lịch Tuần.
           </p>
-          <button type="button" className="btn btn-primary" onClick={handleCreateNew}>
-            <Plus size={16} /> Tạo mẫu ca đầu tiên
-          </button>
+          {canManageShifts && (
+            <button type="button" className="btn btn-primary" onClick={handleCreateNew}>
+              <Plus size={16} /> Tạo mẫu ca đầu tiên
+            </button>
+          )}
         </div>
       ) : (
         <div
@@ -312,6 +351,7 @@ export const ShiftTemplatesPage: React.FC = () => {
             <ShiftTemplateCard
               key={template.id}
               template={template}
+              readOnly={!canManageShifts}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />

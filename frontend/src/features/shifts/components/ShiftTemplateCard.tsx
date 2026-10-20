@@ -4,8 +4,9 @@ import { Clock, Users, Moon, Pencil, Trash2, Coffee, CalendarCheck, Sun } from '
 
 interface ShiftTemplateCardProps {
   template: ShiftTemplate;
-  onEdit: (template: ShiftTemplate) => void;
-  onDelete: (id: number) => void;
+  onEdit?: (template: ShiftTemplate) => void;
+  onDelete?: (id: number) => void;
+  readOnly?: boolean;
 }
 
 const formatTime = (timeStr: string) => {
@@ -36,6 +37,7 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
   template,
   onEdit,
   onDelete,
+  readOnly = false,
 }) => {
   const startTimeClean = formatTime(template.startTime);
   const endTimeClean = formatTime(template.endTime);
@@ -43,7 +45,7 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
 
   return (
     <div
-      className="card card-interactive"
+      className={`card ${readOnly ? '' : 'card-interactive'}`}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -200,76 +202,78 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
       </div>
 
       {/* Card Footer Actions */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: 8,
-          marginTop: 18,
-          paddingTop: 14,
-          borderTop: '1px solid #F1F5F9',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => onEdit(template)}
+      {!readOnly && (
+        <div
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            height: 34,
-            padding: '0 14px',
-            fontSize: 13,
-            fontWeight: 600,
-            borderRadius: 8,
-            backgroundColor: '#F8FAFC',
-            color: '#2563EB',
-            border: '1px solid #E2E8F0',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#EFF6FF';
-            e.currentTarget.style.borderColor = '#BFDBFE';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#F8FAFC';
-            e.currentTarget.style.borderColor = '#E2E8F0';
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 8,
+            marginTop: 18,
+            paddingTop: 14,
+            borderTop: '1px solid #F1F5F9',
           }}
         >
-          <Pencil size={14} /> Chỉnh sửa
-        </button>
+          <button
+            type="button"
+            onClick={() => onEdit?.(template)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              height: 34,
+              padding: '0 14px',
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: 8,
+              backgroundColor: '#F8FAFC',
+              color: '#2563EB',
+              border: '1px solid #E2E8F0',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#EFF6FF';
+              e.currentTarget.style.borderColor = '#BFDBFE';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#F8FAFC';
+              e.currentTarget.style.borderColor = '#E2E8F0';
+            }}
+          >
+            <Pencil size={14} /> Chỉnh sửa
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onDelete(template.id)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            height: 34,
-            padding: '0 14px',
-            fontSize: 13,
-            fontWeight: 600,
-            borderRadius: 8,
-            backgroundColor: '#FEF2F2',
-            color: '#DC2626',
-            border: '1px solid #FECACA',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#FEE2E2';
-            e.currentTarget.style.borderColor = '#FCA5A5';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#FEF2F2';
-            e.currentTarget.style.borderColor = '#FECACA';
-          }}
-        >
-          <Trash2 size={14} /> Xóa
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => onDelete?.(template.id)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              height: 34,
+              padding: '0 14px',
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: 8,
+              backgroundColor: '#FEF2F2',
+              color: '#DC2626',
+              border: '1px solid #FECACA',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#FEE2E2';
+              e.currentTarget.style.borderColor = '#FCA5A5';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#FEF2F2';
+              e.currentTarget.style.borderColor = '#FECACA';
+            }}
+          >
+            <Trash2 size={14} /> Xóa
+          </button>
+        </div>
+      )}
     </div>
   );
 };

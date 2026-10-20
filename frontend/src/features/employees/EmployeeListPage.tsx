@@ -10,7 +10,7 @@ import { employeeService } from './api/employeeService';
 import { branchService } from '@/shared/branch/branchService';
 import { isMockEnabled } from '@/config/env.config';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock, Users, Lock } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock, Users } from 'lucide-react';
 import { useAvailabilityStore } from './store/useAvailabilityStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 
@@ -401,7 +401,7 @@ export const EmployeeListPage: React.FC = () => {
                 color: !isDirector ? '#475569' : 'inherit',
                 cursor: !isDirector ? 'not-allowed' : 'pointer',
                 borderColor: 'var(--color-border-subtle, #E2E8F0)',
-                paddingRight: !isDirector ? 32 : 12,
+                paddingRight: 12,
               }}
               title={
                 !isDirector
@@ -413,25 +413,9 @@ export const EmployeeListPage: React.FC = () => {
               {branchesList.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.branchName}
-                  {!isDirector && b.id === userBranchId ? ' (Cố định)' : ''}
                 </option>
               ))}
             </select>
-            {!isDirector && (
-              <span
-                style={{
-                  position: 'absolute',
-                  right: 10,
-                  pointerEvents: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#64748B',
-                }}
-                title="Cố định theo chi nhánh làm việc"
-              >
-                <Lock size={13} />
-              </span>
-            )}
           </div>
         </div>
 
