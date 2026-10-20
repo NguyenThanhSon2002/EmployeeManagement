@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import type { Employee, Branch, Position, EmploymentStatus } from '@/types/domain.types';
 import { useModalFocusTrap } from '@/hooks/useModalFocusTrap';
-import { UserCog, UserPlus, X, Save } from 'lucide-react';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { UserCog, UserPlus, X, Save, Lock } from 'lucide-react';
 
 interface EmployeeFormModalProps {
   isOpen: boolean;
@@ -21,6 +22,9 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   onSubmit,
 }) => {
   const modalRef = useModalFocusTrap({ isOpen, onClose });
+  const { currentRole, currentUser } = useAuthStore();
+  const isDirector = currentRole === 'ROLE_DIRECTOR';
+  const userBranchId = currentUser?.branchId || (branches.length > 0 ? branches[0].id : 1);
 
   const [formData, setFormData] = useState({
     employeeCode: '',
@@ -34,6 +38,8 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const defaultBranchId = !isDirector ? userBranchId : (branches.length > 0 ? branches[0].id : 1);
 
   useEffect(() => {
     if (initialData) {
@@ -53,19 +59,23 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
         fullName: '',
         email: '',
         phoneNumber: '',
-        branchId: branches.length > 0 ? branches[0].id : 1,
+        branchId: defaultBranchId,
         positionId: 3,
-        employmentStatus: 'OFFICIAL',
+        employmentStatus: !isDirector ? 'PROBATION' : 'OFFICIAL',
         hireDate: new Date().toISOString().split('T')[0],
       });
     }
     setErrors({});
-  }, [initialData, isOpen, branches]);
+  }, [initialData, isOpen, defaultBranchId, isDirector]);
 
   if (!isOpen) return null;
 
   const validate = (): boolean => {
     const err: Record<string, string> = {};
+
+    if (!formData.employeeCode.trim()) {
+      err.employeeCode = 'Mã nhân viên không được để trống';
+    }
 
     if (!formData.fullName.trim()) {
       err.fullName = 'Họ và tên không được để trống';
@@ -87,18 +97,27 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     e.preventDefault();
     if (!validate()) return;
 
-    const isEmpActive = formData.employmentStatus !== 'RESIGNED';
+    // Defense-in-depth: enforce non-director constraints
+    const effectiveBranchId = !isDirector
+      ? (initialData ? initialData.branchId : userBranchId)
+      : formData.branchId;
+
+    const effectiveStatus = !isDirector
+      ? (initialData ? initialData.employmentStatus : 'PROBATION')
+      : formData.employmentStatus;
+
+    const isEmpActive = effectiveStatus !== 'RESIGNED';
 
     onSubmit({
       ...(initialData ? { id: initialData.id } : {}),
-      managerId: null,
+      managerId: initialData?.managerId ?? null,
       employeeCode: formData.employeeCode.trim(),
       fullName: formData.fullName.trim(),
       email: formData.email.trim(),
       phoneNumber: formData.phoneNumber.trim(),
-      branchId: formData.branchId,
+      branchId: effectiveBranchId,
       positionId: formData.positionId,
-      employmentStatus: formData.employmentStatus,
+      employmentStatus: effectiveStatus,
       hireDate: formData.hireDate,
       isActive: isEmpActive,
     });
@@ -354,22 +373,37 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             {/* Row 3: Branch and Canonical Position */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    marginBottom: 5,
-                    color: '#334155',
-                  }}
-                >
-                  Chi Nhánh / Cơ Sở Làm Việc <span style={{ color: '#DC2626' }}>*</span>
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#334155',
+                      margin: 0,
+                    }}
+                  >
+                    Chi Nhánh / Cơ Sở Làm Việc <span style={{ color: '#DC2626' }}>*</span>
+                  </label>
+                  {!isDirector && (
+                    <span style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Lock size={11} /> Cố định
+                    </span>
+                  )}
+                </div>
                 <select
                   className="input"
                   value={formData.branchId}
+                  disabled={!isDirector}
                   onChange={(e) => setFormData({ ...formData, branchId: Number(e.target.value) })}
-                  style={{ width: '100%', backgroundColor: '#FFFFFF', borderColor: '#E2E8F0' }}
+                  style={{
+                    width: '100%',
+                    backgroundColor: !isDirector ? '#F1F5F9' : '#FFFFFF',
+                    color: !isDirector ? '#475569' : 'inherit',
+                    borderColor: '#E2E8F0',
+                    cursor: !isDirector ? 'not-allowed' : 'pointer',
+                  }}
+                  title={!isDirector ? 'Chỉ Giám đốc mới có quyền điều chuyển chi nhánh làm việc' : undefined}
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -377,6 +411,11 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                     </option>
                   ))}
                 </select>
+                {!isDirector && (
+                  <p style={{ fontSize: '11.5px', color: '#64748B', margin: '4px 0 0 0', fontStyle: 'italic' }}>
+                    Chỉ Giám đốc mới có quyền điều chuyển chi nhánh làm việc.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -409,30 +448,50 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             {/* Row 4: Employment Status and Hire Date */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    marginBottom: 5,
-                    color: '#334155',
-                  }}
-                >
-                  Trạng Thái Hợp Đồng
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#334155',
+                      margin: 0,
+                    }}
+                  >
+                    Trạng Thái Hợp Đồng
+                  </label>
+                  {!isDirector && (
+                    <span style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Lock size={11} /> Khóa
+                    </span>
+                  )}
+                </div>
                 <select
                   className="input"
                   value={formData.employmentStatus}
+                  disabled={!isDirector}
                   onChange={(e) =>
                     setFormData({ ...formData, employmentStatus: e.target.value as EmploymentStatus })
                   }
-                  style={{ width: '100%', backgroundColor: '#FFFFFF', borderColor: '#E2E8F0' }}
+                  style={{
+                    width: '100%',
+                    backgroundColor: !isDirector ? '#F1F5F9' : '#FFFFFF',
+                    color: !isDirector ? '#475569' : 'inherit',
+                    borderColor: '#E2E8F0',
+                    cursor: !isDirector ? 'not-allowed' : 'pointer',
+                  }}
+                  title={!isDirector ? 'Chỉ Giám đốc mới có quyền thay đổi trạng thái hợp đồng lao động' : undefined}
                 >
                   <option value="OFFICIAL">Chính thức</option>
                   <option value="PROBATION">Thử việc</option>
                   <option value="ON_LEAVE">Nghỉ chế độ / Tạm hoãn</option>
                   <option value="RESIGNED">Đã nghỉ việc</option>
                 </select>
+                {!isDirector && (
+                  <p style={{ fontSize: '11.5px', color: '#64748B', margin: '4px 0 0 0', fontStyle: 'italic' }}>
+                    Chỉ Giám đốc mới có quyền thay đổi trạng thái hợp đồng lao động.
+                  </p>
+                )}
               </div>
 
               <div>

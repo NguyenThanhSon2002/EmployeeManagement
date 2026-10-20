@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { ROUTE_PATHS } from '@/routes/route-paths';
+import { getDefaultLandingRoute } from '@/routes/route-paths';
 import {
   Lock,
   Eye,
@@ -62,7 +62,8 @@ export const LoginPage: React.FC = () => {
           title: 'Đăng nhập thành công',
           message: `Chào mừng trở lại hệ thống, ${userToLogin}!`,
         });
-        navigate(ROUTE_PATHS.SCHEDULE);
+        const role = useAuthStore.getState().currentRole;
+        navigate(getDefaultLandingRoute(role), { replace: true });
       } else {
         setErrorMessage('Tên tài khoản hoặc mật khẩu không chính xác.');
       }

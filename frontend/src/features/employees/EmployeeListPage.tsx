@@ -10,7 +10,7 @@ import { employeeService } from './api/employeeService';
 import { branchService } from '@/shared/branch/branchService';
 import { isMockEnabled } from '@/config/env.config';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock, Users } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock, Users, Lock } from 'lucide-react';
 import { useAvailabilityStore } from './store/useAvailabilityStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 
@@ -46,8 +46,11 @@ export const EmployeeListPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
-  const { currentRole } = useAuthStore();
-  const canDelete = currentRole === 'ROLE_DIRECTOR';
+  const { currentRole, currentUser } = useAuthStore();
+  const isDirector = currentRole === 'ROLE_DIRECTOR';
+  const canManageStaff = isDirector || currentRole === 'ROLE_MANAGER';
+  const canDelete = isDirector;
+  const userBranchId = currentUser?.branchId || 1;
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -60,7 +63,11 @@ export const EmployeeListPage: React.FC = () => {
       setLoadError(null);
       try {
         const [empRes, branchRes] = await Promise.all([
-          employeeService.getEmployees({ page: 1, size: 100 }),
+          employeeService.getEmployees({
+            page: 1,
+            size: 100,
+            branch_id: !isDirector ? userBranchId : undefined,
+          }),
           branchService.getAllBranches(),
         ]);
 
@@ -119,12 +126,13 @@ export const EmployeeListPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [addToast]);
+  }, [isDirector, userBranchId, addToast]);
 
   // Filtered List
   const filteredEmployees = useMemo(() => {
+    const effectiveBranchId = !isDirector ? userBranchId : selectedBranchId;
     return employeesList.filter((emp) => {
-      if (selectedBranchId !== 0 && emp.branchId !== selectedBranchId) {
+      if (effectiveBranchId !== 0 && emp.branchId !== effectiveBranchId) {
         return false;
       }
       if (searchTerm) {
@@ -137,7 +145,7 @@ export const EmployeeListPage: React.FC = () => {
       }
       return true;
     });
-  }, [employeesList, searchTerm, selectedBranchId]);
+  }, [employeesList, searchTerm, selectedBranchId, isDirector, userBranchId]);
 
   // Pagination Slice
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
@@ -157,6 +165,15 @@ export const EmployeeListPage: React.FC = () => {
   };
 
   const handleSaveEmployee = async (data: Omit<Employee, 'id'> & { id?: number }) => {
+    if (!canManageStaff) {
+      addToast({
+        type: 'error',
+        title: 'Từ chối quyền hạn',
+        message: 'Tài khoản nhân viên không có quyền tạo hoặc chỉnh sửa hồ sơ nhân sự.',
+      });
+      return;
+    }
+
     const payload = {
       employee_code: data.employeeCode,
       full_name: data.fullName,
@@ -240,7 +257,16 @@ export const EmployeeListPage: React.FC = () => {
   };
 
   const handleConfirmDelete = async () => {
-    if (!deletingEmployee) return;
+    if (!canDelete || !deletingEmployee) {
+      if (!canDelete) {
+        addToast({
+          type: 'error',
+          title: 'Từ chối quyền hạn',
+          message: 'Chỉ Giám đốc mới có quyền xóa hồ sơ nhân sự.',
+        });
+      }
+      return;
+    }
     setIsDeleting(true);
     try {
       if (!isMockEnabled()) {
@@ -282,14 +308,16 @@ export const EmployeeListPage: React.FC = () => {
         title="Quản Lý Hồ Sơ Nhân Sự"
         subtitle="Danh mục hồ sơ nhân viên, chức danh, chi nhánh làm việc và lịch khả dụng theo ma trận ca."
         action={
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleOpenAdd}
-            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-          >
-            <Plus size={16} /> Thêm nhân viên mới
-          </button>
+          canManageStaff ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleOpenAdd}
+              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              <Plus size={16} /> Thêm nhân viên mới
+            </button>
+          ) : undefined
         }
       />
 
@@ -354,22 +382,57 @@ export const EmployeeListPage: React.FC = () => {
           </div>
 
           {/* Branch Filter */}
-          <select
-            className="input-base"
-            value={selectedBranchId}
-            onChange={(e) => {
-              setSelectedBranchId(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            style={{ height: 36, fontSize: '12.5px', minWidth: 200, fontWeight: 500 }}
-          >
-            <option value={0}>Tất cả chi nhánh</option>
-            {branchesList.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.branchName}
-              </option>
-            ))}
-          </select>
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <select
+              className="input-base"
+              value={!isDirector ? userBranchId : selectedBranchId}
+              disabled={!isDirector}
+              onChange={(e) => {
+                if (!isDirector) return;
+                setSelectedBranchId(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                height: 36,
+                fontSize: '12.5px',
+                minWidth: 220,
+                fontWeight: 500,
+                backgroundColor: !isDirector ? '#F1F5F9' : '#FFFFFF',
+                color: !isDirector ? '#475569' : 'inherit',
+                cursor: !isDirector ? 'not-allowed' : 'pointer',
+                borderColor: 'var(--color-border-subtle, #E2E8F0)',
+                paddingRight: !isDirector ? 32 : 12,
+              }}
+              title={
+                !isDirector
+                  ? 'Bạn chỉ có quyền xem nhân sự thuộc chi nhánh làm việc của mình.'
+                  : 'Lọc nhân viên theo chi nhánh'
+              }
+            >
+              {isDirector && <option value={0}>Tất cả chi nhánh</option>}
+              {branchesList.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.branchName}
+                  {!isDirector && b.id === userBranchId ? ' (Cố định)' : ''}
+                </option>
+              ))}
+            </select>
+            {!isDirector && (
+              <span
+                style={{
+                  position: 'absolute',
+                  right: 10,
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#64748B',
+                }}
+                title="Cố định theo chi nhánh làm việc"
+              >
+                <Lock size={13} />
+              </span>
+            )}
+          </div>
         </div>
 
         <div
@@ -601,15 +664,17 @@ export const EmployeeListPage: React.FC = () => {
                         >
                           <Eye size={14} />
                         </button>
-                        <button
-                          type="button"
-                          className="btn btn-default"
-                          onClick={() => handleOpenEdit(emp)}
-                          style={{ padding: '0 8px', height: 32 }}
-                          title="Chỉnh sửa thông tin"
-                        >
-                          <Edit2 size={14} />
-                        </button>
+                        {canManageStaff && (
+                          <button
+                            type="button"
+                            className="btn btn-default"
+                            onClick={() => handleOpenEdit(emp)}
+                            style={{ padding: '0 8px', height: 32 }}
+                            title="Chỉnh sửa thông tin"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        )}
                         {canDelete && (
                           <button
                             type="button"
