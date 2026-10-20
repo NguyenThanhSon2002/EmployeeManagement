@@ -6,11 +6,13 @@ import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import type { LeaveRequest } from '@/types/domain.types';
 import { LeaveRequestModal } from './components/LeaveRequestModal';
 import { LeaveApprovalModal } from './components/LeaveApprovalModal';
+import { PageHeader } from '@/components/common/PageHeader';
 import {
   Plus,
   Calendar,
   Search,
   CheckCircle,
+  Palmtree,
 } from 'lucide-react';
 
 export const LeaveRequestsPage: React.FC = () => {
@@ -59,25 +61,21 @@ export const LeaveRequestsPage: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            Quản Lý Đơn Xin Nghỉ Phép
-          </h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-            Tiếp nhận, thẩm tra quỹ phép năm và phê duyệt phân cấp đồng bộ trực tiếp sang Bảng Lịch Tuần.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setIsCreateModalOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-        >
-          <Plus size={16} /> Nộp Đơn Xin Nghỉ Mới
-        </button>
-      </div>
+      <PageHeader
+        icon={<Palmtree size={20} />}
+        title="Quản Lý Đơn Xin Nghỉ Phép"
+        subtitle="Tiếp nhận, thẩm tra quỹ phép năm và phê duyệt phân cấp đồng bộ trực tiếp sang Bảng Lịch Tuần."
+        action={
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setIsCreateModalOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            <Plus size={16} /> Nộp Đơn Xin Nghỉ Mới
+          </button>
+        }
+      />
 
       {/* Leave Balance Summary Bar */}
       <div

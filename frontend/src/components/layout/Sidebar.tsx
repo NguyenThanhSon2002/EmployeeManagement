@@ -35,7 +35,6 @@ const NAV_SECTIONS: NavSection[] = [
         path: ROUTE_PATHS.SCHEDULE,
         label: 'Lịch Phân Ca',
         icon: <CalendarDays size={18} />,
-        badge: 'Chính',
       },
       {
         path: ROUTE_PATHS.DASHBOARD,

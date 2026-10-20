@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { Sliders, RotateCcw, Check, ShieldAlert } from 'lucide-react';
+import { PageHeader } from '@/components/common/PageHeader';
+import { Sliders, RotateCcw, Check, ShieldAlert, Settings } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const { settings, updateSettings } = useSettingsStore();
@@ -40,14 +41,11 @@ export const SettingsPage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)', maxWidth: 840 }}>
-      <div>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-          Cài Đặt Hệ Thống & Tham Số Chính Sách
-        </h1>
-        <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-          Cấu hình các ngưỡng kiểm tra an toàn ca làm việc và thời gian nghỉ ngơi theo quy định pháp luật lao động.
-        </p>
-      </div>
+      <PageHeader
+        icon={<Settings size={20} />}
+        title="Cài Đặt Hệ Thống & Tham Số Chính Sách"
+        subtitle="Cấu hình các ngưỡng kiểm tra an toàn ca làm việc và thời gian nghỉ ngơi theo quy định pháp luật lao động."
+      />
 
       {/* Policy Form Card */}
       <div className="card" style={{ padding: '24px 28px' }}>

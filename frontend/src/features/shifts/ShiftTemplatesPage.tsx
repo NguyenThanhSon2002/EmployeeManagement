@@ -4,6 +4,7 @@ import { useUIStore } from '@/shared/store/useUIStore';
 import type { ShiftTemplate } from '@/types/domain.types';
 import { ShiftTemplateCard } from './components/ShiftTemplateCard';
 import { ShiftTemplateFormModal } from './components/ShiftTemplateFormModal';
+import { PageHeader } from '@/components/common/PageHeader';
 import {
   Plus,
   Layers,
@@ -95,66 +96,30 @@ export const ShiftTemplatesPage: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
       {/* Page Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 16,
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 10,
-                backgroundColor: '#EFF6FF',
-                color: '#2563EB',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Layers size={20} />
-            </div>
-            <h1
-              style={{
-                fontSize: '22px',
-                fontWeight: 800,
-                color: '#0F172A',
-                letterSpacing: '-0.02em',
-                margin: 0,
-              }}
-            >
-              Danh Mục Mẫu Ca Làm Việc
-            </h1>
-          </div>
-          <p style={{ color: '#64748B', marginTop: 4, fontSize: '13.5px', marginLeft: 48 }}>
-            Quản lý chuẩn hóa khung giờ ca làm việc, định biên nhân sự tối thiểu/tối đa và màu sắc nhận diện trực quan.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleCreateNew}
-          style={{
-            height: 42,
-            padding: '0 20px',
-            fontSize: 14,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-          }}
-        >
-          <Plus size={18} strokeWidth={2.5} /> Thêm Mẫu Ca Mới
-        </button>
-      </div>
+      <PageHeader
+        icon={<Layers size={20} />}
+        title="Danh Mục Mẫu Ca Làm Việc"
+        subtitle="Quản lý chuẩn hóa khung giờ ca làm việc, định biên nhân sự tối thiểu/tối đa và màu sắc nhận diện trực quan."
+        action={
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleCreateNew}
+            style={{
+              height: 42,
+              padding: '0 20px',
+              fontSize: 14,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+            }}
+          >
+            <Plus size={18} strokeWidth={2.5} /> Thêm Mẫu Ca Mới
+          </button>
+        }
+      />
 
       {/* KPI Summary Cards */}
       <div
