@@ -137,8 +137,22 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTE_PATHS.ATTENDANCE} element={<AttendanceOverviewPage />} />
         <Route path={ROUTE_PATHS.SHIFTS} element={<ShiftTemplatesPage />} />
         <Route path={ROUTE_PATHS.LEAVES} element={<LeaveRequestsPage />} />
-        <Route path={ROUTE_PATHS.REPORTS} element={<ReportsPage />} />
-        <Route path={ROUTE_PATHS.SETTINGS} element={<SettingsPage />} />
+        <Route
+          path={ROUTE_PATHS.REPORTS}
+          element={
+            <RoleRoute allowedRoles={['ROLE_DIRECTOR', 'ROLE_MANAGER']}>
+              <ReportsPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path={ROUTE_PATHS.SETTINGS}
+          element={
+            <RoleRoute allowedRoles={['ROLE_DIRECTOR', 'ROLE_MANAGER']}>
+              <SettingsPage />
+            </RoleRoute>
+          }
+        />
 
         {/* 404 Fallback */}
         <Route

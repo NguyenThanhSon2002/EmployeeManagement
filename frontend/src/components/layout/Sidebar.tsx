@@ -84,11 +84,13 @@ const NAV_SECTIONS: NavSection[] = [
         path: ROUTE_PATHS.REPORTS,
         label: 'Báo Cáo',
         icon: <BarChart3 size={18} />,
+        roles: ['ROLE_DIRECTOR', 'ROLE_MANAGER'],
       },
       {
         path: ROUTE_PATHS.SETTINGS,
         label: 'Cài Đặt',
         icon: <Settings size={18} />,
+        roles: ['ROLE_DIRECTOR', 'ROLE_MANAGER'],
       },
     ],
   },
