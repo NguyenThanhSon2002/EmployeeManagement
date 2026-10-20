@@ -243,6 +243,20 @@
   animation: pulse-live 2s infinite;
 }
 
+/* Spinner Animation for Loaders */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
 /* Tables Modern Reset */
 .table-container {
   width: 100%;
