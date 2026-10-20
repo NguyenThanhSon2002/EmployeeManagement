@@ -13,7 +13,8 @@ import { ReportsPage } from '@/features/reports/ReportsPage';
 import { BranchesPage } from '@/features/branches/BranchesPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
-import { ROUTE_PATHS } from './route-paths';
+import { ROUTE_PATHS, getDefaultLandingRoute } from './route-paths';
+import type { RoleType } from '@/types/domain.types';
 
 interface RouteWrapperProps {
   children: React.ReactNode;
@@ -58,11 +59,40 @@ const ProtectedRoute: React.FC<RouteWrapperProps> = ({ children }) => {
   return <>{children}</>;
 };
 
+interface RoleRouteProps {
+  allowedRoles: RoleType[];
+  children: React.ReactNode;
+  fallbackPath?: string;
+}
+
+const RoleRoute: React.FC<RoleRouteProps> = ({
+  allowedRoles,
+  children,
+  fallbackPath = ROUTE_PATHS.SCHEDULE,
+}) => {
+  const { currentRole } = useAuthStore();
+
+  if (!allowedRoles.includes(currentRole)) {
+    return <Navigate to={fallbackPath} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const HomeRedirect: React.FC = () => {
+  const { currentRole } = useAuthStore();
+  return <Navigate to={getDefaultLandingRoute(currentRole)} replace />;
+};
+
 const PublicOnlyRoute: React.FC<RouteWrapperProps> = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, currentRole, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return null;
+  }
 
   if (isAuthenticated) {
-    return <Navigate to={ROUTE_PATHS.SCHEDULE} replace />;
+    return <Navigate to={getDefaultLandingRoute(currentRole)} replace />;
   }
 
   return <>{children}</>;
@@ -89,11 +119,18 @@ export const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       >
-        <Route path={ROUTE_PATHS.HOME} element={<Navigate to={ROUTE_PATHS.SCHEDULE} replace />} />
+        <Route path={ROUTE_PATHS.HOME} element={<HomeRedirect />} />
 
-        {/* Core Scheduling Matrix (SCR-11 & SCR-12) */}
+        {/* Operational Routes */}
+        <Route
+          path={ROUTE_PATHS.DASHBOARD}
+          element={
+            <RoleRoute allowedRoles={['ROLE_DIRECTOR']}>
+              <DashboardPage />
+            </RoleRoute>
+          }
+        />
         <Route path={ROUTE_PATHS.SCHEDULE} element={<SchedulePage />} />
-        <Route path={ROUTE_PATHS.DASHBOARD} element={<DashboardPage />} />
         <Route path={ROUTE_PATHS.EMPLOYEES} element={<EmployeeListPage />} />
         <Route path={ROUTE_PATHS.EMPLOYEE_DETAIL} element={<EmployeeDetailPage />} />
         <Route path={ROUTE_PATHS.BRANCHES} element={<BranchesPage />} />

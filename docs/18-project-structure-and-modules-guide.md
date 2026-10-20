@@ -96,7 +96,7 @@ D:\Project\Employee Management\
 │       ├── main.tsx               # Entry point gắn kết React DOM
 │       ├── App.tsx                # Khởi tạo Auth State, Router & Theme
 │       ├── config/                # Cấu hình môi trường (env.config.ts Dual-Mode)
-│       ├── routes/                # Định tuyến SPA (AppRoutes.tsx, route-paths.ts)
+│       ├── routes/                # Định tuyến SPA & RBAC Guards (AppRoutes.tsx, RoleRoute, HomeRedirect, route-paths.ts)
 │       ├── types/                 # Kiểu TypeScript chuẩn hóa domain (domain.types.ts, schedule.types.ts)
 │       ├── shared/                # Module dùng chung toàn hệ thống (Shared Infrastructure)
 │       │   ├── api/
@@ -111,7 +111,7 @@ D:\Project\Employee Management\
 │       │   └── store/
 │       │       └── useUIStore.ts  # Quản lý Toast notification và trạng thái UI toàn cục
 │       ├── components/            # UI components tái sử dụng dùng chung
-│       │   ├── layout/            # Khung sườn (AppLayout, Sidebar, Topbar, RoleSwitcher)
+│       │   ├── layout/            # Khung sườn (AppLayout, Sidebar lọc menu theo RoleType, Topbar, RoleSwitcher)
 │       │   ├── ui/                # Nguyên tử UI (Button, Input, Modal, Badge, Card,...)
 │       │   ├── feedback/          # Thông báo Toast, Spinner, Empty State
 │       │   └── charts/            # Biểu đồ KPI thống kê
@@ -245,8 +245,8 @@ src/features/<feature-name>/
 | Phân hệ (Feature) | Thư mục | Các file then chốt | Chức năng nghiệp vụ & Trải nghiệm UI |
 | :--- | :--- | :--- | :--- |
 | **`schedule`** *(Trọng tâm)* | `features/schedule` | `SchedulePage.tsx`, `WeeklyGrid.tsx`, `scheduleService.ts`, `useScheduleStore.ts`, `AssignShiftDrawer.tsx` | - Ma trận 8 cột (Nhân viên + 7 ngày trong tuần).<br>- Hiển thị thẻ ca có mã màu, biểu tượng ca đêm, thẻ phép `[🏖️ PHÉP NĂM]`.<br>- Thanh tiến độ tổng giờ công tuần cảnh báo đỏ khi chạm/vượt trần 48h.<br>- Drawer gán ca kiểm tra vi phạm luật lao động realtime.<br>- Bộ lọc phòng ban, lọc nhân viên có xung đột, tìm kiếm.<br>- Hộp thoại phân ca hàng loạt, sao chép lịch tuần, công bố lịch, xem lịch sử thay đổi. |
-| **`dashboard`** | `features/dashboard` | `DashboardPage.tsx`, `QuickAttendanceCard.tsx` | - Tổng hợp KPI vận hành: Tổng quân số, nhân sự đang làm hôm nay, ca trực đêm, tỷ lệ đúng giờ.<br>- Thẻ Điểm Danh Nhanh: Nút 1-click Check-in/Check-out và đồng hồ bấm giờ công làm việc. |
-| **`employees`** | `features/employees` | `EmployeeListPage.tsx`, `EmployeeDetailPage.tsx`, `employeeService.ts` | - Bảng danh sách nhân viên: Tìm kiếm realtime, lọc theo phòng ban, phân trang chuẩn.<br>- Modal thêm mới/sửa thông tin nhân sự có xác thực trường.<br>- Trang hồ sơ chi tiết gồm 4 tab: Lý lịch cá nhân, Lịch sử phân ca, Bảng chấm công, Đơn xin nghỉ phép. |
+| **`dashboard`** | `features/dashboard` | `DashboardPage.tsx`, `QuickAttendanceCard.tsx` | - Tổng hợp KPI vận hành: Tổng quân số, nhân sự đang làm hôm nay, ca trực đêm, tỷ lệ đúng giờ.<br>- Thẻ Điểm Danh Nhanh: Nút 1-click Check-in/Check-out và đồng hồ bấm giờ công làm việc.<br>- **Kiểm soát truy cập (RBAC):** Chỉ mở cho `ROLE_DIRECTOR`. Đối với `ROLE_MANAGER` và `ROLE_EMPLOYEE`, hệ thống tự động ẩn menu trên Sidebar và kích hoạt Safe Fallback Redirect về `/schedule`. |
+| **`employees`** | `features/employees` | `EmployeeListPage.tsx`, `EmployeeDetailPage.tsx`, `employeeService.ts` | - Bảng danh sách nhân viên: Tìm kiếm realtime, phân quyền phạm vi chi nhánh (`Branch Scoping`): Quản lý và Nhân viên cố định theo chi nhánh trực thuộc, Giám đốc xem/lọc toàn chuỗi.<br>- Phân quyền thao tác: `ROLE_EMPLOYEE` chỉ đọc (ẩn nút Thêm & Sửa); `ROLE_MANAGER` được thêm/sửa nhân sự trong chi nhánh; `ROLE_DIRECTOR` toàn quyền (thêm/sửa mọi trường, xóa nhân sự).<br>- Modal thêm mới/sửa hồ sơ (`EmployeeFormModal`): Khóa trường Chi nhánh và Trạng thái hợp đồng đối với Non-director, tích hợp cơ chế phòng vệ đa tầng (Defense-in-depth).<br>- Trang hồ sơ chi tiết gồm 4 tab: Lý lịch cá nhân, Lịch sử phân ca, Bảng chấm công, Đơn xin nghỉ phép. |
 | **`attendance`** | `features/attendance` | `AttendanceOverviewPage.tsx`, `attendanceService.ts`, `useAttendanceStore.ts`, `AttendanceCorrectionModal.tsx` | - Bảng giám sát chấm công toàn công ty theo ngày: Có mặt, Đi muộn, Về sớm, Quên quẹt thẻ ra.<br>- Modal nộp đơn và duyệt giải trình giờ công của nhân viên. |
 | **`leaves`** | `features/leaves` | `LeaveRequestsPage.tsx`, `leaveService.ts`, `useLeaveStore.ts`, `LeaveApprovalModal.tsx` | - Sổ cái quỹ phép cá nhân: Hạn mức, Đã dùng, Đang chờ, Còn lại.<br>- Nộp đơn xin nghỉ tự động tính số ngày và chặn trùng lịch.<br>- Phê duyệt đơn phép phân cấp: Duyệt đơn tự động trừ quỹ phép và đồng bộ sang lưới xếp ca. |
 | **`shifts`** | `features/shifts` | `ShiftTemplatesPage.tsx`, `ShiftTemplateModal.tsx` | - Quản lý mẫu ca chuẩn: Giờ bắt đầu/kết thúc, thời gian nghỉ, định mức nhân sự tối thiểu/tối đa, bảng chọn màu trực quan (Color Picker). |

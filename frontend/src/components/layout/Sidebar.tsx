@@ -15,7 +15,9 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useUIStore } from '@/shared/store/useUIStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { ROUTE_PATHS } from '@/routes/route-paths';
+import type { RoleType } from '@/types/domain.types';
 
 interface NavSection {
   title: string;
@@ -24,6 +26,7 @@ interface NavSection {
     label: string;
     icon: React.ReactNode;
     badge?: string;
+    roles?: RoleType[];
   }[];
 }
 
@@ -32,14 +35,15 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'VẬN HÀNH & ĐIỀU ĐỘ',
     items: [
       {
-        path: ROUTE_PATHS.SCHEDULE,
-        label: 'Lịch Phân Ca',
-        icon: <CalendarDays size={18} />,
-      },
-      {
         path: ROUTE_PATHS.DASHBOARD,
         label: 'Tổng Quan',
         icon: <LayoutDashboard size={18} />,
+        roles: ['ROLE_DIRECTOR'],
+      },
+      {
+        path: ROUTE_PATHS.SCHEDULE,
+        label: 'Lịch Phân Ca',
+        icon: <CalendarDays size={18} />,
       },
       {
         path: ROUTE_PATHS.ATTENDANCE,
@@ -92,6 +96,12 @@ const NAV_SECTIONS: NavSection[] = [
 
 export const Sidebar: React.FC = () => {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { currentRole } = useAuthStore();
+
+  const visibleSections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !item.roles || item.roles.includes(currentRole)),
+  })).filter((section) => section.items.length > 0);
 
   return (
     <aside
@@ -179,7 +189,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Navigation Sections */}
       <nav style={{ flex: 1, padding: '12px 0', overflowY: 'auto' }}>
-        {NAV_SECTIONS.map((section, sIdx) => (
+        {visibleSections.map((section, sIdx) => (
           <div key={section.title} style={{ marginBottom: 16 }}>
             {!sidebarCollapsed && (
               <div
