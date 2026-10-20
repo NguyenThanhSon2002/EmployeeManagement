@@ -1,61 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { UserProfileDropdown } from './UserProfileDropdown';
-import { Clock, ChevronDown, Crown, Briefcase, User } from 'lucide-react';
-import type { RoleType } from '@/types/domain.types';
+import { ChevronDown } from 'lucide-react';
 
 export const Topbar: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useUIStore();
   const { currentUser, currentRole, logout } = useAuthStore();
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const timeFormatted = format(currentTime, 'HH:mm:ss');
-  const dateFormatted = format(currentTime, "EEEE, 'ngày' dd/MM/yyyy", { locale: vi });
-
-  const getRoleBadge = (role: RoleType) => {
-    switch (role) {
-      case 'ROLE_DIRECTOR':
-        return {
-          label: 'Giám Đốc (Director)',
-          icon: <Crown size={14} color="#7C3AED" />,
-          color: '#6D28D9',
-          bg: '#F5F3FF',
-          border: '#DDD6FE',
-        };
-      case 'ROLE_MANAGER':
-        return {
-          label: 'Quản Lý (Manager)',
-          icon: <Briefcase size={14} color="#2563EB" />,
-          color: '#1D4ED8',
-          bg: '#EFF6FF',
-          border: '#BFDBFE',
-        };
-      case 'ROLE_EMPLOYEE':
-      default:
-        return {
-          label: 'Nhân Viên (Employee)',
-          icon: <User size={14} color="#059669" />,
-          color: '#047857',
-          bg: '#ECFDF5',
-          border: '#A7F3D0',
-        };
-    }
-  };
-
-  const roleBadge = getRoleBadge(currentRole);
 
   return (
     <header
@@ -79,66 +33,19 @@ export const Topbar: React.FC = () => {
         </span>
       </div>
 
-      {/* Right Controls: Clock, Role Badge, User Identity */}
+      {/* Right Controls: User Identity */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        {/* Real-time Clock GMT+7 with Tabular Monospace */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '5px 12px',
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--radius-full)',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-xs)',
-            fontSize: 'var(--font-caption)',
-            color: 'var(--color-text-secondary)',
-          }}
-          title="Thời gian chuẩn hệ thống (GMT+7)"
-        >
-          <Clock size={14} color="var(--color-primary)" />
-          <span
-            style={{
-              fontWeight: 700,
-              color: 'var(--color-text-primary)',
-              fontVariantNumeric: 'tabular-nums',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              fontSize: 13,
-            }}
-          >
-            {timeFormatted}
-          </span>
-          <span style={{ color: '#CBD5E1' }}>|</span>
-          <span style={{ textTransform: 'capitalize', fontSize: 12 }}>{dateFormatted}</span>
-        </div>
-
-        {/* Current Active Role Badge (Static) */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            height: 34,
-            padding: '0 12px',
-            borderRadius: 'var(--radius-full)',
-            backgroundColor: roleBadge.bg,
-            border: `1px solid ${roleBadge.border}`,
-            color: roleBadge.color,
-            fontSize: '12.5px',
-            fontWeight: 600,
-            boxShadow: 'var(--shadow-xs)',
-          }}
-          title={`Vai trò đang kích hoạt: ${roleBadge.label}`}
-        >
-          {roleBadge.icon}
-          <span>{roleBadge.label}</span>
-        </div>
-
         {/* Interactive User Profile Capsule & Dropdown */}
         <div style={{ position: 'relative' }}>
           <div
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            onClick={() => setIsDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsDropdownOpen((prev) => !prev);
+              }
+            }}
+            tabIndex={0}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -151,6 +58,7 @@ export const Topbar: React.FC = () => {
               cursor: 'pointer',
               userSelect: 'none',
               transition: 'all 0.15s ease',
+              outline: 'none',
             }}
             title="Tùy chọn tài khoản cá nhân & Đăng xuất"
             role="button"
@@ -159,10 +67,10 @@ export const Topbar: React.FC = () => {
           >
             <img
               src={
-                currentUser.avatarUrl ||
+                currentUser?.avatarUrl ||
                 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
               }
-              alt={currentUser.fullName}
+              alt={currentUser?.fullName || 'User'}
               style={{
                 width: 32,
                 height: 32,
@@ -171,14 +79,19 @@ export const Topbar: React.FC = () => {
                 border: '2px solid var(--color-primary-light)',
               }}
             />
-            <div style={{ lineHeight: 1.2 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                {currentUser.fullName}
-              </div>
-              <div style={{ fontSize: 10.5, color: 'var(--color-text-muted)' }}>
-                {currentUser.employeeCode}
-              </div>
-            </div>
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: 'var(--color-text-primary)',
+                maxWidth: 160,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {currentUser?.fullName}
+            </span>
             <ChevronDown
               size={14}
               color="var(--color-text-secondary)"

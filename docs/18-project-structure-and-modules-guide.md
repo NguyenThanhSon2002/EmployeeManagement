@@ -111,7 +111,7 @@ D:\Project\Employee Management\
 │       │   └── store/
 │       │       └── useUIStore.ts  # Quản lý Toast notification và trạng thái UI toàn cục
 │       ├── components/            # UI components tái sử dụng dùng chung
-│       │   ├── layout/            # Khung sườn (AppLayout, Sidebar lọc menu theo RoleType, Topbar, RoleSwitcher)
+│       │   ├── layout/            # Khung sườn (AppLayout, Sidebar lọc menu theo RoleType, Topbar tinh gọn, UserProfileDropdown)
 │       │   ├── ui/                # Nguyên tử UI (Button, Input, Modal, Badge, Card,...)
 │       │   ├── feedback/          # Thông báo Toast, Spinner, Empty State
 │       │   └── charts/            # Biểu đồ KPI thống kê
