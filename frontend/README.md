@@ -12,8 +12,7 @@ Hệ thống ứng dụng web quản lý nhân sự chuyên sâu cho doanh nghi�
 - **Styling & Design System:** Pure CSS Modules & CSS Custom Properties (`src/styles/tokens.css`, `reset.css`, `global.css`). Tối ưu hiệu năng, không phụ thuộc vào UI Component Library cồng kềnh (Tailwind/AntD/MUI).
 - **Typography:** `@fontsource/be-vietnam-pro` và `@fontsource/inter` nạp offline cục bộ, hỗ trợ hiển thị tiếng Việt hoàn hảo.
 - **Iconography:** `lucide-react` (Bộ icon SVG đồng bộ, sắc nét).
-- **Date Handling:** `date-fns` (Thao tác ngày tháng chuẩn xác, định dạng chuẩn GMT+7).
-- **Testing Framework:** Vitest + React Testing Library + `@testing-library/jest-dom` (35 bài kiểm thử tự động, 100% pass).
+- **Quality Assurance & Verification:** TypeScript Strict Mode (`tsc -b`), Oxlint (0 errors, 81 files checked), Production Build Verification via Vite 8.
 
 ---
 
@@ -36,13 +35,7 @@ npm install
 npm run dev
 # Mở trình duyệt tại: http://localhost:5173
 
-# 4. Chạy toàn bộ bộ kiểm thử tự động (Unit tests)
-npm test
-
-# Hoặc chế độ theo dõi file tự động re-test:
-npm run test:watch
-
-# 5. Biên dịch sản phẩm xuất xưởng (Production Build)
+# 4. Biên dịch sản phẩm xuất xưởng (Production Build)
 npm run build
 ```
 
@@ -151,9 +144,7 @@ frontend/
 │   ├── routes/                                 # AppRoutes, route-paths
 │   ├── store/                                  # Zustand stores (Schedule, Auth, Attendance...)
 │   ├── styles/                                 # tokens.css, reset.css, global.css
-│   ├── test/                                   # Vitest suites (Foundation, A11y, Integration...)
 │   └── utils/                                  # conflict-detector, schedule-calc, csv-exporter...
-│       └── __tests__/                          # Unit tests Vitest (code-generator, date.utils)
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
