@@ -5,6 +5,7 @@ import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { BranchFormModal } from './components/BranchFormModal';
 import { DeleteBranchModal } from './components/DeleteBranchModal';
+import { PageHeader } from '@/components/common/PageHeader';
 import {
   Building2,
   Plus,
@@ -196,67 +197,33 @@ export const BranchesPage: React.FC = () => {
   };
 
   return (
-    <div className="page-container" style={{ padding: '24px 32px', maxWidth: '1440px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {/* Page Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          marginBottom: '24px',
-          flexWrap: 'wrap',
-          gap: '16px',
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1
+      <PageHeader
+        icon={<Building2 size={20} />}
+        title="Quản Lý Chi Nhánh & Cơ Sở"
+        subtitle="Quản trị mạng lưới các cơ sở, phân bổ nhân sự và thông tin liên hệ toàn doanh nghiệp"
+        action={
+          isDirector ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleOpenCreate}
               style={{
-                fontSize: '24px',
-                fontWeight: 700,
-                color: 'var(--color-text-primary, #0F172A)',
-                margin: 0,
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 8,
+                padding: '10px 18px',
+                fontWeight: 600,
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
               }}
             >
-              <Building2 size={28} style={{ color: 'var(--color-primary, #2563EB)' }} />
-              Quản Lý Chi Nhánh & Cơ Sở
-            </h1>
-          </div>
-          <p
-            style={{
-              fontSize: '14px',
-              color: 'var(--color-text-secondary, #64748B)',
-              marginTop: '4px',
-              marginBottom: 0,
-            }}
-          >
-            Quản trị mạng lưới các cơ sở, phân bổ nhân sự và thông tin liên hệ toàn doanh nghiệp
-          </p>
-        </div>
-
-        {/* Action Button */}
-        {isDirector && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleOpenCreate}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '10px 18px',
-              fontWeight: 600,
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            }}
-          >
-            <Plus size={18} />
-            Thêm Chi Nhánh Mới
-          </button>
-        )}
-      </div>
+              <Plus size={18} />
+              Thêm Chi Nhánh Mới
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* KPI Cards */}
       <div
@@ -264,7 +231,6 @@ export const BranchesPage: React.FC = () => {
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: '16px',
-          marginBottom: '24px',
         }}
       >
         {/* KPI 1 */}
@@ -407,7 +373,6 @@ export const BranchesPage: React.FC = () => {
           backgroundColor: '#FFFFFF',
           borderRadius: 'var(--radius-lg, 12px)',
           border: '1px solid var(--color-border-subtle, #E2E8F0)',
-          marginBottom: '20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',

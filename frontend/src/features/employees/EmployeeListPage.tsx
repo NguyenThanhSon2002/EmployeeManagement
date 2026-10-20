@@ -9,7 +9,8 @@ import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { employeeService } from './api/employeeService';
 import { branchService } from '@/shared/branch/branchService';
 import { isMockEnabled } from '@/config/env.config';
-import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock } from 'lucide-react';
+import { PageHeader } from '@/components/common/PageHeader';
+import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock, Users } from 'lucide-react';
 import { useAvailabilityStore } from './store/useAvailabilityStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 
@@ -276,24 +277,21 @@ export const EmployeeListPage: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {/* Header & Add Button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            Quản Lý Hồ Sơ Nhân Sự
-          </h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-            Danh mục hồ sơ nhân viên, chức danh, chi nhánh làm việc và lịch khả dụng theo ma trận ca.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleOpenAdd}
-          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-        >
-          <Plus size={16} /> Thêm nhân viên mới
-        </button>
-      </div>
+      <PageHeader
+        icon={<Users size={20} />}
+        title="Quản Lý Hồ Sơ Nhân Sự"
+        subtitle="Danh mục hồ sơ nhân viên, chức danh, chi nhánh làm việc và lịch khả dụng theo ma trận ca."
+        action={
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleOpenAdd}
+            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            <Plus size={16} /> Thêm nhân viên mới
+          </button>
+        }
+      />
 
       {/* Filter Bar */}
       <div

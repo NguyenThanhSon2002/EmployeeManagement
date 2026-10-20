@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAttendanceStore } from './store/useAttendanceStore';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { AttendanceCorrectionModal } from './components/AttendanceCorrectionModal';
+import { PageHeader } from '@/components/common/PageHeader';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
 import type { AttendanceRecord } from '@/types/domain.types';
 import {
@@ -119,25 +120,21 @@ export const AttendanceOverviewPage: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            Bảng Tổng Quan Chấm Công Hàng Ngày
-          </h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-            Giám sát thời gian thực giờ vào/ra, cảnh báo đi muộn, về sớm và tiếp nhận giải trình công.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button type="button" className="btn btn-default" onClick={handleOpenAllCorrections}>
-            <FileQuestion size={16} /> Quản lý Giải trình
-          </button>
-          <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
-            <Download size={16} /> Xuất CSV Điểm Danh
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Clock size={20} />}
+        title="Bảng Tổng Quan Chấm Công Hàng Ngày"
+        subtitle="Giám sát thời gian thực giờ vào/ra, cảnh báo đi muộn, về sớm và tiếp nhận giải trình công."
+        action={
+          <>
+            <button type="button" className="btn btn-default" onClick={handleOpenAllCorrections}>
+              <FileQuestion size={16} /> Quản lý Giải trình
+            </button>
+            <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
+              <Download size={16} /> Xuất CSV Điểm Danh
+            </button>
+          </>
+        }
+      />
 
       {/* KPI Cards */}
       <div

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MonthlyAttendanceReport } from './components/MonthlyAttendanceReport';
 import { ScheduledVsActualTable } from './components/ScheduledVsActualTable';
 import { LateEarlyReport } from './components/LateEarlyReport';
+import { PageHeader } from '@/components/common/PageHeader';
 import { BarChart3, Clock, AlertTriangle } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
@@ -10,14 +11,11 @@ export const ReportsPage: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-          Trung Tâm Báo Cáo & Thống Kê
-        </h1>
-        <p style={{ color: 'var(--color-text-secondary)', marginTop: 2, fontSize: '13.5px' }}>
-          Đối soát dữ liệu công ca, phân tích tỷ lệ hoàn thành kế hoạch và xuất báo cáo Excel/CSV.
-        </p>
-      </div>
+      <PageHeader
+        icon={<BarChart3 size={20} />}
+        title="Trung Tâm Báo Cáo & Thống Kê"
+        subtitle="Đối soát dữ liệu công ca, phân tích tỷ lệ hoàn thành kế hoạch và xuất báo cáo Excel/CSV."
+      />
 
       {/* Modern Tabs Navigation Bar */}
       <div
