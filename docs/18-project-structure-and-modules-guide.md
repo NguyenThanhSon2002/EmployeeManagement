@@ -103,7 +103,7 @@ D:\Project\Employee Management\
 │       │   │   └── apiClient.ts   # Axios/Fetch client: tự gán Bearer Token, unwrap ApiResponse, Blob download
 │       │   ├── auth/
 │       │   │   ├── authService.ts # Gọi API đăng nhập, làm mới token, lấy user /me
-│       │   │   └── useAuthStore.ts# Zustand store quản lý JWT, user principal, auto-bootstrap, switch role
+│       │   │   └── useAuthStore.ts# Zustand store quản lý JWT, user principal, xác thực & duy trì phiên làm việc
 │       │   ├── department/
 │       │   │   └── departmentService.ts # Gọi API danh mục phòng ban toàn cục
 │       │   ├── directory/
@@ -115,7 +115,9 @@ D:\Project\Employee Management\
 │       │   ├── ui/                # Nguyên tử UI (Button, Input, Modal, Badge, Card,...)
 │       │   ├── feedback/          # Thông báo Toast, Spinner, Empty State
 │       │   └── charts/            # Biểu đồ KPI thống kê
-│       ├── features/              # 8 Phân hệ màn hình chức năng tự chứa (Feature-Driven Architecture)
+│       ├── features/              # Các phân hệ màn hình chức năng tự chứa (Feature-Driven Architecture)
+│       │   ├── auth/              # Phân hệ xác thực & Đăng nhập người dùng
+│       │   │   └── LoginPage.tsx  # Giao diện đăng nhập tinh gọn (Centered Card, Form tài khoản chuẩn)
 │       │   ├── schedule/          # Ma trận xếp ca tuần & kiểm tra xung đột trực quan (Core Feature)
 │       │   │   ├── SchedulePage.tsx       # Màn hình chính ma trận xếp ca tuần
 │       │   │   ├── schedule.css           # Bảng style riêng biệt cho WeeklyGrid
@@ -225,12 +227,12 @@ Frontend áp dụng triết lý **Feature-Driven Architecture** kết hợp mô 
   - Tự động phát hiện kiểu `Content-Type` nhị phân (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `text/csv`) để chuyển thành `Blob` và kích hoạt tải file tự động trên trình duyệt.
 - **`shared/auth/`**:
   - `authService.ts`: Các phương thức gọi API xác thực (`login`, `refreshToken`, `getCurrentUser`).
-  - `useAuthStore.ts`: Zustand store quản lý trạng thái đăng nhập, lưu token, tự động đăng nhập mẫu (Auto-Auth Bootstrap) và hỗ trợ đổi vai trò người dùng trực tiếp (`RoleSwitcher`).
+  - `useAuthStore.ts`: Zustand store quản lý trạng thái đăng nhập, lưu token, khôi phục phiên (`initAuth`), giải mã thông tin `currentUser` và phân quyền RBAC.
 - **`shared/department/departmentService.ts`**: Cung cấp hàm nạp danh mục phòng ban toàn cục dùng chung cho bộ lọc ca, bảng nhân sự và báo cáo.
 - **`shared/directory/useDirectoryStore.ts`**: Zustand store quản lý bộ nhớ đệm danh mục toàn hệ thống (Nhân viên, Phòng ban, Vị trí chức danh). Tự động nạp trực tiếp 100% từ API MySQL khi ứng dụng khởi động và cung cấp tra cứu O(1) theo ID cho toàn bộ các màn hình nghiệp vụ.
 - **`shared/store/useUIStore.ts`**: Quản lý hàng đợi thông báo Toast toàn cục (Success, Warning, Error, Info).
 
-### 2. Chi tiết 8 Phân hệ Giao diện (`src/features/*`)
+### 2. Chi tiết các Phân hệ Giao diện (`src/features/*`)
 
 ```
 src/features/<feature-name>/
@@ -244,6 +246,7 @@ src/features/<feature-name>/
 
 | Phân hệ (Feature) | Thư mục | Các file then chốt | Chức năng nghiệp vụ & Trải nghiệm UI |
 | :--- | :--- | :--- | :--- |
+| **`auth`** | `features/auth` | `LoginPage.tsx` | - Màn hình đăng nhập tập trung, tinh gọn (Centered Card tối giản).<br>- Biểu mẫu xác thực chuẩn với tài khoản công việc / mật khẩu, hiển thị cảnh báo lỗi trực quan, tùy chọn ghi nhớ tài khoản (`saved_username`). |
 | **`schedule`** *(Trọng tâm)* | `features/schedule` | `SchedulePage.tsx`, `WeeklyGrid.tsx`, `scheduleService.ts`, `useScheduleStore.ts`, `AssignShiftDrawer.tsx` | - Ma trận 8 cột (Nhân viên + 7 ngày trong tuần).<br>- Hiển thị thẻ ca có mã màu, biểu tượng ca đêm, thẻ phép `[🏖️ PHÉP NĂM]`.<br>- Thanh tiến độ tổng giờ công tuần cảnh báo đỏ khi chạm/vượt trần 48h.<br>- Drawer gán ca kiểm tra vi phạm luật lao động realtime.<br>- Bộ lọc phòng ban, lọc nhân viên có xung đột, tìm kiếm.<br>- Hộp thoại phân ca hàng loạt, sao chép lịch tuần, công bố lịch, xem lịch sử thay đổi. |
 | **`dashboard`** | `features/dashboard` | `DashboardPage.tsx`, `QuickAttendanceCard.tsx` | - Tổng hợp KPI vận hành: Tổng quân số, nhân sự đang làm hôm nay, ca trực đêm, tỷ lệ đúng giờ.<br>- Thẻ Điểm Danh Nhanh: Nút 1-click Check-in/Check-out và đồng hồ bấm giờ công làm việc.<br>- **Kiểm soát truy cập (RBAC):** Chỉ mở cho `ROLE_DIRECTOR`. Đối với `ROLE_MANAGER` và `ROLE_EMPLOYEE`, hệ thống tự động ẩn menu trên Sidebar và kích hoạt Safe Fallback Redirect về `/schedule`. |
 | **`employees`** | `features/employees` | `EmployeeListPage.tsx`, `EmployeeDetailPage.tsx`, `employeeService.ts` | - Bảng danh sách nhân viên: Tìm kiếm realtime, phân quyền phạm vi chi nhánh (`Branch Scoping`): Quản lý và Nhân viên cố định theo chi nhánh trực thuộc, Giám đốc xem/lọc toàn chuỗi.<br>- Phân quyền thao tác: `ROLE_EMPLOYEE` chỉ đọc (ẩn nút Thêm & Sửa); `ROLE_MANAGER` được thêm/sửa nhân sự trong chi nhánh; `ROLE_DIRECTOR` toàn quyền (thêm/sửa mọi trường, xóa nhân sự).<br>- Modal thêm mới/sửa hồ sơ (`EmployeeFormModal`): Khóa trường Chi nhánh và Trạng thái hợp đồng đối với Non-director, tích hợp cơ chế phòng vệ đa tầng (Defense-in-depth).<br>- Trang hồ sơ chi tiết gồm 4 tab: Lý lịch cá nhân, Lịch sử phân ca, Bảng chấm công, Đơn xin nghỉ phép. |
