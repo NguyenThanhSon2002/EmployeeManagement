@@ -54,6 +54,9 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
     }
   }, [isOpen, mode, branch]);
 
+    const branchManagers =
+        mode === 'edit' && branch ? managers.filter((m) => m.branchId === branch.id) : [];
+
   if (!isOpen) return null;
 
   const validate = (): boolean => {
@@ -84,7 +87,7 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
       branchName: branchName.trim(),
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
-      managerId: managerId || undefined,
+        managerId: branchManagers.some((m) => m.id === managerId) ? managerId! : undefined,
       isActive,
     });
   };
@@ -263,11 +266,16 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
                   style={{ width: '100%', backgroundColor: '#FFFFFF' }}
                 >
                   <option value="">-- Chưa phân công --</option>
-                  {managers.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.fullName} ({m.employeeCode})
-                    </option>
+                    {branchManagers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                            {m.fullName} ({m.employeeCode})
+                        </option>
                   ))}
+                    {branchManagers.length === 0 && (
+                        <span style={{ fontSize: '11.5px', color: '#64748B', marginTop: 4, display: 'block' }}>
+                    Chưa có nhân sự thuộc chi nhánh này. Hãy thêm hoặc điều chuyển nhân sự về đây trước.
+                  </span>
+                    )}
                 </select>
               </div>
             </div>
