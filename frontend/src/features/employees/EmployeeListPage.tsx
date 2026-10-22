@@ -26,6 +26,7 @@ export const EmployeeListPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useUIStore();
   const { employees, branches, positions } = useDirectoryStore();
+  const { fetchBranchAvailabilities, availabilities } = useAvailabilityStore();
 
   const [employeesList, setEmployeesList] = useState<Employee[]>(isMockEnabled() ? employees : []);
   const [branchesList, setBranchesList] = useState<Branch[]>(isMockEnabled() ? branches : []);
@@ -107,6 +108,17 @@ export const EmployeeListPage: React.FC = () => {
           version: dto.version || 1,
         }));
         setEmployeesList(mappedEmps);
+
+        // Nạp ngay lịch khả dụng sau khi lấy danh sách chi nhánh
+        if (!isDirector) {
+          fetchBranchAvailabilities(userBranchId);
+        } else if (selectedBranchId !== 0) {
+          fetchBranchAvailabilities(selectedBranchId);
+        } else if (mappedBranches.length > 0) {
+          mappedBranches.forEach((b) => {
+            fetchBranchAvailabilities(b.id);
+          });
+        }
       } catch (err: any) {
         if (!isMounted) return;
         console.error('Không tải được dữ liệu nhân sự từ backend:', err);
@@ -126,7 +138,16 @@ export const EmployeeListPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [isDirector, userBranchId, addToast]);
+  }, [isDirector, userBranchId, selectedBranchId, fetchBranchAvailabilities, addToast]);
+
+  // Cập nhật khi thay đổi dropdown lọc chi nhánh
+  useEffect(() => {
+    if (selectedBranchId !== 0) {
+      fetchBranchAvailabilities(selectedBranchId);
+    } else if (branchesList.length > 0) {
+      branchesList.forEach((b) => fetchBranchAvailabilities(b.id));
+    }
+  }, [selectedBranchId, branchesList, fetchBranchAvailabilities]);
 
   // Filtered List
   const filteredEmployees = useMemo(() => {
@@ -214,10 +235,10 @@ export const EmployeeListPage: React.FC = () => {
       id: savedId,
     } as Employee;
 
-    // 1. Đồng bộ tức thời vào useDirectoryStore
+    // Đồng bộ tức thời vào useDirectoryStore
     useDirectoryStore.getState().upsertEmployeeInDirectory(updatedEmployee);
 
-    // 2. Đồng bộ tức thời vào useScheduleStore
+    // Đồng bộ tức thời vào useScheduleStore
     useScheduleStore.setState((state) => {
       const idx = state.employees.findIndex((e) => e.id === savedId);
       if (idx >= 0) {
@@ -231,7 +252,7 @@ export const EmployeeListPage: React.FC = () => {
 
     if (data.id) {
       setEmployeesList((prev) =>
-        prev.map((e) => (e.id === data.id ? updatedEmployee : e))
+          prev.map((e) => (e.id === data.id ? updatedEmployee : e))
       );
       addToast({
         type: 'success',
@@ -286,10 +307,10 @@ export const EmployeeListPage: React.FC = () => {
     } catch (err: any) {
       console.error('Xóa nhân viên thất bại:', err);
       const errorMsg =
-        err?.response?.data?.error?.message ||
-        err?.data?.error?.message ||
-        err?.message ||
-        'Không thể xóa nhân viên. Vui lòng kiểm tra lại quyền hạn hoặc ràng buộc.';
+          err?.response?.data?.error?.message ||
+          err?.data?.error?.message ||
+          err?.message ||
+          'Không thể xóa nhân viên. Vui lòng kiểm tra lại quyền hạn hoặc ràng buộc.';
       addToast({
         type: 'error',
         title: 'Xóa nhân viên thất bại',
@@ -301,151 +322,151 @@ export const EmployeeListPage: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-      {/* Header & Add Button */}
-      <PageHeader
-        icon={<Users size={20} />}
-        title="Quản Lý Hồ Sơ Nhân Sự"
-        subtitle="Danh mục hồ sơ nhân viên, chức danh, chi nhánh làm việc và lịch khả dụng theo ca."
-        action={
-          canManageStaff ? (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleOpenAdd}
-              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-            >
-              <Plus size={16} /> Thêm nhân viên mới
-            </button>
-          ) : undefined
-        }
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        {/* Header & Add Button */}
+        <PageHeader
+            icon={<Users size={20} />}
+            title="Quản Lý Hồ Sơ Nhân Sự"
+            subtitle="Danh mục hồ sơ nhân viên, chức danh, chi nhánh làm việc và lịch khả dụng theo ca."
+            action={
+              canManageStaff ? (
+                  <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleOpenAdd}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                  >
+                    <Plus size={16} /> Thêm nhân viên mới
+                  </button>
+              ) : undefined
+            }
+        />
 
-      {/* Filter Bar */}
-      <div
-        className="card"
-        style={{
-          padding: '12px 18px',
-          display: 'flex',
-          gap: 14,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Search */}
-          <div style={{ position: 'relative', width: 290 }}>
-            <Search
-              size={15}
-              color="var(--color-text-muted)"
-              style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}
-            />
-            <input
-              type="text"
-              className="input-base"
-              placeholder="Tìm theo họ tên, mã NV, email, SĐT..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              style={{
-                width: '100%',
-                paddingLeft: 34,
-                paddingRight: searchTerm ? 28 : 10,
-                height: 36,
-                fontSize: '12.5px',
-              }}
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchTerm('');
-                  setCurrentPage(1);
-                }}
-                style={{
-                  position: 'absolute',
-                  right: 8,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--color-text-muted)',
-                }}
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Branch Filter */}
-          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <select
-              className="input-base"
-              value={!isDirector ? userBranchId : selectedBranchId}
-              disabled={!isDirector}
-              onChange={(e) => {
-                if (!isDirector) return;
-                setSelectedBranchId(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              style={{
-                height: 36,
-                fontSize: '12.5px',
-                minWidth: 220,
-                fontWeight: 500,
-                backgroundColor: !isDirector ? '#F1F5F9' : '#FFFFFF',
-                color: !isDirector ? '#475569' : 'inherit',
-                cursor: !isDirector ? 'not-allowed' : 'pointer',
-                borderColor: 'var(--color-border-subtle, #E2E8F0)',
-                paddingRight: 12,
-              }}
-              title={
-                !isDirector
-                  ? 'Bạn chỉ có quyền xem nhân sự thuộc chi nhánh làm việc của mình.'
-                  : 'Lọc nhân viên theo chi nhánh'
-              }
-            >
-              {isDirector && <option value={0}>Tất cả chi nhánh</option>}
-              {branchesList.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.branchName}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
+        {/* Filter Bar */}
         <div
-          style={{
-            fontSize: '12px',
-            color: 'var(--color-text-secondary)',
-            backgroundColor: '#F8FAFC',
-            padding: '4px 10px',
-            borderRadius: 'var(--radius-full)',
-            border: '1px solid var(--color-border-subtle)',
-          }}
+            className="card"
+            style={{
+              padding: '12px 18px',
+              display: 'flex',
+              gap: 14,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+            }}
         >
-          Hiển thị <strong style={{ color: 'var(--color-primary)' }}>{filteredEmployees.length}</strong> kết quả
-        </div>
-      </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Search */}
+            <div style={{ position: 'relative', width: 290 }}>
+              <Search
+                  size={15}
+                  color="var(--color-text-muted)"
+                  style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}
+              />
+              <input
+                  type="text"
+                  className="input-base"
+                  placeholder="Tìm theo họ tên, mã NV, email, SĐT..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    width: '100%',
+                    paddingLeft: 34,
+                    paddingRight: searchTerm ? 28 : 10,
+                    height: 36,
+                    fontSize: '12.5px',
+                  }}
+              />
+              {searchTerm && (
+                  <button
+                      type="button"
+                      onClick={() => {
+                        setSearchTerm('');
+                        setCurrentPage(1);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: 8,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--color-text-muted)',
+                      }}
+                  >
+                    <X size={14} />
+                  </button>
+              )}
+            </div>
 
-      {/* Employee Data Table */}
-      <div className="card" style={{ overflowX: 'auto', borderRadius: 'var(--radius-xl)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
-          <thead>
-            <tr
+            {/* Branch Filter */}
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <select
+                  className="input-base"
+                  value={!isDirector ? userBranchId : selectedBranchId}
+                  disabled={!isDirector}
+                  onChange={(e) => {
+                    if (!isDirector) return;
+                    setSelectedBranchId(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    height: 36,
+                    fontSize: '12.5px',
+                    minWidth: 220,
+                    fontWeight: 500,
+                    backgroundColor: !isDirector ? '#F1F5F9' : '#FFFFFF',
+                    color: !isDirector ? '#475569' : 'inherit',
+                    cursor: !isDirector ? 'not-allowed' : 'pointer',
+                    borderColor: 'var(--color-border-subtle, #E2E8F0)',
+                    paddingRight: 12,
+                  }}
+                  title={
+                    !isDirector
+                        ? 'Bạn chỉ có quyền xem nhân sự thuộc chi nhánh làm việc của mình.'
+                        : 'Lọc nhân viên theo chi nhánh'
+                  }
+              >
+                {isDirector && <option value={0}>Tất cả chi nhánh</option>}
+                {branchesList.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.branchName}
+                    </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div
               style={{
-                backgroundColor: '#F8FAFC',
-                borderBottom: '1px solid var(--color-border)',
+                fontSize: '12px',
                 color: 'var(--color-text-secondary)',
-                fontSize: 12.5,
-                fontWeight: 600,
-                letterSpacing: '0.02em',
+                backgroundColor: '#F8FAFC',
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-full)',
+                border: '1px solid var(--color-border-subtle)',
               }}
+          >
+            Hiển thị <strong style={{ color: 'var(--color-primary)' }}>{filteredEmployees.length}</strong> kết quả
+          </div>
+        </div>
+
+        {/* Employee Data Table */}
+        <div className="card" style={{ overflowX: 'auto', borderRadius: 'var(--radius-xl)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
+            <thead>
+            <tr
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderBottom: '1px solid var(--color-border)',
+                  color: 'var(--color-text-secondary)',
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
             >
               <th style={{ padding: '12px 16px' }}>Mã NV</th>
               <th style={{ padding: '12px 16px' }}>Họ và Tên</th>
@@ -456,288 +477,288 @@ export const EmployeeListPage: React.FC = () => {
               <th style={{ padding: '12px 16px' }}>Lịch Khả Dụng</th>
               <th style={{ padding: '12px 16px', textAlign: 'center' }}>Thao Tác</th>
             </tr>
-          </thead>
-          <tbody>
+            </thead>
+            <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-                  Đang tải danh sách nhân sự từ máy chủ...
-                </td>
-              </tr>
+                <tr>
+                  <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+                    Đang tải danh sách nhân sự từ máy chủ...
+                  </td>
+                </tr>
             ) : loadError ? (
-              <tr>
-                <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-error)' }}>
-                  {loadError}
-                </td>
-              </tr>
+                <tr>
+                  <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-error)' }}>
+                    {loadError}
+                  </td>
+                </tr>
             ) : paginatedEmployees.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                  Không tìm thấy nhân viên nào phù hợp với bộ lọc hiện tại.
-                </td>
-              </tr>
+                <tr>
+                  <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                    Không tìm thấy nhân viên nào phù hợp với bộ lọc hiện tại.
+                  </td>
+                </tr>
             ) : (
-              paginatedEmployees.map((emp) => {
-                const isResigned = emp.employmentStatus === 'RESIGNED';
-                let badge = (
-                  <span className="badge badge-success">
+                paginatedEmployees.map((emp) => {
+                  const isResigned = emp.employmentStatus === 'RESIGNED';
+                  let badge = (
+                      <span className="badge badge-success">
                     <span className="badge-dot" /> Chính thức
                   </span>
-                );
-                if (emp.employmentStatus === 'PROBATION') {
-                  badge = (
-                    <span className="badge badge-warning">
+                  );
+                  if (emp.employmentStatus === 'PROBATION') {
+                    badge = (
+                        <span className="badge badge-warning">
                       <span className="badge-dot" /> Thử việc
                     </span>
-                  );
-                } else if (emp.employmentStatus === 'RESIGNED' || !emp.isActive) {
-                  badge = (
-                    <span className="badge badge-error">
+                    );
+                  } else if (emp.employmentStatus === 'RESIGNED' || !emp.isActive) {
+                    badge = (
+                        <span className="badge badge-error">
                       <span className="badge-dot" /> Đã nghỉ việc
                     </span>
-                  );
-                } else if (emp.employmentStatus === 'ON_LEAVE') {
-                  badge = (
-                    <span className="badge badge-info">
+                    );
+                  } else if (emp.employmentStatus === 'ON_LEAVE') {
+                    badge = (
+                        <span className="badge badge-info">
                       <span className="badge-dot" /> Nghỉ chế độ
                     </span>
-                  );
-                }
+                    );
+                  }
 
-                return (
-                  <tr
-                    key={emp.id}
-                    style={{
-                      borderBottom: '1px solid var(--color-border-subtle)',
-                      transition: 'background-color var(--transition-fast), opacity var(--transition-fast)',
-                      opacity: isResigned ? 0.55 : 1,
-                      backgroundColor: isResigned ? '#F8FAFC' : 'transparent',
-                    }}
-                  >
-                    <td style={{ padding: '12px 16px', fontWeight: 700, color: isResigned ? 'var(--color-text-muted)' : 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                      {emp.employeeCode}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <img
-                          src={
-                            emp.avatarUrl ||
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-                          }
-                          alt={emp.fullName}
+                  return (
+                      <tr
+                          key={emp.id}
                           style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 'var(--radius-full)',
-                            objectFit: 'cover',
-                            border: '1.5px solid var(--color-border)',
-                            filter: isResigned ? 'grayscale(100%)' : 'none',
+                            borderBottom: '1px solid var(--color-border-subtle)',
+                            transition: 'background-color var(--transition-fast), opacity var(--transition-fast)',
+                            opacity: isResigned ? 0.55 : 1,
+                            backgroundColor: isResigned ? '#F8FAFC' : 'transparent',
                           }}
-                        />
-                        <div>
-                          <div style={{ fontWeight: 600, color: isResigned ? 'var(--color-text-secondary)' : 'var(--color-text-primary)' }}>{emp.fullName}</div>
-                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Mail size={11} /> {emp.email}
+                      >
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: isResigned ? 'var(--color-text-muted)' : 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                          {emp.employeeCode}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <img
+                                src={
+                                    emp.avatarUrl ||
+                                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
+                                }
+                                alt={emp.fullName}
+                                style={{
+                                  width: 34,
+                                  height: 34,
+                                  borderRadius: 'var(--radius-full)',
+                                  objectFit: 'cover',
+                                  border: '1.5px solid var(--color-border)',
+                                  filter: isResigned ? 'grayscale(100%)' : 'none',
+                                }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 600, color: isResigned ? 'var(--color-text-secondary)' : 'var(--color-text-primary)' }}>{emp.fullName}</div>
+                              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <Mail size={11} /> {emp.email}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+                        </td>
+                        <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
                       <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: 'var(--radius-sm)',
-                          backgroundColor: '#F1F5F9',
-                          fontSize: '12px',
-                        }}
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-sm)',
+                            backgroundColor: '#F1F5F9',
+                            fontSize: '12px',
+                          }}
                       >
                         {getBranchName(emp.branchId)}
                       </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
-                      {getPositionName(emp.positionId)}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
-                        <Phone size={12} color="var(--color-text-muted)" />
-                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{emp.phoneNumber}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>{badge}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      {isResigned ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '4px 10px',
-                            borderRadius: 'var(--radius-md, 6px)',
-                            fontSize: 12,
-                            fontWeight: 500,
-                            backgroundColor: '#F1F5F9',
-                            color: '#94A3B8',
-                            border: '1px solid #E2E8F0',
-                            cursor: 'not-allowed',
-                            userSelect: 'none',
-                          }}
-                          title="Nhân viên đã nghỉ việc không thể đăng ký lịch khả dụng"
-                        >
+                        </td>
+                        <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
+                          {getPositionName(emp.positionId)}
+                        </td>
+                        <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+                            <Phone size={12} color="var(--color-text-muted)" />
+                            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{emp.phoneNumber}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>{badge}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          {isResigned ? (
+                              <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    padding: '4px 10px',
+                                    borderRadius: 'var(--radius-md, 6px)',
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    backgroundColor: '#F1F5F9',
+                                    color: '#94A3B8',
+                                    border: '1px solid #E2E8F0',
+                                    cursor: 'not-allowed',
+                                    userSelect: 'none',
+                                  }}
+                                  title="Nhân viên đã nghỉ việc không thể đăng ký lịch khả dụng"
+                              >
                           <Clock size={13} color="#94A3B8" />
                           Đã nghỉ việc
                         </span>
-                      ) : (() => {
-                        const empAvail = useAvailabilityStore.getState().getAvailability(emp.id);
-                        let totalAvailSlots = 0;
-                        for (let d = 1; d <= 7; d++) {
-                          totalAvailSlots += (empAvail[d] || []).length;
-                        }
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/employees/${emp.id}?tab=AVAILABILITY`)}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              padding: '4px 10px',
-                              borderRadius: 'var(--radius-md, 6px)',
-                              fontSize: 12,
-                              fontWeight: 600,
-                              backgroundColor: totalAvailSlots > 0 ? '#ECFDF5' : '#F8FAFC',
-                              color: totalAvailSlots > 0 ? '#047857' : '#64748B',
-                              border: totalAvailSlots > 0 ? '1px solid #A7F3D0' : '1px dashed #CBD5E1',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                            title="Bấm để đăng ký / chỉnh sửa lịch làm việc khả dụng"
-                            aria-label={`Lịch làm việc khả dụng ${emp.fullName}`}
-                          >
-                            <Clock size={13} color={totalAvailSlots > 0 ? '#10B981' : '#94A3B8'} />
-                            {totalAvailSlots > 0 ? `${totalAvailSlots} ca rảnh/tuần` : 'Chưa đăng ký'}
-                          </button>
-                        );
-                      })()}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
-                        <button
-                          type="button"
-                          className="btn btn-default"
-                          onClick={() => !isResigned && navigate(`/employees/${emp.id}?tab=AVAILABILITY`)}
-                          disabled={isResigned}
-                          style={{
-                            padding: '0 8px',
-                            height: 32,
-                            color: isResigned ? '#94A3B8' : 'var(--color-primary, #2563EB)',
-                            backgroundColor: isResigned ? '#F1F5F9' : '#EFF6FF',
-                            borderColor: isResigned ? '#E2E8F0' : '#BFDBFE',
-                            cursor: isResigned ? 'not-allowed' : 'pointer',
-                            opacity: isResigned ? 0.6 : 1,
-                          }}
-                          title={isResigned ? 'Nhân viên đã nghỉ việc không thể đăng ký lịch' : 'Khai báo lịch làm việc khả dụng'}
-                        >
-                          <Clock size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-default"
-                          onClick={() => navigate(`/employees/${emp.id}`)}
-                          style={{ padding: '0 8px', height: 32 }}
-                          title="Xem chi tiết hồ sơ"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        {canManageStaff && (
-                          <button
-                            type="button"
-                            className="btn btn-default"
-                            onClick={() => handleOpenEdit(emp)}
-                            style={{ padding: '0 8px', height: 32 }}
-                            title="Chỉnh sửa thông tin"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            type="button"
-                            className="btn btn-danger"
-                            onClick={() => setDeletingEmployee(emp)}
-                            style={{ padding: '0 8px', height: 32 }}
-                            title="Xóa hồ sơ nhân viên"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
+                          ) : (() => {
+                            const empAvail = availabilities[Number(emp.id)] || {};
+                            let totalAvailSlots = 0;
+                            for (let d = 1; d <= 7; d++) {
+                              totalAvailSlots += (empAvail[d] || []).length;
+                            }
+                            return (
+                                <button
+                                    type="button"
+                                    onClick={() => navigate(`/employees/${emp.id}?tab=AVAILABILITY`)}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 6,
+                                      padding: '4px 10px',
+                                      borderRadius: 'var(--radius-md, 6px)',
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                      backgroundColor: totalAvailSlots > 0 ? '#ECFDF5' : '#F8FAFC',
+                                      color: totalAvailSlots > 0 ? '#047857' : '#64748B',
+                                      border: totalAvailSlots > 0 ? '1px solid #A7F3D0' : '1px dashed #CBD5E1',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s ease',
+                                    }}
+                                    title="Bấm để đăng ký / chỉnh sửa lịch làm việc khả dụng"
+                                    aria-label={`Lịch làm việc khả dụng ${emp.fullName}`}
+                                >
+                                  <Clock size={13} color={totalAvailSlots > 0 ? '#10B981' : '#94A3B8'} />
+                                  {totalAvailSlots > 0 ? `${totalAvailSlots} ca rảnh/tuần` : 'Chưa đăng ký'}
+                                </button>
+                            );
+                          })()}
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                            <button
+                                type="button"
+                                className="btn btn-default"
+                                onClick={() => !isResigned && navigate(`/employees/${emp.id}?tab=AVAILABILITY`)}
+                                disabled={isResigned}
+                                style={{
+                                  padding: '0 8px',
+                                  height: 32,
+                                  color: isResigned ? '#94A3B8' : 'var(--color-primary, #2563EB)',
+                                  backgroundColor: isResigned ? '#F1F5F9' : '#EFF6FF',
+                                  borderColor: isResigned ? '#E2E8F0' : '#BFDBFE',
+                                  cursor: isResigned ? 'not-allowed' : 'pointer',
+                                  opacity: isResigned ? 0.6 : 1,
+                                }}
+                                title={isResigned ? 'Nhân viên đã nghỉ việc không thể đăng ký lịch' : 'Khai báo lịch làm việc khả dụng'}
+                            >
+                              <Clock size={14} />
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-default"
+                                onClick={() => navigate(`/employees/${emp.id}`)}
+                                style={{ padding: '0 8px', height: 32 }}
+                                title="Xem chi tiết hồ sơ"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            {canManageStaff && (
+                                <button
+                                    type="button"
+                                    className="btn btn-default"
+                                    onClick={() => handleOpenEdit(emp)}
+                                    style={{ padding: '0 8px', height: 32 }}
+                                    title="Chỉnh sửa thông tin"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                            )}
+                            {canDelete && (
+                                <button
+                                    type="button"
+                                    className="btn btn-danger"
+                                    onClick={() => setDeletingEmployee(emp)}
+                                    style={{ padding: '0 8px', height: 32 }}
+                                    title="Xóa hồ sơ nhân viên"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                  );
+                })
             )}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
 
-        {/* Pagination Toolbar */}
-        <div
-          style={{
-            padding: '12px 18px',
-            borderTop: '1px solid var(--color-border-subtle)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 10,
-            fontSize: '12.5px',
-            color: 'var(--color-text-secondary)',
-          }}
-        >
-          <div>
-            Trang <strong>{currentPage}</strong> / <strong>{totalPages}</strong> (Tổng cộng {filteredEmployees.length} nhân viên)
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              type="button"
-              className="btn btn-default"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              style={{ height: 32, padding: '0 10px' }}
-            >
-              <ChevronLeft size={15} /> Trước
-            </button>
-            <button
-              type="button"
-              className="btn btn-default"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              style={{ height: 32, padding: '0 10px' }}
-            >
-              Sau <ChevronRight size={15} />
-            </button>
+          {/* Pagination Toolbar */}
+          <div
+              style={{
+                padding: '12px 18px',
+                borderTop: '1px solid var(--color-border-subtle)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 10,
+                fontSize: '12.5px',
+                color: 'var(--color-text-secondary)',
+              }}
+          >
+            <div>
+              Trang <strong>{currentPage}</strong> / <strong>{totalPages}</strong> (Tổng cộng {filteredEmployees.length} nhân viên)
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                  type="button"
+                  className="btn btn-default"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  style={{ height: 32, padding: '0 10px' }}
+              >
+                <ChevronLeft size={15} /> Trước
+              </button>
+              <button
+                  type="button"
+                  className="btn btn-default"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  style={{ height: 32, padding: '0 10px' }}
+              >
+                Sau <ChevronRight size={15} />
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Employee Modal Form */}
+        <EmployeeFormModal
+            isOpen={modalOpen}
+            initialData={editingEmployee}
+            branches={branchesList}
+            positions={positions}
+            onClose={() => setModalOpen(false)}
+            onSubmit={handleSaveEmployee}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmModal
+            isOpen={!!deletingEmployee}
+            employee={deletingEmployee}
+            branchName={deletingEmployee ? getBranchName(deletingEmployee.branchId) : undefined}
+            isDeleting={isDeleting}
+            onClose={() => setDeletingEmployee(null)}
+            onConfirm={handleConfirmDelete}
+        />
       </div>
-
-      {/* Employee Modal Form */}
-      <EmployeeFormModal
-        isOpen={modalOpen}
-        initialData={editingEmployee}
-        branches={branchesList}
-        positions={positions}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleSaveEmployee}
-      />
-
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={!!deletingEmployee}
-        employee={deletingEmployee}
-        branchName={deletingEmployee ? getBranchName(deletingEmployee.branchId) : undefined}
-        isDeleting={isDeleting}
-        onClose={() => setDeletingEmployee(null)}
-        onConfirm={handleConfirmDelete}
-      />
-    </div>
   );
 };

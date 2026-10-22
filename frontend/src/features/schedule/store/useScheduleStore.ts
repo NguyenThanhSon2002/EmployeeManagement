@@ -68,6 +68,23 @@ function saveBranchScheduleToStorage(
   }
 }
 
+/** Đếm số người (của chi nhánh đang xem) đang giữ từng ô: khóa `${ca}_${ngày}` */
+function buildShiftStaffCount(
+    assignments: Record<string, ShiftAssignment[]>,
+    employees: Employee[]
+): Map<string, number> {
+  const empIds = new Set(employees.map((e) => e.id));
+  const counts = new Map<string, number>();
+  for (const list of Object.values(assignments)) {
+    for (const a of list) {
+      if (a.status === 'CANCELLED' || !empIds.has(a.employeeId)) continue;
+      const cellKey = `${a.workShiftId}_${a.workDate}`;
+      counts.set(cellKey, (counts.get(cellKey) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
 export interface AssignShiftPayload {
   assignmentId?: number; // Optional ID for updating an existing shift
   employeeId: number;
@@ -106,14 +123,7 @@ interface ScheduleState {
 
   assignShift: (payload: AssignShiftPayload) => { success: boolean; error?: string };
   deleteAssignment: (assignmentId: number, changeReason?: string, actorRole?: RoleType) => void;
-  bulkAssign: (payload: {
-    employeeIds: number[];
-    workShiftId: number;
-    fromDate: string;
-    toDate: string;
-    overrideReason?: string;
-    actorRole: RoleType;
-  }) => void;
+  applyAutoAssignments: (newAssignments: ShiftAssignment[]) => void;
   copyWeek: (mode: 'SKIP_OCCUPIED' | 'REPLACE_ALL') => { copiedCount: number; skippedCount: number };
   publishSchedule: () => void;
   unpublishSchedule: () => void;
@@ -403,6 +413,20 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       const key = `${payload.employeeId}_${payload.workDate}`;
       const existingList = state.assignments[key] ? [...state.assignments[key]] : [];
 
+      // Định biên tối đa: không cho thêm người vào ca đã đủ
+      const isNewToThisShift = !existingList.some(
+          (a) => a.workShiftId === template.id && a.status !== 'CANCELLED'
+      );
+      if (isNewToThisShift) {
+        const staffCount = buildShiftStaffCount(state.assignments, state.employees);
+        if ((staffCount.get(`${template.id}_${payload.workDate}`) ?? 0) >= template.maxStaffing) {
+          return {
+            success: false,
+            error: `Ca ${template.shiftName} ngày ${payload.workDate} đã đủ định biên tối đa (${template.maxStaffing} người).`,
+          };
+        }
+      }
+
       const { startMs, endMs } = getShiftAbsoluteTimeRange(
         payload.workDate,
         template.startTime,
@@ -588,79 +612,32 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       });
     },
 
-    bulkAssign: (payload) => {
+    applyAutoAssignments: (newAssignments) => {
+      if (newAssignments.length === 0) return;
       const state = get();
-      const template = state.shiftTemplates.find((t) => t.id === payload.workShiftId);
-      if (!template) return;
-
-      const fromDate = parseISO(payload.fromDate);
-      const toDate = parseISO(payload.toDate);
       const updated = { ...state.assignments };
 
-      const { startMs, endMs } = getShiftAbsoluteTimeRange(
-        payload.fromDate,
-        template.startTime,
-        template.endTime,
-        template.isCrossMidnight
-      );
-      const durationMs = endMs - startMs;
+      for (const a of newAssignments) {
+        const key = `${a.employeeId}_${a.workDate}`;
+        const list = updated[key] ? [...updated[key]] : [];
 
-      for (const empId of payload.employeeIds) {
-        const emp = state.employees.find((e) => e.id === empId);
-        if (!emp || !emp.isActive || emp.employmentStatus === 'RESIGNED') continue;
+        // Không ghi đè: bỏ qua nếu nhân viên đã có đúng ca này trong ngày
+        const alreadyHasShift = list.some(
+            (x) => x.workShiftId === a.workShiftId && x.status !== 'CANCELLED'
+        );
+        if (alreadyHasShift) continue;
 
-        let curr = fromDate;
-        while (curr <= toDate) {
-          const dateStr = format(curr, 'yyyy-MM-dd');
-          const key = `${empId}_${dateStr}`;
-
-          const { startMs: cellStartMs } = getShiftAbsoluteTimeRange(
-            dateStr,
-            template.startTime,
-            template.endTime,
-            template.isCrossMidnight
-          );
-
-          const newAssignment: ShiftAssignment = {
-            id: Date.now() + Math.floor(Math.random() * 100000),
-            scheduleId: state.scheduleId,
-            employeeId: empId,
-            workShiftId: template.id,
-            workDate: dateStr,
-            snapshotShiftName: template.shiftName,
-            snapshotStartTime: template.startTime,
-            snapshotEndTime: template.endTime,
-            snapshotBreakMinutes: template.breakMinutes,
-            snapshotCrossMidnight: template.isCrossMidnight,
-            snapshotColorCode: template.colorCode,
-            plannedStartTime: new Date(cellStartMs).toISOString(),
-            plannedEndTime: new Date(cellStartMs + durationMs).toISOString(),
-            status: 'ASSIGNED',
-            overrideRule: payload.overrideReason ? 'BULK_OVERRIDE' : null,
-            overrideReason: payload.overrideReason ?? null,
-            version: 1,
-          };
-
-          const existingList = updated[key] ? [...updated[key]] : [];
-          const existingIdx = existingList.findIndex((a) => a.workShiftId === template.id);
-          if (existingIdx >= 0) {
-            existingList[existingIdx] = newAssignment;
-          } else {
-            existingList.push(newAssignment);
-          }
-          updated[key] = existingList;
-
-          curr = addDays(curr, 1);
-        }
+        list.push(a);
+        updated[key] = list;
       }
 
       saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updated);
 
       const updatedConflicts = computeAllConflicts(
-        updated,
-        state.employees,
-        state.approvedLeaves,
-        state.holidays
+          updated,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays
       );
 
       set({ assignments: updated, conflicts: updatedConflicts });
