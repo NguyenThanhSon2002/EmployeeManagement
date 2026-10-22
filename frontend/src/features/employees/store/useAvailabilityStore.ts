@@ -57,8 +57,7 @@ export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
 
   fetchBranchAvailabilities: async (branchId: number) => {
     try {
-      // Đổi sang gọi đúng URL mà Controller hiện tại của bạn đang hỗ trợ:
-      const response: any = await api.get(`/api/v1/employees/availability?branch_id=${branchId}`);
+      const response: any = await api.get(`/employees/availability?branch_id=${branchId}`);
 
       const rawData = response?.data?.data || response?.data || response || {};
       const data: AvailabilityMap = rawData;
