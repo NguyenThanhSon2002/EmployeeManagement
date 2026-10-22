@@ -58,8 +58,8 @@ function loadBranchScheduleFromStorage(branchId: number): Record<string, ShiftAs
 }
 
 function saveBranchScheduleToStorage(
-  branchId: number,
-  assignments: Record<string, ShiftAssignment[]>
+    branchId: number,
+    assignments: Record<string, ShiftAssignment[]>
 ) {
   try {
     localStorage.setItem(`${STORAGE_PREFIX}${branchId}`, JSON.stringify(assignments));
@@ -130,6 +130,9 @@ interface ScheduleState {
   recomputeAllConflicts: () => void;
   resetDemoData: () => void;
 
+  /** Xóa toàn bộ phân ca trong tuần hiện tại đang chọn */
+  resetCurrentWeekSchedule: () => Promise<boolean>;
+
   fetchShiftTemplates: () => Promise<void>;
   addShiftTemplate: (template: Omit<ShiftTemplate, 'id'>) => Promise<ShiftTemplate> | ShiftTemplate;
   updateShiftTemplate: (id: number, data: Partial<ShiftTemplate>) => Promise<void> | void;
@@ -172,10 +175,10 @@ function initializeStateFromSeed(branchId: number = 1) {
 }
 
 function computeAllConflicts(
-  assignments: Record<string, ShiftAssignment[]>,
-  employees: Employee[],
-  leaves: LeaveRequest[],
-  holidays: CompanyHoliday[]
+    assignments: Record<string, ShiftAssignment[]>,
+    employees: Employee[],
+    leaves: LeaveRequest[],
+    holidays: CompanyHoliday[]
 ): Record<string, ScheduleConflict[]> {
   const settings = useSettingsStore.getState().settings;
   const conflictsMap: Record<string, ScheduleConflict[]> = {};
@@ -190,10 +193,10 @@ function computeAllConflicts(
 
     const timeRange = assignmentToTimeRange(assignment);
     const { netHours } = calculateShiftDurations(
-      assignment.snapshotStartTime,
-      assignment.snapshotEndTime,
-      assignment.snapshotBreakMinutes,
-      assignment.snapshotCrossMidnight
+        assignment.snapshotStartTime,
+        assignment.snapshotEndTime,
+        assignment.snapshotBreakMinutes,
+        assignment.snapshotCrossMidnight
     );
 
     const assignDate = parseISO(assignment.workDate);
@@ -228,10 +231,10 @@ function computeAllConflicts(
 export const useScheduleStore = create<ScheduleState>((set, get) => {
   const initial = initializeStateFromSeed(1);
   const initialConflicts = computeAllConflicts(
-    initial.assignments,
-    initial.employees,
-    initial.approvedLeaves,
-    initial.holidays
+      initial.assignments,
+      initial.employees,
+      initial.approvedLeaves,
+      initial.holidays
   );
 
   return {
@@ -276,8 +279,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           const dirEmp = useDirectoryStore.getState().getEmployeeById(empSchedule.employee_id);
           const resolvedStatus = (empSchedule as any).employment_status || (empSchedule as any).employmentStatus || dirEmp?.employmentStatus || 'OFFICIAL';
           const resolvedIsActive = (empSchedule as any).is_active !== undefined
-            ? (empSchedule as any).is_active
-            : ((empSchedule as any).isActive !== undefined ? (empSchedule as any).isActive : (dirEmp?.isActive !== undefined ? dirEmp.isActive : resolvedStatus !== 'RESIGNED'));
+              ? (empSchedule as any).is_active
+              : ((empSchedule as any).isActive !== undefined ? (empSchedule as any).isActive : (dirEmp?.isActive !== undefined ? dirEmp.isActive : resolvedStatus !== 'RESIGNED'));
 
           backendEmployees.push({
             id: empSchedule.employee_id,
@@ -428,16 +431,16 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       }
 
       const { startMs, endMs } = getShiftAbsoluteTimeRange(
-        payload.workDate,
-        template.startTime,
-        template.endTime,
-        template.isCrossMidnight
+          payload.workDate,
+          template.startTime,
+          template.endTime,
+          template.isCrossMidnight
       );
 
       // Determine if updating an existing assignment or adding a new one
       const existingIndex = payload.assignmentId !== undefined
-        ? existingList.findIndex((a) => a.id === payload.assignmentId)
-        : -1;
+          ? existingList.findIndex((a) => a.id === payload.assignmentId)
+          : -1;
 
       const existingAssignment = existingIndex >= 0 ? existingList[existingIndex] : null;
 
@@ -496,10 +499,10 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       }
 
       const updatedConflicts = computeAllConflicts(
-        updatedAssignments,
-        state.employees,
-        state.approvedLeaves,
-        state.holidays
+          updatedAssignments,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays
       );
 
       set({
@@ -510,37 +513,37 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
 
       if (!isMockEnabled()) {
         scheduleService
-          .assignSingleShift({
-            schedule_id: state.scheduleId,
-            employee_id: payload.employeeId,
-            work_shift_id: payload.workShiftId,
-            work_date: payload.workDate,
-            override_rule: payload.overrideRule || undefined,
-            override_reason: payload.overrideReason || undefined,
-            schedule_version: state.scheduleVersion,
-          })
-          .then((saved) => {
-            if (saved && saved.id) {
-              set((prev) => {
-                const currentList = prev.assignments[key] || [];
-                const updatedList = currentList.map((item) =>
-                  item.id === newAssignment.id ? { ...item, id: saved.id, version: saved.version || item.version } : item
-                );
-                const newAssignmentsMap = {
-                  ...prev.assignments,
-                  [key]: updatedList,
-                };
-                saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, newAssignmentsMap);
-                return {
-                  assignments: newAssignmentsMap,
-                  scheduleVersion: (prev.scheduleVersion || 1) + 1,
-                };
-              });
-            }
-          })
-          .catch((err) => {
-            console.warn('Failed to persist shift assignment to backend:', err);
-          });
+            .assignSingleShift({
+              schedule_id: state.scheduleId,
+              employee_id: payload.employeeId,
+              work_shift_id: payload.workShiftId,
+              work_date: payload.workDate,
+              override_rule: payload.overrideRule || undefined,
+              override_reason: payload.overrideReason || undefined,
+              schedule_version: state.scheduleVersion,
+            })
+            .then((saved) => {
+              if (saved && saved.id) {
+                set((prev) => {
+                  const currentList = prev.assignments[key] || [];
+                  const updatedList = currentList.map((item) =>
+                      item.id === newAssignment.id ? { ...item, id: saved.id, version: saved.version || item.version } : item
+                  );
+                  const newAssignmentsMap = {
+                    ...prev.assignments,
+                    [key]: updatedList,
+                  };
+                  saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, newAssignmentsMap);
+                  return {
+                    assignments: newAssignmentsMap,
+                    scheduleVersion: (prev.scheduleVersion || 1) + 1,
+                  };
+                });
+              }
+            })
+            .catch((err) => {
+              console.warn('Failed to persist shift assignment to backend:', err);
+            });
       }
 
       return { success: true };
@@ -599,10 +602,10 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments);
 
       const updatedConflicts = computeAllConflicts(
-        updatedAssignments,
-        state.employees,
-        state.approvedLeaves,
-        state.holidays
+          updatedAssignments,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays
       );
 
       set({
@@ -657,14 +660,14 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       const allList: ShiftAssignment[] = Object.values(state.assignments).flat();
 
       const sourceAssignments = allList.filter(
-        (a) => a.workDate >= prevMonStr && a.workDate <= prevSunStr
+          (a) => a.workDate >= prevMonStr && a.workDate <= prevSunStr
       );
       const targetAssignments = allList.filter(
-        (a) => a.workDate >= state.currentStartDate && a.workDate <= currentSunStr
+          (a) => a.workDate >= state.currentStartDate && a.workDate <= currentSunStr
       );
 
       const targetLeaves = state.approvedLeaves.filter(
-        (l) => l.startDate <= currentSunStr && l.endDate >= state.currentStartDate
+          (l) => l.startDate <= currentSunStr && l.endDate >= state.currentStartDate
       );
 
       const result = copyScheduleWeek({
@@ -700,10 +703,10 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments);
 
       const updatedConflicts = computeAllConflicts(
-        updatedAssignments,
-        state.employees,
-        state.approvedLeaves,
-        state.holidays
+          updatedAssignments,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays
       );
 
       set({
@@ -742,13 +745,63 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       });
     },
 
+    resetCurrentWeekSchedule: async () => {
+      const state = get();
+      const branchId = state.filterOptions.branchId || 1;
+      const currentMon = parseISO(state.currentStartDate);
+      const currentSun = addDays(currentMon, 6);
+      const currentMonStr = state.currentStartDate;
+      const currentSunStr = format(currentSun, 'yyyy-MM-dd');
+
+      // 1. Lọc bỏ toàn bộ phân ca trong khoảng thời gian tuần hiện tại
+      const updatedAssignments = { ...state.assignments };
+      for (const [key, list] of Object.entries(updatedAssignments)) {
+        const remaining = list.filter(
+            (a) => a.workDate < currentMonStr || a.workDate > currentSunStr
+        );
+        if (remaining.length > 0) {
+          updatedAssignments[key] = remaining;
+        } else {
+          delete updatedAssignments[key];
+        }
+      }
+
+      // 2. Lưu lại vào cache trình duyệt
+      saveBranchScheduleToStorage(branchId, updatedAssignments);
+
+      // 3. Tính toán lại xung đột (conflicts sẽ trở về rỗng cho tuần này)
+      const updatedConflicts = computeAllConflicts(
+          updatedAssignments,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays
+      );
+
+      // 4. Đồng bộ State
+      set({
+        assignments: updatedAssignments,
+        conflicts: updatedConflicts,
+      });
+
+      // 5. Nếu kết nối Backend thực, gọi API dọn dẹp các phân ca trên server
+      if (!isMockEnabled() && state.scheduleId) {
+        try {
+          await scheduleService.deleteAssignment(state.scheduleId, state.scheduleVersion);
+        } catch (err) {
+          console.warn('Lỗi khi xóa phân ca tuần trên máy chủ:', err);
+        }
+      }
+
+      return true;
+    },
+
     recomputeAllConflicts: () => {
       const state = get();
       const updatedConflicts = computeAllConflicts(
-        state.assignments,
-        state.employees,
-        state.approvedLeaves,
-        state.holidays
+          state.assignments,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays
       );
       set({ conflicts: updatedConflicts });
     },
@@ -762,10 +815,10 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       }
       const initialReset = initializeStateFromSeed(branchId);
       const conflictsReset = computeAllConflicts(
-        initialReset.assignments,
-        initialReset.employees,
-        initialReset.approvedLeaves,
-        initialReset.holidays
+          initialReset.assignments,
+          initialReset.employees,
+          initialReset.approvedLeaves,
+          initialReset.holidays
       );
       set({
         ...initialReset,
