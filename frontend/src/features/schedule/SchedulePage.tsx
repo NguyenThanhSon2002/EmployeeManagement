@@ -50,6 +50,7 @@ export const SchedulePage: React.FC = () => {
         publishSchedule,
         unpublishSchedule,
         fetchWeeklySchedule,
+        resetCurrentWeekSchedule,
     } = useScheduleStore();
 
     const {currentRole} = useAuthStore();
@@ -402,6 +403,39 @@ export const SchedulePage: React.FC = () => {
         setUnpublishDialogOpen(false);
     };
 
+    // Reset Week Schedule Handler
+    const handleResetSchedule = async () => {
+        if (scheduleStatus === 'PUBLISHED') {
+            addToast({
+                type: 'error',
+                title: 'Không thể reset lịch',
+                message: 'Lịch tuần đã công bố chính thức. Hãy thu hồi công bố về Bản nháp trước khi reset.',
+            });
+            return;
+        }
+
+        const isConfirmed = window.confirm(
+            'Bạn có chắc chắn muốn xóa toàn bộ phân ca của tuần này không? Thao tác này sẽ xóa sạch lịch làm việc và đưa số ca tuần về 0.'
+        );
+
+        if (!isConfirmed) return;
+
+        const success = await resetCurrentWeekSchedule();
+        if (success) {
+            addToast({
+                type: 'success',
+                title: 'Đã reset lịch phân ca',
+                message: 'Đã dọn sạch toàn bộ ca làm việc của tuần hiện tại.',
+            });
+        } else {
+            addToast({
+                type: 'error',
+                title: 'Lỗi',
+                message: 'Không thể reset lịch phân ca tuần.',
+            });
+        }
+    };
+
     return (
         <div style={{display: 'flex', flexDirection: 'column', gap: 'var(--space-md)'}}>
             {/* 1. Top Action Toolbar */}
@@ -431,6 +465,7 @@ export const SchedulePage: React.FC = () => {
                 onOpenUnpublish={() => setUnpublishDialogOpen(true)}
                 onOpenCopyWeek={() => setCopyDialogOpen(true)}
                 onOpenBulkAssign={() => setBulkDialogOpen(true)}
+                onResetSchedule={handleResetSchedule}
                 onExportCsv={handleExportCsv}
                 onOpenHistory={() => setHistoryDrawerOpen(true)}
             />
