@@ -4,6 +4,7 @@ import { api } from '@/shared/api/apiClient';
 
 interface AvailabilityState {
   availabilities: AvailabilityMap;
+  preferredShifts: Record<number, number[]>; // empId -> list of preferred shiftIds
   isLoading: boolean;
   isLoaded: boolean;
   error: string | null;
@@ -12,10 +13,22 @@ interface AvailabilityState {
   fetchBranchAvailabilities: (branchId: number) => Promise<void>;
 
   /** Tải lịch rảnh của 1 nhân sự từ Backend */
-  fetchEmployeeAvailability: (employeeId: number) => Promise<Record<number, number[]>>;
+  fetchEmployeeAvailability: (employeeId: number) => Promise<{
+    availabilities: Record<number, number[]>;
+    preferredShiftIds: number[];
+  }>;
 
   /** Lấy lịch khả dụng 7 ngày (1..7) của 1 nhân sự từ Store cache */
   getAvailability: (employeeId: number) => Record<number, number[]>;
+
+  /** Lấy danh sách ID ca ưu tiên của 1 nhân sự */
+  getPreferredShiftIds: (employeeId: number) => number[];
+
+  /** Kiểm tra nhân sự có ưu tiên ca này không */
+  isPreferredShift: (employeeId: number, shiftTemplateId: number) => boolean;
+
+  /** Bật/tắt ca ưu tiên cho nhân sự */
+  togglePreferredShift: (employeeId: number, shiftTemplateId: number) => void;
 
   /** Kiểm tra nhanh O(1) nhân sự có thể làm ca này vào thứ này không */
   isAvailable: (employeeId: number, dayOfWeek: number, shiftTemplateId: number) => boolean;
@@ -32,8 +45,12 @@ interface AvailabilityState {
   /** Bật/tắt ca cho cả 7 ngày trong tuần */
   setShiftForWeek: (employeeId: number, shiftTemplateId: number, available: boolean) => void;
 
-  /** Lưu toàn bộ bản đồ 7 ngày của nhân viên xuống Database qua Backend API */
-  saveAvailability: (employeeId: number, record?: Record<number, number[]>) => Promise<boolean>;
+  /** Lưu toàn bộ bản đồ 7 ngày và danh sách ca ưu tiên của nhân viên xuống Database qua Backend API */
+  saveAvailability: (
+    employeeId: number,
+    record?: Record<number, number[]>,
+    preferredShiftIds?: number[]
+  ) => Promise<boolean>;
 
   /** Xóa toàn bộ lịch rảnh của nhân viên trên Backend */
   clearAllAvailability: (employeeId: number) => Promise<boolean>;
@@ -51,21 +68,31 @@ const createEmptyWeek = (): Record<number, number[]> => ({
 
 export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
   availabilities: {},
+  preferredShifts: {},
   isLoading: false,
   isLoaded: false,
   error: null,
 
   fetchBranchAvailabilities: async (branchId: number) => {
     try {
-      const response: any = await api.get(`/employees/availability?branch_id=${branchId}`);
+      const [availRes, prefRes]: [any, any] = await Promise.all([
+        api.get(`/employees/availability?branch_id=${branchId}`),
+        api.get(`/employees/preferred-shifts?branch_id=${branchId}`).catch(() => ({ data: {} })),
+      ]);
 
-      const rawData = response?.data?.data || response?.data || response || {};
+      const rawData = availRes?.data?.data || availRes?.data || availRes || {};
       const data: AvailabilityMap = rawData;
+      const rawPref = prefRes?.data?.data || prefRes?.data || prefRes || {};
+      const prefData: Record<number, number[]> = rawPref;
 
       set((state) => ({
         availabilities: {
           ...state.availabilities,
           ...data,
+        },
+        preferredShifts: {
+          ...state.preferredShifts,
+          ...prefData,
         },
         isLoaded: true,
       }));
@@ -77,21 +104,37 @@ export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
   fetchEmployeeAvailability: async (employeeId: number) => {
     const empIdNum = Number(employeeId);
     try {
-      // URL chuẩn theo mapping của Spring Boot: /api/v1/employees/{employeeId}/availability
       const response: any = await api.get(`/employees/${empIdNum}/availability`);
-      const rawData = response?.data?.data || response?.data || response || createEmptyWeek();
-      const data: Record<number, number[]> = rawData;
+      const raw = response?.data?.data || response?.data || response || {};
+
+      let availMap: Record<number, number[]> = createEmptyWeek();
+      let prefIds: number[] = [];
+
+      if (raw && raw.availabilities) {
+        availMap = raw.availabilities;
+        prefIds = (raw.preferred_shift_ids || []).map(Number);
+      } else if (raw && typeof raw === 'object' && !raw.availabilities) {
+        // Fallback for simple map
+        availMap = raw;
+      }
 
       set((state) => ({
         availabilities: {
           ...state.availabilities,
-          [empIdNum]: data,
+          [empIdNum]: availMap,
+        },
+        preferredShifts: {
+          ...state.preferredShifts,
+          [empIdNum]: prefIds,
         },
       }));
-      return data;
+      return { availabilities: availMap, preferredShiftIds: prefIds };
     } catch (err) {
       console.error(`Lỗi khi tải lịch khả dụng nhân viên ${employeeId}:`, err);
-      return get().getAvailability(empIdNum);
+      return {
+        availabilities: get().getAvailability(empIdNum),
+        preferredShiftIds: get().getPreferredShiftIds(empIdNum),
+      };
     }
   },
 
@@ -106,6 +149,35 @@ export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
       }
     }
     return result;
+  },
+
+  getPreferredShiftIds: (employeeId: number) => {
+    const prefList = get().preferredShifts[Number(employeeId)];
+    return Array.isArray(prefList) ? [...prefList] : [];
+  },
+
+  isPreferredShift: (employeeId: number, shiftTemplateId: number) => {
+    const prefList = get().preferredShifts[Number(employeeId)];
+    if (!Array.isArray(prefList)) return false;
+    return prefList.includes(Number(shiftTemplateId));
+  },
+
+  togglePreferredShift: (employeeId: number, shiftTemplateId: number) => {
+    const empIdNum = Number(employeeId);
+    const shiftIdNum = Number(shiftTemplateId);
+    const current = get().getPreferredShiftIds(empIdNum);
+    const idx = current.indexOf(shiftIdNum);
+    if (idx >= 0) {
+      current.splice(idx, 1);
+    } else {
+      current.push(shiftIdNum);
+    }
+    set((state) => ({
+      preferredShifts: {
+        ...state.preferredShifts,
+        [empIdNum]: current,
+      },
+    }));
   },
 
   isAvailable: (employeeId: number, dayOfWeek: number, shiftTemplateId: number) => {
@@ -188,20 +260,33 @@ export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
     }));
   },
 
-  saveAvailability: async (employeeId: number, record?: Record<number, number[]>) => {
+  saveAvailability: async (
+    employeeId: number,
+    record?: Record<number, number[]>,
+    preferredShiftIds?: number[]
+  ) => {
     const empIdNum = Number(employeeId);
     const dataToSave = record || get().getAvailability(empIdNum);
+    const prefToSave =
+      preferredShiftIds !== undefined
+        ? preferredShiftIds
+        : get().getPreferredShiftIds(empIdNum);
 
     try {
       await api.put(`/employees/${empIdNum}/availability`, {
         employee_id: empIdNum,
         availabilities: dataToSave,
+        preferred_shift_ids: prefToSave,
       });
 
       set((state) => ({
         availabilities: {
           ...state.availabilities,
           [empIdNum]: dataToSave,
+        },
+        preferredShifts: {
+          ...state.preferredShifts,
+          [empIdNum]: prefToSave,
         },
       }));
       return true;
@@ -219,12 +304,17 @@ export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
       await api.put(`/employees/${empIdNum}/availability`, {
         employee_id: empIdNum,
         availabilities: emptyWeek,
+        preferred_shift_ids: [],
       });
 
       set((state) => ({
         availabilities: {
           ...state.availabilities,
           [empIdNum]: emptyWeek,
+        },
+        preferredShifts: {
+          ...state.preferredShifts,
+          [empIdNum]: [],
         },
       }));
       return true;

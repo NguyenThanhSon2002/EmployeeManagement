@@ -13,6 +13,8 @@ export interface Branch {
   branchName: string;
   address?: string;
   phoneNumber?: string;
+  openedDate?: string;
+  opened_date?: string;
   managerId?: number | null;
   isActive: boolean;
 }
@@ -26,6 +28,13 @@ export interface Position {
 
 /** Employment Status */
 export type EmploymentStatus = 'PROBATION' | 'OFFICIAL' | 'ON_LEAVE' | 'RESIGNED';
+
+export interface SecondaryBranchAssignment {
+  branchId: number;
+  positionId: number;
+  branchName?: string;
+  positionName?: string;
+}
 
 /** Employee Profile */
 export interface Employee {
@@ -47,6 +56,13 @@ export interface Employee {
   gender?: string;
   address?: string;
   employmentType?: string;
+  hasMultiBranch?: boolean;
+  homeBranchId?: number;
+  homeBranchName?: string;
+  branchHours?: number;
+  totalChainHours?: number;
+  secondaryBranchIds?: number[];
+  secondaryBranches?: SecondaryBranchAssignment[];
 }
 
 /** Lịch khả dụng làm việc của nhân viên theo ngày trong tuần */
@@ -117,13 +133,29 @@ export interface ShiftAssignment {
   overrideRule: string | null;
   overrideReason: string | null;
   version: number;
+
+  // Multi-branch assignment properties
+  branchId?: number;
+  branchName?: string;
+  isExternal?: boolean;
+  readOnly?: boolean;
+}
+
+/** Employee Monthly Schedule and Summary */
+export interface EmployeeMonthlySchedule {
+  employeeId: number;
+  month: string; // YYYY-MM
+  totalShifts: number;
+  totalHours: number;
+  earliestAvailableMonth: string; // YYYY-MM
+  shifts: ShiftAssignment[];
 }
 
 /** Severity for shift conflicts */
 export type ConflictSeverity = 'MANDATORY' | 'WARNING';
 
 /** Rule codes for scheduling business rules */
-export type ConflictRuleCode = 'BR-001' | 'BR-002' | 'BR-003' | 'BR-004' | 'BR-005' | 'BR-006' | 'BR-007' | 'BR-DAILY-LIMIT';
+export type ConflictRuleCode = 'BR-001' | 'BR-002' | 'BR-003' | 'BR-004' | 'BR-005' | 'BR-006' | 'BR-007' | 'BR-DAILY-LIMIT' | 'BR-TRAVEL-BUFFER';
 
 /** Scheduling Conflict Object */
 export interface ScheduleConflict {

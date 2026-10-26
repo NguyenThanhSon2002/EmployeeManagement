@@ -18,7 +18,9 @@ import {
   Edit2,
   Trash2,
   Loader2,
+  Calendar,
 } from 'lucide-react';
+import { formatDateVi } from '@/utils/date.utils';
 
 export const BranchesPage: React.FC = () => {
   const { addToast } = useUIStore();
@@ -533,6 +535,26 @@ export const BranchesPage: React.FC = () => {
                           <span style={{ fontSize: '12px', color: '#94A3B8', fontStyle: 'italic' }}>
                             Chưa cập nhật địa chỉ
                           </span>
+                        )}
+
+                        {(branch.openedDate || branch.opened_date) && (
+                          <div
+                            style={{
+                              fontSize: '11.5px',
+                              color: '#475569',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              marginTop: 5,
+                              backgroundColor: '#F1F5F9',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontWeight: 500,
+                            }}
+                          >
+                            <Calendar size={11} style={{ color: '#64748B' }} />
+                            <span>Hoạt động từ: {formatDateVi(branch.openedDate || branch.opened_date)}</span>
+                          </div>
                         )}
                       </td>
 

@@ -29,6 +29,7 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
   const [branchName, setBranchName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [openedDate, setOpenedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [managerId, setManagerId] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -40,6 +41,7 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
         setBranchName(branch.branchName);
         setAddress(branch.address || '');
         setPhoneNumber(branch.phoneNumber || '');
+        setOpenedDate(branch.openedDate || branch.opened_date || new Date().toISOString().slice(0, 10));
         setManagerId(branch.managerId || null);
         setIsActive(branch.isActive);
       } else {
@@ -47,6 +49,7 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
         setBranchName('');
         setAddress('');
         setPhoneNumber('');
+        setOpenedDate(new Date().toISOString().slice(0, 10));
         setManagerId(null);
         setIsActive(true);
       }
@@ -72,6 +75,10 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
       errs.phoneNumber = 'Số điện thoại không hợp lệ (8 - 20 số)';
     }
 
+    if (!openedDate || !openedDate.trim()) {
+      errs.openedDate = 'Ngày bắt đầu hoạt động không được để trống';
+    }
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -87,7 +94,9 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
       branchName: branchName.trim(),
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
-        managerId: branchManagers.some((m) => m.id === managerId) ? managerId! : undefined,
+      openedDate: openedDate.trim(),
+      opened_date: openedDate.trim(),
+      managerId: branchManagers.some((m) => m.id === managerId) ? managerId! : undefined,
       isActive,
     });
   };
@@ -278,6 +287,33 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({
                     )}
                 </select>
               </div>
+            </div>
+
+            {/* Row 4: Ngày bắt đầu hoạt động */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: 6, color: '#334155' }}>
+                Ngày bắt đầu hoạt động <span style={{ color: '#DC2626' }}>*</span>
+              </label>
+              <input
+                type="date"
+                className="input"
+                value={openedDate}
+                onChange={(e) => setOpenedDate(e.target.value)}
+                disabled={isSaving}
+                style={{
+                  width: '100%',
+                  borderColor: errors.openedDate ? '#DC2626' : undefined,
+                }}
+              />
+              {errors.openedDate ? (
+                <span style={{ fontSize: '11.5px', color: '#DC2626', marginTop: 4, display: 'block' }}>
+                  {errors.openedDate}
+                </span>
+              ) : (
+                <span style={{ fontSize: '11.5px', color: '#64748B', marginTop: 4, display: 'block' }}>
+                  Mốc thời gian chi nhánh bắt đầu vận hành (dùng để xác định giới hạn lịch làm việc và phân bổ nhân sự).
+                </span>
+              )}
             </div>
 
             {/* Row 4: Status Toggle */}

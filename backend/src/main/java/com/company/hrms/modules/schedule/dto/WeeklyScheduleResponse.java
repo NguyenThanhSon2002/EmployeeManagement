@@ -55,6 +55,21 @@ public class WeeklyScheduleResponse {
         @JsonProperty("is_active")
         private Boolean isActive;
 
+        @JsonProperty("branch_hours")
+        private Double branchHours = 0.0;
+
+        @JsonProperty("total_chain_hours")
+        private Double totalChainHours = 0.0;
+
+        @JsonProperty("has_multi_branch")
+        private Boolean hasMultiBranch = false;
+
+        @JsonProperty("home_branch_id")
+        private Long homeBranchId;
+
+        @JsonProperty("home_branch_name")
+        private String homeBranchName;
+
         private List<ShiftAssignmentDto> assignments = new ArrayList<>();
 
         public EmployeeScheduleDto() {
@@ -90,6 +105,16 @@ public class WeeklyScheduleResponse {
         public void setWeeklyScheduledHours(Double hours) { this.weeklyScheduledHours = hours; }
         public List<ShiftAssignmentDto> getAssignments() { return assignments; }
         public void setAssignments(List<ShiftAssignmentDto> assignments) { this.assignments = assignments; }
+        public Double getBranchHours() { return branchHours; }
+        public void setBranchHours(Double branchHours) { this.branchHours = branchHours; }
+        public Double getTotalChainHours() { return totalChainHours; }
+        public void setTotalChainHours(Double totalChainHours) { this.totalChainHours = totalChainHours; }
+        public Boolean getHasMultiBranch() { return hasMultiBranch; }
+        public void setHasMultiBranch(Boolean hasMultiBranch) { this.hasMultiBranch = hasMultiBranch; }
+        public Long getHomeBranchId() { return homeBranchId; }
+        public void setHomeBranchId(Long homeBranchId) { this.homeBranchId = homeBranchId; }
+        public String getHomeBranchName() { return homeBranchName; }
+        public void setHomeBranchName(String homeBranchName) { this.homeBranchName = homeBranchName; }
     }
 
     public static class HolidayDto {

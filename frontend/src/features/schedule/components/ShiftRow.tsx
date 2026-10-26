@@ -13,6 +13,7 @@ interface ShiftRowProps {
   conflictsMap: Record<string, ScheduleConflict[]>;
   todayDateStr: string;
   canEdit: boolean;
+  onlyShowConflicts?: boolean;
   onOpenAssignDrawer: (shiftTemplateId: number, workDate: string) => void;
   onRemoveAssignment: (assignmentId: number) => void;
 }
@@ -25,6 +26,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
   conflictsMap,
   todayDateStr,
   canEdit,
+  onlyShowConflicts = false,
   onOpenAssignDrawer,
   onRemoveAssignment,
 }) => {
@@ -47,17 +49,31 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
         role="rowheader"
         className="employee-sticky-cell shift-sticky-cell"
         style={{
-          borderLeft: `5px solid ${template.colorCode || 'var(--color-primary)'}`,
+          borderLeft: `4px solid ${template.colorCode || '#2563EB'}`,
           padding: '12px 14px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           gap: 6,
+          backgroundColor: '#FFFFFF',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text-primary)' }}>
+          <span style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', letterSpacing: '-0.01em' }}>
             {template.shiftName}
+          </span>
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              color: '#2563EB',
+              backgroundColor: '#EFF6FF',
+              padding: '1px 6px',
+              borderRadius: '4px',
+              border: '1px solid #DBEAFE',
+            }}
+          >
+            {netHours.toFixed(1)}h
           </span>
         </div>
 
@@ -66,23 +82,20 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            fontSize: 12,
-            color: 'var(--color-text-secondary)',
+            gap: 5,
+            fontSize: '12px',
+            color: '#64748B',
+            fontWeight: 500,
           }}
         >
-          <Clock size={13} style={{ flexShrink: 0 }} />
+          <Clock size={12} color="#94A3B8" style={{ flexShrink: 0 }} />
           <span>
             {template.startTime} - {template.endTime}
             {template.isCrossMidnight && (
-              <span style={{ color: '#722ED1', marginLeft: 3 }}>
-                <Moon size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> +1
+              <span style={{ color: '#7C3AED', marginLeft: 4, fontWeight: 600 }}>
+                <Moon size={11} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 1 }} />+1
               </span>
             )}
-          </span>
-          <span style={{ color: 'var(--color-text-muted)' }}>•</span>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-            {netHours.toFixed(1)}h
           </span>
         </div>
 
@@ -92,13 +105,13 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: 5,
-            fontSize: 11,
-            color: 'var(--color-text-muted)',
+            fontSize: '11px',
+            color: '#64748B',
           }}
         >
-          <Users size={12} />
+          <Users size={12} color="#94A3B8" />
           <span>
-            Định biên: <strong style={{ color: 'var(--color-text-secondary)' }}>{template.minStaffing}</strong>
+            Định biên: <strong style={{ color: '#1E293B' }}>{template.minStaffing}</strong>
             {template.maxStaffing ? ` - ${template.maxStaffing}` : ''} NV
           </span>
         </div>
@@ -131,6 +144,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
             conflictsMap={conflictsMap}
             isToday={isToday}
             canEdit={canEdit}
+            onlyShowConflicts={onlyShowConflicts}
             onOpenAssignDrawer={() => onOpenAssignDrawer(template.id, dateStr)}
             onRemoveAssignment={(assignmentId, e) => {
               e.stopPropagation();

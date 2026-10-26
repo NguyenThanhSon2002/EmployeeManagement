@@ -12,6 +12,10 @@ import com.company.hrms.modules.schedule.repository.CompanyHolidayRepository;
 import com.company.hrms.modules.schedule.repository.ShiftAssignmentRepository;
 import com.company.hrms.modules.setting.domain.SystemSetting;
 import com.company.hrms.modules.setting.repository.SystemSettingRepository;
+import com.company.hrms.modules.branch.domain.Branch;
+import com.company.hrms.modules.branch.repository.BranchRepository;
+import com.company.hrms.modules.schedule.domain.Schedule;
+import com.company.hrms.modules.schedule.repository.ScheduleRepository;
 import com.company.hrms.modules.shift.domain.WorkShift;
 import com.company.hrms.modules.shift.repository.WorkShiftRepository;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,8 @@ public class ConflictDetectionEngine {
     private final CompanyHolidayRepository holidayRepository;
     private final WorkShiftRepository workShiftRepository;
     private final SystemSettingRepository systemSettingRepository;
+    private final ScheduleRepository scheduleRepository;
+    private final BranchRepository branchRepository;
 
     public ConflictDetectionEngine(
             List<ConflictRule> rules,
@@ -41,7 +47,9 @@ public class ConflictDetectionEngine {
             LeaveRequestRepository leaveRequestRepository,
             CompanyHolidayRepository holidayRepository,
             WorkShiftRepository workShiftRepository,
-            SystemSettingRepository systemSettingRepository) {
+            SystemSettingRepository systemSettingRepository,
+            ScheduleRepository scheduleRepository,
+            BranchRepository branchRepository) {
         this.rules = rules;
         this.employeeRepository = employeeRepository;
         this.assignmentRepository = assignmentRepository;
@@ -49,6 +57,8 @@ public class ConflictDetectionEngine {
         this.holidayRepository = holidayRepository;
         this.workShiftRepository = workShiftRepository;
         this.systemSettingRepository = systemSettingRepository;
+        this.scheduleRepository = scheduleRepository;
+        this.branchRepository = branchRepository;
     }
 
     public ConflictValidationResult validateAssignment(
@@ -56,6 +66,16 @@ public class ConflictDetectionEngine {
             Long workShiftId,
             LocalDate workDate,
             Long excludeAssignmentId) {
+        return validateAssignment(employeeId, workShiftId, workDate, excludeAssignmentId, null, null);
+    }
+
+    public ConflictValidationResult validateAssignment(
+            Long employeeId,
+            Long workShiftId,
+            LocalDate workDate,
+            Long excludeAssignmentId,
+            Long targetScheduleId,
+            Long targetBranchId) {
 
         Employee employee = employeeRepository.findByIdAndDeletedAtIsNull(employeeId).orElse(null);
         WorkShift workShift = workShiftRepository.findByIdAndDeletedAtIsNull(workShiftId).orElse(null);
@@ -67,12 +87,39 @@ public class ConflictDetectionEngine {
                 workShift != null && Boolean.TRUE.equals(workShift.getIsCrossMidnight())
         );
 
-        // Fetch existing assignments around this date (from 1 day before to 1 day after to detect overnight/rest issues)
-        List<ShiftAssignment> existingAssignments = assignmentRepository.findAllByEmployeeIdAndWorkDateBetween(
+        // Fetch existing assignments around this date for the employee (to detect overnight/rest/overlap issues)
+        List<ShiftAssignment> existingAssignments = new ArrayList<>(assignmentRepository.findAllByEmployeeIdAndWorkDateBetween(
                 employeeId,
                 workDate.minusDays(2),
                 workDate.plusDays(2)
-        );
+        ));
+
+        // Also fetch all existing assignments for this workShift on this workDate to evaluate staffing capacity
+        Long effectiveBranchId = targetBranchId;
+        if (effectiveBranchId == null && targetScheduleId != null) {
+            effectiveBranchId = scheduleRepository.findById(targetScheduleId).map(Schedule::getBranchId).orElse(null);
+        }
+        if (effectiveBranchId == null && employee != null) {
+            effectiveBranchId = employee.getBranchId();
+        }
+
+        if (effectiveBranchId != null) {
+            List<ShiftAssignment> shiftSlotAssignments = assignmentRepository.findAssignmentsByBranchShiftAndDate(
+                    effectiveBranchId, workShiftId, workDate);
+            for (ShiftAssignment ssa : shiftSlotAssignments) {
+                if (!existingAssignments.contains(ssa)) {
+                    existingAssignments.add(ssa);
+                }
+            }
+        } else if (targetScheduleId != null) {
+            List<ShiftAssignment> shiftSlotAssignments = assignmentRepository.findAssignmentsByShiftAndDate(
+                    targetScheduleId, workShiftId, workDate);
+            for (ShiftAssignment ssa : shiftSlotAssignments) {
+                if (!existingAssignments.contains(ssa)) {
+                    existingAssignments.add(ssa);
+                }
+            }
+        }
 
         List<LeaveRequest> approvedLeaves = leaveRequestRepository.findApprovedLeavesByEmployeeAndDate(employeeId, workDate);
         List<CompanyHoliday> holidays = holidayRepository.findAllByHolidayDateBetween(workDate.minusDays(1), workDate.plusDays(1));
@@ -97,6 +144,7 @@ public class ConflictDetectionEngine {
         );
 
         applySystemSettings(context);
+        populateBranchContext(context, targetScheduleId, targetBranchId);
 
         ConflictValidationResult result = new ConflictValidationResult();
         for (ConflictRule rule : rules) {
@@ -104,6 +152,52 @@ public class ConflictDetectionEngine {
         }
 
         return result;
+    }
+
+    private void populateBranchContext(ConflictDetectionContext context, Long targetScheduleId, Long explicitBranchId) {
+        Long targetBranchId = explicitBranchId;
+        if (targetBranchId == null && targetScheduleId != null) {
+            targetBranchId = scheduleRepository.findById(targetScheduleId)
+                    .map(Schedule::getBranchId)
+                    .orElse(null);
+        }
+        if (targetBranchId == null && context.getEmployee() != null) {
+            targetBranchId = context.getEmployee().getBranchId();
+        }
+        context.setTargetBranchId(targetBranchId);
+        if (targetBranchId != null) {
+            context.setTargetBranchName(branchRepository.findByIdAndDeletedAtIsNull(targetBranchId)
+                    .map(Branch::getBranchName)
+                    .orElse("Chi nhánh #" + targetBranchId));
+        }
+
+        List<ShiftAssignment> existing = context.getExistingAssignments();
+        if (existing != null && !existing.isEmpty()) {
+            List<Long> schedIds = existing.stream()
+                    .map(ShiftAssignment::getScheduleId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (!schedIds.isEmpty()) {
+                List<Schedule> scheds = scheduleRepository.findAllById(schedIds);
+                Map<Long, Long> schedBranchMap = new HashMap<>();
+                List<Long> bIds = new ArrayList<>();
+                for (Schedule s : scheds) {
+                    schedBranchMap.put(s.getId(), s.getBranchId());
+                    if (s.getBranchId() != null) {
+                        bIds.add(s.getBranchId());
+                    }
+                }
+                Map<Long, String> bNameMap = branchRepository.findAllById(bIds).stream()
+                        .collect(Collectors.toMap(Branch::getId, Branch::getBranchName, (k1, k2) -> k1));
+                Map<Long, String> schedBranchNameMap = new HashMap<>();
+                for (Map.Entry<Long, Long> entry : schedBranchMap.entrySet()) {
+                    schedBranchNameMap.put(entry.getKey(), bNameMap.getOrDefault(entry.getValue(), "Chi nhánh #" + entry.getValue()));
+                }
+                context.setScheduleBranchIdMap(schedBranchMap);
+                context.setScheduleBranchNameMap(schedBranchNameMap);
+            }
+        }
     }
 
     public ConflictValidationResult validateBulk(
@@ -167,6 +261,7 @@ public class ConflictDetectionEngine {
                 );
 
                 applySystemSettings(context);
+                populateBranchContext(context, null, null);
 
                 for (ConflictRule rule : rules) {
                     rule.evaluate(context, overallResult);

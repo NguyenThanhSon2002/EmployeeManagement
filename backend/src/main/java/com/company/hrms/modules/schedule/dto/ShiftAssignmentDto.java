@@ -47,6 +47,18 @@ public class ShiftAssignmentDto {
     @JsonProperty("override_reason")
     private String overrideReason;
 
+    @JsonProperty("branch_id")
+    private Long branchId;
+
+    @JsonProperty("branch_name")
+    private String branchName;
+
+    @JsonProperty("is_external")
+    private Boolean isExternal = false;
+
+    @JsonProperty("read_only")
+    private Boolean readOnly = false;
+
     private Integer version;
 
     public ShiftAssignmentDto() {
@@ -82,4 +94,12 @@ public class ShiftAssignmentDto {
     public void setOverrideReason(String overrideReason) { this.overrideReason = overrideReason; }
     public Integer getVersion() { return version; }
     public void setVersion(Integer version) { this.version = version; }
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
+    public String getBranchName() { return branchName; }
+    public void setBranchName(String branchName) { this.branchName = branchName; }
+    public Boolean getIsExternal() { return isExternal; }
+    public void setIsExternal(Boolean isExternal) { this.isExternal = isExternal; }
+    public Boolean getReadOnly() { return readOnly; }
+    public void setReadOnly(Boolean readOnly) { this.readOnly = readOnly; }
 }

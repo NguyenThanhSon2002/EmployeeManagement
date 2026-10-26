@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import type { Branch, ScheduleStatus, RoleType } from '@/types/domain.types';
+import type { ScheduleStatus, RoleType } from '@/types/domain.types';
 import { formatDateVi, offsetWeeks } from '@/utils/date.utils';
 import {
     ChevronLeft,
@@ -10,7 +10,6 @@ import {
     Copy,
     Plus,
     Download,
-    History,
     Sparkles,
     RotateCcw,
 } from 'lucide-react';
@@ -19,8 +18,6 @@ import { DatePickerPopover } from './DatePickerPopover';
 interface ScheduleToolbarProps {
     baseMonday: Date;
     monthDate?: Date;
-    branches: Branch[];
-    selectedBranchId: number;
     scheduleStatus: ScheduleStatus;
     viewMode: 'WEEK' | 'MONTH';
     currentRole: RoleType;
@@ -31,7 +28,6 @@ interface ScheduleToolbarProps {
     onNextMonth?: () => void;
     onCurrentMonth?: () => void;
     onSelectDate?: (date: Date) => void;
-    onSelectBranch: (branchId: number) => void;
     onToggleViewMode: (mode: 'WEEK' | 'MONTH') => void;
     onOpenPublish: () => void;
     onOpenUnpublish?: () => void;
@@ -39,14 +35,11 @@ interface ScheduleToolbarProps {
     onOpenBulkAssign: () => void;
     onResetSchedule?: () => void;
     onExportCsv: () => void;
-    onOpenHistory: () => void;
 }
 
 export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                                                     baseMonday,
                                                                     monthDate,
-                                                                    branches,
-                                                                    selectedBranchId,
                                                                     scheduleStatus,
                                                                     viewMode,
                                                                     currentRole,
@@ -57,7 +50,6 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                                                     onNextMonth,
                                                                     onCurrentMonth,
                                                                     onSelectDate,
-                                                                    onSelectBranch,
                                                                     onToggleViewMode,
                                                                     onOpenPublish,
                                                                     onOpenUnpublish,
@@ -65,7 +57,6 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                                                     onOpenBulkAssign,
                                                                     onResetSchedule,
                                                                     onExportCsv,
-                                                                    onOpenHistory,
                                                                 }) => {
     const [isPickerOpen, setIsPickerOpen] = React.useState(false);
     const sunday = offsetWeeks(baseMonday, 0);
@@ -79,9 +70,13 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
             style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 12,
+                gap: 14,
                 padding: '14px 18px',
-                marginBottom: 'var(--space-md)',
+                marginBottom: '16px',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                background: '#FFFFFF',
+                boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
             }}
         >
             {/* Row 1: Week/Month Navigation Controls & Schedule Status Badge */}
@@ -102,10 +97,10 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                             position: 'relative',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            backgroundColor: '#F8FAFC',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: 'var(--radius-md)',
-                            boxShadow: 'var(--shadow-xs)',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: '8px',
+                            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
                         }}
                     >
                         <button
@@ -204,22 +199,44 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                     {/* Status Badge */}
                     {scheduleStatus === 'PUBLISHED' ? (
                         <span
-                            className="badge badge-success"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '4px 10px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                letterSpacing: '0.04em',
+                                color: '#047857',
+                                backgroundColor: '#ECFDF5',
+                                border: '1px solid #A7F3D0',
+                                borderRadius: '9999px',
+                            }}
                             title="Lịch đã được công bố chính thức cho nhân viên"
-                            style={{ padding: '4px 10px', fontSize: 11.5 }}
                         >
-              <span className="badge-dot" style={{ backgroundColor: '#10B981' }} />
-              ĐÃ CÔNG BỐ
-            </span>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10B981' }} />
+                            ĐÃ CÔNG BỐ
+                        </span>
                     ) : (
                         <span
-                            className="badge badge-warning"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '4px 10px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                letterSpacing: '0.04em',
+                                color: '#B45309',
+                                backgroundColor: '#FFFBEB',
+                                border: '1px solid #FDE68A',
+                                borderRadius: '9999px',
+                            }}
                             title="Lịch đang ở trạng thái bản nháp nội bộ"
-                            style={{ padding: '4px 10px', fontSize: 11.5 }}
                         >
-              <span className="badge-dot" style={{ backgroundColor: '#F59E0B' }} />
-              BẢN NHÁP
-            </span>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#F59E0B' }} />
+                            BẢN NHÁP
+                        </span>
                     )}
                 </div>
             </div>
@@ -235,30 +252,15 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                     gap: 12,
                 }}
             >
-                {/* Left: Branch & Mode Selectors */}
+                {/* Left: View Mode Selector */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    {/* Branch Dropdown */}
-                    <select
-                        className="input-base"
-                        value={selectedBranchId}
-                        onChange={(e) => onSelectBranch(Number(e.target.value))}
-                        style={{ height: 34, minWidth: 200, fontSize: '12.5px', fontWeight: 500 }}
-                    >
-                        {branches.map((b) => (
-                            <option key={b.id} value={b.id}>
-                                {b.branchName}
-                            </option>
-                        ))}
-                    </select>
-
-                    {/* View Mode Toggle Pill */}
                     <div
                         style={{
                             display: 'inline-flex',
                             padding: 3,
                             backgroundColor: '#F1F5F9',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--color-border-subtle)',
+                            borderRadius: '8px',
+                            border: '1px solid #E2E8F0',
                         }}
                     >
                         <button
@@ -266,16 +268,16 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                             onClick={() => onToggleViewMode('WEEK')}
                             style={{
                                 height: 28,
-                                padding: '0 12px',
+                                padding: '0 14px',
                                 fontSize: '12px',
-                                fontWeight: viewMode === 'WEEK' ? 600 : 500,
-                                backgroundColor: viewMode === 'WEEK' ? 'var(--color-surface)' : 'transparent',
-                                color: viewMode === 'WEEK' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                                borderRadius: 'var(--radius-sm)',
-                                boxShadow: viewMode === 'WEEK' ? 'var(--shadow-xs)' : 'none',
+                                fontWeight: viewMode === 'WEEK' ? 700 : 500,
+                                backgroundColor: viewMode === 'WEEK' ? '#FFFFFF' : 'transparent',
+                                color: viewMode === 'WEEK' ? '#2563EB' : '#64748B',
+                                borderRadius: '6px',
+                                boxShadow: viewMode === 'WEEK' ? '0 1px 2px rgba(15, 23, 42, 0.08)' : 'none',
                                 border: 'none',
                                 cursor: 'pointer',
-                                transition: 'all var(--transition-fast)',
+                                transition: 'all 0.15s ease',
                             }}
                         >
                             Tuần
@@ -285,16 +287,16 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                             onClick={() => onToggleViewMode('MONTH')}
                             style={{
                                 height: 28,
-                                padding: '0 12px',
+                                padding: '0 14px',
                                 fontSize: '12px',
-                                fontWeight: viewMode === 'MONTH' ? 600 : 500,
-                                backgroundColor: viewMode === 'MONTH' ? 'var(--color-surface)' : 'transparent',
-                                color: viewMode === 'MONTH' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                                borderRadius: 'var(--radius-sm)',
-                                boxShadow: viewMode === 'MONTH' ? 'var(--shadow-xs)' : 'none',
+                                fontWeight: viewMode === 'MONTH' ? 700 : 500,
+                                backgroundColor: viewMode === 'MONTH' ? '#FFFFFF' : 'transparent',
+                                color: viewMode === 'MONTH' ? '#2563EB' : '#64748B',
+                                borderRadius: '6px',
+                                boxShadow: viewMode === 'MONTH' ? '0 1px 2px rgba(15, 23, 42, 0.08)' : 'none',
                                 border: 'none',
                                 cursor: 'pointer',
-                                transition: 'all var(--transition-fast)',
+                                transition: 'all 0.15s ease',
                             }}
                         >
                             Tháng
@@ -310,9 +312,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                         className="btn btn-default"
                         onClick={onExportCsv}
                         title="Tải bảng lịch tuần dạng file CSV"
-                        style={{ height: 34, padding: '0 10px', fontSize: '12.5px' }}
+                        style={{ height: 34, padding: '0 12px', fontSize: '12.5px', borderRadius: '8px', gap: 6 }}
                     >
-                        <Download size={14} />
+                        <Download size={14} color="#64748B" />
                         Xuất CSV
                     </button>
 
@@ -322,26 +324,15 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                             <button
                                 type="button"
                                 className="btn btn-default"
-                                onClick={onOpenHistory}
-                                title="Xem nhật ký kiểm toán thay đổi"
-                                style={{ height: 34, padding: '0 10px', fontSize: '12.5px' }}
-                            >
-                                <History size={14} />
-                                Lịch sử
-                            </button>
-
-                            <button
-                                type="button"
-                                className="btn btn-default"
                                 onClick={onOpenCopyWeek}
                                 title="Sao chép toàn bộ ca từ tuần trước sang tuần này"
-                                style={{ height: 34, padding: '0 10px', fontSize: '12.5px' }}
+                                style={{ height: 34, padding: '0 12px', fontSize: '12.5px', borderRadius: '8px', gap: 6 }}
                             >
-                                <Copy size={14} />
+                                <Copy size={14} color="#64748B" />
                                 Sao chép tuần
                             </button>
 
-                            {/* Nút Reset lịch (Đặt cạnh nút Gán hàng loạt) */}
+                            {/* Nút Reset lịch */}
                             {onResetSchedule && (
                                 <button
                                     type="button"
@@ -351,23 +342,24 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                     title={
                                         scheduleStatus === 'PUBLISHED'
                                             ? 'Lịch đã công bố, vui lòng chuyển về bản nháp trước khi reset'
-                                            : 'Xóa toàn bộ phân ca trong tuần hiện tại'
+                                             : 'Xóa toàn bộ phân ca trong tuần hiện tại'
                                     }
                                     style={{
                                         height: 34,
-                                        padding: '0 10px',
+                                        padding: '0 12px',
                                         fontSize: '12.5px',
+                                        borderRadius: '8px',
                                         color: scheduleStatus === 'PUBLISHED' ? '#94A3B8' : '#DC2626',
                                         borderColor: scheduleStatus === 'PUBLISHED' ? '#E2E8F0' : '#FECACA',
                                         backgroundColor: scheduleStatus === 'PUBLISHED' ? '#F8FAFC' : '#FEF2F2',
                                         cursor: scheduleStatus === 'PUBLISHED' ? 'not-allowed' : 'pointer',
-                                        display: 'flex',
+                                        display: 'inline-flex',
                                         alignItems: 'center',
                                         gap: 6,
                                     }}
                                 >
                                     <RotateCcw size={14} />
-                                    Reset lịch
+                                    Reset tuần
                                 </button>
                             )}
 
@@ -376,9 +368,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                 className="btn btn-default"
                                 onClick={onOpenBulkAssign}
                                 title="Gán ca đồng loạt cho nhiều người"
-                                style={{ height: 34, padding: '0 10px', fontSize: '12.5px' }}
+                                style={{ height: 34, padding: '0 12px', fontSize: '12.5px', borderRadius: '8px', gap: 6 }}
                             >
-                                <Plus size={14} />
+                                <Plus size={14} color="#64748B" />
                                 Gán hàng loạt
                             </button>
 
@@ -388,7 +380,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                     className="btn btn-primary"
                                     onClick={onOpenPublish}
                                     title="Công bố lịch chính thức cho nhân viên"
-                                    style={{ height: 34, padding: '0 14px', fontSize: '12.5px', gap: 6 }}
+                                    style={{ height: 34, padding: '0 16px', fontSize: '12.5px', borderRadius: '8px', gap: 6, fontWeight: 600 }}
                                 >
                                     <Send size={14} />
                                     Công bố lịch
@@ -402,11 +394,14 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                         title="Lịch đã công bố, click để xem chi tiết"
                                         style={{
                                             height: 34,
-                                            padding: '0 10px',
+                                            padding: '0 12px',
                                             fontSize: '12.5px',
+                                            borderRadius: '8px',
                                             color: '#059669',
                                             borderColor: '#A7F3D0',
                                             backgroundColor: '#ECFDF5',
+                                            gap: 6,
+                                            fontWeight: 600,
                                         }}
                                     >
                                         <Sparkles size={14} />
@@ -420,14 +415,16 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                             title="Thu hồi lịch về trạng thái bản nháp nếu bạn bấm nhầm"
                                             style={{
                                                 height: 34,
-                                                padding: '0 10px',
+                                                padding: '0 12px',
                                                 fontSize: '12.5px',
-                                                color: 'var(--color-warning, #D97706)',
+                                                borderRadius: '8px',
+                                                color: '#D97706',
                                                 borderColor: '#FDE68A',
                                                 backgroundColor: '#FFFBEB',
-                                                display: 'flex',
+                                                display: 'inline-flex',
                                                 alignItems: 'center',
                                                 gap: 6,
+                                                fontWeight: 600,
                                             }}
                                         >
                                             <RotateCcw size={14} />

@@ -88,15 +88,74 @@ export function checkShiftOverlap(
 
     // Strict inequality: touching at edge (e.g. 14:00:00 to 14:00:00) does not overlap
     if (overlapStart < overlapEnd) {
+      const branchSuffix = shift.branchName ? ` tại ${shift.branchName}` : '';
       return {
         hasOverlap: true,
         conflictingShift: shift,
-        message: `Trùng khung giờ với ca ${shift.snapshotShiftName} (${shift.snapshotStartTime} - ${shift.snapshotEndTime})`,
+        message: `Trùng khung giờ với ca ${shift.snapshotShiftName} (${shift.snapshotStartTime} - ${shift.snapshotEndTime}${branchSuffix})`,
       };
     }
   }
 
   return { hasOverlap: false, conflictingShift: null, message: null };
+}
+
+/**
+ * BR-TRAVEL-BUFFER: Check travel buffer between shifts at DIFFERENT branches.
+ * Severity: WARNING (Can be overridden with explanation)
+ */
+export function checkTravelBufferBetweenBranches(
+  newShift: ShiftTimeRange,
+  existingShifts: ShiftAssignment[],
+  targetBranchId?: number,
+  targetBranchName?: string,
+  bufferMinutes = 45
+): { hasBufferConflict: boolean; conflictingShift: ShiftAssignment | null; message: string | null } {
+  const bufferMs = bufferMinutes * 60 * 1000;
+
+  for (const shift of existingShifts) {
+    if (shift.status === 'CANCELLED') continue;
+    if (newShift.id !== undefined && shift.id === newShift.id) continue;
+
+    // Only check between DIFFERENT branches
+    if (!shift.branchId || (targetBranchId && shift.branchId === targetBranchId)) {
+      continue;
+    }
+
+    const existingRange = assignmentToTimeRange(shift);
+
+    // Existing ends before newShift starts
+    if (existingRange.endMs <= newShift.startMs) {
+      const gapMs = newShift.startMs - existingRange.endMs;
+      if (gapMs >= 0 && gapMs < bufferMs) {
+        const gapMin = Math.round(gapMs / (60 * 1000));
+        const otherBranch = shift.branchName || `Chi nhánh #${shift.branchId}`;
+        const currentBranch = targetBranchName || 'cơ sở này';
+        return {
+          hasBufferConflict: true,
+          conflictingShift: shift,
+          message: `Khoảng cách giữa ca tại ${otherBranch} và ca tại ${currentBranch} chỉ có ${gapMin} phút, không đủ thời gian di chuyển an toàn giữa 2 cơ sở (khuyến nghị tối thiểu ${bufferMinutes} phút)`,
+        };
+      }
+    }
+
+    // NewShift ends before existing starts
+    if (newShift.endMs <= existingRange.startMs) {
+      const gapMs = existingRange.startMs - newShift.endMs;
+      if (gapMs >= 0 && gapMs < bufferMs) {
+        const gapMin = Math.round(gapMs / (60 * 1000));
+        const otherBranch = shift.branchName || `Chi nhánh #${shift.branchId}`;
+        const currentBranch = targetBranchName || 'cơ sở này';
+        return {
+          hasBufferConflict: true,
+          conflictingShift: shift,
+          message: `Khoảng cách giữa ca tại ${currentBranch} và ca tại ${otherBranch} chỉ có ${gapMin} phút, không đủ thời gian di chuyển an toàn giữa 2 cơ sở (khuyến nghị tối thiểu ${bufferMinutes} phút)`,
+        };
+      }
+    }
+  }
+
+  return { hasBufferConflict: false, conflictingShift: null, message: null };
 }
 
 /**
@@ -249,6 +308,8 @@ export function validateAllShiftConflicts(params: {
   employeeLeaves: LeaveRequest[];
   holidays: CompanyHoliday[];
   settings: DemoSettings;
+  targetBranchId?: number;
+  targetBranchName?: string;
 }): ScheduleConflict[] {
   const {
     employee,
@@ -258,6 +319,8 @@ export function validateAllShiftConflicts(params: {
     employeeLeaves,
     holidays,
     settings,
+    targetBranchId,
+    targetBranchName,
   } = params;
 
   const conflicts: ScheduleConflict[] = [];
@@ -287,6 +350,25 @@ export function validateAllShiftConflicts(params: {
       workDate: newShiftRange.workDate,
       message: overlapCheck.message!,
       canOverride: false,
+    });
+  }
+
+  // BR-TRAVEL-BUFFER: Travel buffer between different branches
+  const travelCheck = checkTravelBufferBetweenBranches(
+    newShiftRange,
+    existingShifts,
+    targetBranchId,
+    targetBranchName
+  );
+  if (travelCheck.hasBufferConflict) {
+    conflicts.push({
+      id: `BR-TRAVEL-BUFFER_${employee.id}_${newShiftRange.workDate}`,
+      ruleCode: 'BR-TRAVEL-BUFFER',
+      severity: 'WARNING',
+      employeeId: employee.id,
+      workDate: newShiftRange.workDate,
+      message: travelCheck.message!,
+      canOverride: true,
     });
   }
 

@@ -33,9 +33,9 @@ const toArray = (res: any): any[] => {
 };
 
 const DEFAULT_BRANCHES: Branch[] = [
-  { id: 1, branchCode: 'CN_CAUGIAY', branchName: 'Chi nhánh Cầu Giấy', address: '12 Cầu Giấy, Hà Nội', phoneNumber: '0243123456', isActive: true },
-  { id: 2, branchCode: 'CN_DONGDA', branchName: 'Chi nhánh Đống Đa', address: '45 Chùa Bộc, Hà Nội', phoneNumber: '0243654321', isActive: true },
-  { id: 3, branchCode: 'CN_HOANKIEM', branchName: 'Chi nhánh Hoàn Kiếm', address: '88 Tràng Thi, Hà Nội', phoneNumber: '0243987654', isActive: true },
+  { id: 1, branchCode: 'CN_CAUGIAY', branchName: 'Chi nhánh Cầu Giấy', address: '12 Cầu Giấy, Hà Nội', phoneNumber: '0243123456', openedDate: '2026-01-01', isActive: true },
+  { id: 2, branchCode: 'CN_DONGDA', branchName: 'Chi nhánh Đống Đa', address: '45 Chùa Bộc, Hà Nội', phoneNumber: '0243654321', openedDate: '2026-01-01', isActive: true },
+  { id: 3, branchCode: 'CN_HOANKIEM', branchName: 'Chi nhánh Hoàn Kiếm', address: '88 Tràng Thi, Hà Nội', phoneNumber: '0243987654', openedDate: '2026-01-01', isActive: true },
 ];
 
 const DEFAULT_POSITIONS: Position[] = [
@@ -88,6 +88,7 @@ export const useDirectoryStore = create<DirectoryState>((set, get) => ({
         branchName: b.branch_name || b.branchName,
         address: b.address || '',
         phoneNumber: b.phone_number || b.phoneNumber || '',
+        openedDate: b.opened_date || b.openedDate || '2026-01-01',
         managerId: b.manager_id || b.managerId || null,
         isActive: b.is_active !== undefined ? b.is_active : (b.isActive !== undefined ? b.isActive : true),
       }));
@@ -98,25 +99,38 @@ export const useDirectoryStore = create<DirectoryState>((set, get) => ({
         positionName: p.position_name || p.positionName,
       }));
 
-      const mappedEmps: Employee[] = empData.map((dto: any) => ({
-        id: dto.id,
-        employeeCode: dto.employee_code || dto.employeeCode || `EMP-${dto.id}`,
-        fullName: dto.full_name || dto.fullName || 'Nhân viên',
-        email: dto.email || '',
-        phoneNumber: dto.phone_number || dto.phoneNumber || '',
-        nationalId: dto.national_id || dto.nationalId || '',
-        dateOfBirth: dto.date_of_birth || dto.dateOfBirth || '',
-        gender: dto.gender || 'OTHER',
-        address: dto.address || '',
-        branchId: dto.branch_id || dto.branchId || dto.department_id || dto.departmentId || 1,
-        positionId: dto.position_id || dto.positionId || 1,
-        managerId: dto.manager_id || dto.managerId || null,
-        employmentStatus: dto.employment_status || dto.employmentStatus || 'OFFICIAL',
-        employmentType: dto.employment_type || dto.employmentType || 'FULL_TIME',
-        hireDate: dto.hire_date || dto.hireDate || '2026-01-01',
-        isActive: dto.is_active !== undefined ? dto.is_active : true,
-        version: dto.version || 0,
-      }));
+      const mappedEmps: Employee[] = empData.map((dto: any) => {
+        const secBranches = (dto.secondary_branches || []).map((sb: any) => ({
+          branchId: sb.branch_id || sb.branchId,
+          positionId: sb.position_id || sb.positionId,
+          branchName: sb.branch_name || sb.branchName,
+          positionName: sb.position_name || sb.positionName,
+        }));
+        const secBranchIds: number[] = dto.secondary_branch_ids || secBranches.map((sb: any) => sb.branchId);
+
+        return {
+          id: dto.id,
+          employeeCode: dto.employee_code || dto.employeeCode || `EMP-${dto.id}`,
+          fullName: dto.full_name || dto.fullName || 'Nhân viên',
+          email: dto.email || '',
+          phoneNumber: dto.phone_number || dto.phoneNumber || '',
+          nationalId: dto.national_id || dto.nationalId || '',
+          dateOfBirth: dto.date_of_birth || dto.dateOfBirth || '',
+          gender: dto.gender || 'OTHER',
+          address: dto.address || '',
+          branchId: dto.branch_id || dto.branchId || dto.department_id || dto.departmentId || 1,
+          positionId: dto.position_id || dto.positionId || 1,
+          managerId: dto.manager_id || dto.managerId || null,
+          employmentStatus: dto.employment_status || dto.employmentStatus || 'OFFICIAL',
+          employmentType: dto.employment_type || dto.employmentType || 'FULL_TIME',
+          hireDate: dto.hire_date || dto.hireDate || '2026-01-01',
+          isActive: dto.is_active !== undefined ? dto.is_active : true,
+          version: dto.version || 0,
+          secondaryBranchIds: secBranchIds,
+          secondaryBranches: secBranches,
+          hasMultiBranch: secBranchIds.length > 0,
+        };
+      });
 
       set({
         employees: mappedEmps.length > 0 ? mappedEmps : (isMockEnabled() ? DEFAULT_EMPLOYEES : []),
@@ -141,25 +155,38 @@ export const useDirectoryStore = create<DirectoryState>((set, get) => ({
     try {
       const empRes = await employeeService.getEmployees({ page: 1, size: 200 });
       const empData = toArray(empRes);
-      const mappedEmps: Employee[] = empData.map((dto: any) => ({
-        id: dto.id,
-        employeeCode: dto.employee_code || dto.employeeCode || `EMP-${dto.id}`,
-        fullName: dto.full_name || dto.fullName || 'Nhân viên',
-        email: dto.email || '',
-        phoneNumber: dto.phone_number || dto.phoneNumber || '',
-        nationalId: dto.national_id || dto.nationalId || '',
-        dateOfBirth: dto.date_of_birth || dto.dateOfBirth || '',
-        gender: dto.gender || 'OTHER',
-        address: dto.address || '',
-        branchId: dto.branch_id || dto.branchId || dto.department_id || dto.departmentId || 1,
-        positionId: dto.position_id || dto.positionId || 1,
-        managerId: dto.manager_id || dto.managerId || null,
-        employmentStatus: dto.employment_status || dto.employmentStatus || 'OFFICIAL',
-        employmentType: dto.employment_type || dto.employmentType || 'FULL_TIME',
-        hireDate: dto.hire_date || dto.hireDate || '2026-01-01',
-        isActive: dto.is_active !== undefined ? dto.is_active : true,
-        version: dto.version || 0,
-      }));
+      const mappedEmps: Employee[] = empData.map((dto: any) => {
+        const secBranches = (dto.secondary_branches || []).map((sb: any) => ({
+          branchId: sb.branch_id || sb.branchId,
+          positionId: sb.position_id || sb.positionId,
+          branchName: sb.branch_name || sb.branchName,
+          positionName: sb.position_name || sb.positionName,
+        }));
+        const secBranchIds: number[] = dto.secondary_branch_ids || secBranches.map((sb: any) => sb.branchId);
+
+        return {
+          id: dto.id,
+          employeeCode: dto.employee_code || dto.employeeCode || `EMP-${dto.id}`,
+          fullName: dto.full_name || dto.fullName || 'Nhân viên',
+          email: dto.email || '',
+          phoneNumber: dto.phone_number || dto.phoneNumber || '',
+          nationalId: dto.national_id || dto.nationalId || '',
+          dateOfBirth: dto.date_of_birth || dto.dateOfBirth || '',
+          gender: dto.gender || 'OTHER',
+          address: dto.address || '',
+          branchId: dto.branch_id || dto.branchId || dto.department_id || dto.departmentId || 1,
+          positionId: dto.position_id || dto.positionId || 1,
+          managerId: dto.manager_id || dto.managerId || null,
+          employmentStatus: dto.employment_status || dto.employmentStatus || 'OFFICIAL',
+          employmentType: dto.employment_type || dto.employmentType || 'FULL_TIME',
+          hireDate: dto.hire_date || dto.hireDate || '2026-01-01',
+          isActive: dto.is_active !== undefined ? dto.is_active : true,
+          version: dto.version || 0,
+          secondaryBranchIds: secBranchIds,
+          secondaryBranches: secBranches,
+          hasMultiBranch: secBranchIds.length > 0,
+        };
+      });
       set({ employees: mappedEmps });
     } catch (err) {
       console.warn('Failed to refresh employees:', err);
@@ -175,6 +202,7 @@ export const useDirectoryStore = create<DirectoryState>((set, get) => ({
         branchName: data.branchName || 'Chi nhánh mới',
         address: data.address || '',
         phoneNumber: data.phoneNumber || '',
+        openedDate: data.openedDate || data.opened_date || new Date().toISOString().slice(0, 10),
         managerId: data.managerId || null,
         isActive: data.isActive ?? true,
       };

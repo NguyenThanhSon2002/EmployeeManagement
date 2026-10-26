@@ -26,6 +26,8 @@ export interface AutoAssignInput {
     scheduleId: number;
     /** Nguồn dữ liệu khả dụng. useAvailabilityStore.getState().isAvailable */
     isAvailable: (employeeId: number, dayOfWeek: number, shiftTemplateId: number) => boolean;
+    /** Kiểm tra nhân viên có ưu tiên ca này không. useAvailabilityStore.getState().isPreferredShift */
+    isPreferred?: (employeeId: number, shiftTemplateId: number) => boolean;
     /** Mặc định 2 ca/ngày */
     maxShiftsPerDay?: number;
 }
@@ -71,6 +73,7 @@ interface Slot {
 
 interface Candidate {
     employee: Employee;
+    isPreferred: boolean;
     warnings: ScheduleConflict[];
     totalHours: number;
     sameDayCount: number;
@@ -85,7 +88,12 @@ interface PassConfig {
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7];
 
 function isSchedulable(emp: Employee): boolean {
-    return emp.isActive && emp.employmentStatus !== 'RESIGNED' && emp.employmentStatus !== 'ON_LEAVE';
+    return (
+        emp.isActive &&
+        emp.employmentStatus !== 'RESIGNED' &&
+        emp.employmentStatus !== 'ON_LEAVE' &&
+        emp.positionId !== 1
+    );
 }
 
 function listDates(fromDate: string, toDate: string): string[] {
@@ -252,16 +260,20 @@ export function autoAssignShifts(input: AutoAssignInput): AutoAssignResult {
             if (conflicts.some(isHardBlock)) continue;
             if (!cfg.allowWarnings && conflicts.length > 0) continue;
 
+            const isPreferred = input.isPreferred ? input.isPreferred(emp.id, slot.template.id) : false;
+
             result.push({
                 employee: emp,
+                isPreferred,
                 warnings: conflicts,
                 totalHours: hoursInRange.get(emp.id) ?? 0,
                 sameDayCount,
             });
         }
-        // Ưu tiên: Ít cảnh báo nhất -> ít giờ nhất -> ít ca trong ngày nhất
+        // Ưu tiên: Ca ưu tiên (isPreferred) -> Ít cảnh báo nhất -> ít giờ nhất -> ít ca trong ngày nhất
         result.sort(
             (a, b) =>
+                (b.isPreferred ? 1 : 0) - (a.isPreferred ? 1 : 0) ||
                 a.warnings.length - b.warnings.length ||
                 a.totalHours - b.totalHours ||
                 a.sameDayCount - b.sameDayCount ||

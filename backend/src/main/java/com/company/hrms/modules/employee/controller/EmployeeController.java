@@ -4,6 +4,8 @@ import com.company.hrms.common.response.ApiResponse;
 import com.company.hrms.common.response.PageResponse;
 import com.company.hrms.modules.employee.dto.EmployeeDto;
 import com.company.hrms.modules.employee.service.EmployeeService;
+import com.company.hrms.modules.schedule.dto.EmployeeMonthlyScheduleDto;
+import com.company.hrms.modules.schedule.service.ScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -20,9 +22,11 @@ import org.springframework.web.bind.annotation.*;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final ScheduleService scheduleService;
 
-    public EmployeeController(EmployeeService employeeService) {
+    public EmployeeController(EmployeeService employeeService, ScheduleService scheduleService) {
         this.employeeService = employeeService;
+        this.scheduleService = scheduleService;
     }
 
     @GetMapping
@@ -70,5 +74,14 @@ public class EmployeeController {
     public ApiResponse<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
         return ApiResponse.success(null);
+    }
+
+    @GetMapping("/{id}/shifts")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE')")
+    @Operation(summary = "Lấy lịch ca làm việc theo tháng và thống kê của nhân viên")
+    public ApiResponse<EmployeeMonthlyScheduleDto> getEmployeeMonthlySchedule(
+            @PathVariable Long id,
+            @RequestParam(name = "month", required = false) String month) {
+        return ApiResponse.success(scheduleService.getEmployeeMonthlySchedule(id, month));
     }
 }

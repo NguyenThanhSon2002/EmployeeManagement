@@ -44,5 +44,16 @@ public interface ShiftAssignmentRepository extends JpaRepository<ShiftAssignment
             @Param("workDate") LocalDate workDate
     );
 
+    @Query("SELECT a FROM ShiftAssignment a JOIN Schedule s ON a.scheduleId = s.id " +
+            "WHERE s.branchId = :branchId " +
+            "AND a.workShiftId = :workShiftId " +
+            "AND a.workDate = :workDate " +
+            "AND a.status != 'CANCELLED'")
+    List<ShiftAssignment> findAssignmentsByBranchShiftAndDate(
+            @Param("branchId") Long branchId,
+            @Param("workShiftId") Long workShiftId,
+            @Param("workDate") LocalDate workDate
+    );
+
     void deleteAllByScheduleId(Long scheduleId);
 }

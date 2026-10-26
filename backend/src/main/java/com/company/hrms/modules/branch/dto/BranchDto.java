@@ -2,6 +2,8 @@ package com.company.hrms.modules.branch.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
 
 public class BranchDto {
 
@@ -21,6 +23,10 @@ public class BranchDto {
     @JsonProperty("phone_number")
     private String phoneNumber;
 
+    @NotNull(message = "Ngày bắt đầu hoạt động không được để trống")
+    @JsonProperty("opened_date")
+    private java.time.LocalDate openedDate;
+
     @JsonProperty("manager_id")
     private Long managerId;
 
@@ -33,15 +39,20 @@ public class BranchDto {
     public BranchDto() {
     }
 
-    public BranchDto(Long id, String branchCode, String branchName, String address, String phoneNumber, Long managerId, Boolean isActive, Integer version) {
+    public BranchDto(Long id, String branchCode, String branchName, String address, String phoneNumber, java.time.LocalDate openedDate, Long managerId, Boolean isActive, Integer version) {
         this.id = id;
         this.branchCode = branchCode;
         this.branchName = branchName;
         this.address = address;
         this.phoneNumber = phoneNumber;
+        this.openedDate = openedDate;
         this.managerId = managerId;
         this.isActive = isActive;
         this.version = version;
+    }
+
+    public BranchDto(Long id, String branchCode, String branchName, String address, String phoneNumber, Long managerId, Boolean isActive, Integer version) {
+        this(id, branchCode, branchName, address, phoneNumber, java.time.LocalDate.now(), managerId, isActive, version);
     }
 
     public Long getId() { return id; }
@@ -54,6 +65,8 @@ public class BranchDto {
     public void setAddress(String address) { this.address = address; }
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public LocalDate getOpenedDate() { return openedDate; }
+    public void setOpenedDate(LocalDate openedDate) { this.openedDate = openedDate; }
     public Long getManagerId() { return managerId; }
     public void setManagerId(Long managerId) { this.managerId = managerId; }
     public Boolean getIsActive() { return isActive; }

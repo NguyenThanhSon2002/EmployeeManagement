@@ -49,6 +49,7 @@ public class BranchService {
                 request.getBranchName(),
                 request.getAddress(),
                 request.getPhoneNumber(),
+                request.getOpenedDate() != null ? request.getOpenedDate() : java.time.LocalDate.now(),
                 request.getManagerId()
         );
 
@@ -64,6 +65,9 @@ public class BranchService {
         branch.setBranchName(request.getBranchName());
         branch.setAddress(request.getAddress());
         branch.setPhoneNumber(request.getPhoneNumber());
+        if (request.getOpenedDate() != null) {
+            branch.setOpenedDate(request.getOpenedDate());
+        }
         branch.setManagerId(request.getManagerId());
         if (request.getIsActive() != null) {
             branch.setIsActive(request.getIsActive());
@@ -107,6 +111,7 @@ public class BranchService {
                 branch.getBranchName(),
                 branch.getAddress(),
                 branch.getPhoneNumber(),
+                branch.getOpenedDate(),
                 branch.getManagerId(),
                 branch.getIsActive(),
                 branch.getVersion()
