@@ -1,4 +1,5 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
+import {useSearchParams} from 'react-router-dom';
 import {addDays, format, parseISO, startOfMonth, addMonths} from 'date-fns';
 import {getWeekDays, getCurrentMonday} from '@/utils/date.utils';
 import {useScheduleStore} from './store/useScheduleStore';
@@ -17,7 +18,6 @@ import {BulkAssignDialog} from './dialogs/BulkAssignDialog';
 import {CopyWeekDialog} from './dialogs/CopyWeekDialog';
 import {PublishConfirmDialog} from './dialogs/PublishConfirmDialog';
 import {UnpublishConfirmDialog} from './dialogs/UnpublishConfirmDialog';
-import {ChangeHistoryDrawer} from './dialogs/ChangeHistoryDrawer';
 import {buildWeeklyRosterCsv, downloadCsvFile} from '@/utils/csv-exporter.utils';
 import {calculateShiftDurations} from '@/utils/schedule-calc.utils';
 import type {ShiftAssignment} from '@/types/domain.types';
@@ -31,7 +31,6 @@ export const SchedulePage: React.FC = () => {
         scheduleStatus,
         assignments,
         conflicts,
-        changeHistory,
         viewMode,
         filterOptions,
         employees,
@@ -53,11 +52,74 @@ export const SchedulePage: React.FC = () => {
         resetCurrentWeekSchedule,
     } = useScheduleStore();
 
-    const {currentRole} = useAuthStore();
+    const {currentRole, currentUser} = useAuthStore();
+    const isDirector = currentRole === 'ROLE_DIRECTOR';
+    // Người không phải Giám đốc bị khóa ở chi nhánh của mình
+    const lockedBranchId = !isDirector ? currentUser?.branchId : undefined;
     const {settings} = useSettingsStore();
     const {addToast} = useUIStore();
-    const {branches} = useDirectoryStore();
+    const {
+        branches,
+        isLoaded: directoryLoaded,
+        isLoading: directoryLoading,
+        fetchDirectory,
+    } = useDirectoryStore();
     const {fetchBranchAvailabilities, error: availabilityError} = useAvailabilityStore();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Khởi tạo tuần và chi nhánh ban đầu từ URL Query Parameters nếu có
+    useEffect(() => {
+        const urlStartDate = searchParams.get('start_date');
+        const urlBranchId = searchParams.get('branch_id');
+
+        if (urlStartDate && /^\d{4}-\d{2}-\d{2}$/.test(urlStartDate) && urlStartDate !== currentStartDate) {
+            setWeek(urlStartDate);
+        }
+
+        if (urlBranchId) {
+            const bId = Number(urlBranchId);
+            if (!isNaN(bId) && bId > 0 && bId !== filterOptions.branchId) {
+                setFilters({branchId: bId});
+            }
+        }
+    }, []);
+
+    // Đồng bộ URL Search Params khi currentStartDate hoặc branchId thay đổi
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+        let changed = false;
+
+        if (currentStartDate && params.get('start_date') !== currentStartDate) {
+            params.set('start_date', currentStartDate);
+            changed = true;
+        }
+
+        const effectiveBranchId = filterOptions.branchId;
+        if (effectiveBranchId && params.get('branch_id') !== String(effectiveBranchId)) {
+            params.set('branch_id', String(effectiveBranchId));
+            changed = true;
+        }
+
+        if (changed) {
+            setSearchParams(params, {replace: true});
+        }
+    }, [currentStartDate, filterOptions.branchId, searchParams, setSearchParams]);
+
+    React.useEffect(() => {
+        if (filterOptions.onlyShowConflicts) {
+            const timer = setTimeout(() => {
+                const firstConflictCell = document.querySelector('[id^="shift-cell-conflict-"]');
+                if (firstConflictCell) {
+                    firstConflictCell.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center',
+                    });
+                }
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [filterOptions.onlyShowConflicts]);
 
     React.useEffect(() => {
         if (availabilityError) {
@@ -69,7 +131,27 @@ export const SchedulePage: React.FC = () => {
         }
     }, [availabilityError, addToast]);
 
-    // Auto-fetch weekly schedule and branch availabilities from backend
+    // Nạp danh bạ (chi nhánh, nhân sự) khi trang được mở trực tiếp
+    React.useEffect(() => {
+        if (!directoryLoaded && !directoryLoading) {
+            fetchDirectory();
+        }
+    }, [directoryLoaded, directoryLoading, fetchDirectory]);
+
+    // Chi nhánh đang chọn luôn hợp lệ, và bị khóa với người không phải Giám đốc
+    React.useEffect(() => {
+        if (branches.length === 0) return;
+        const targetBranchId =
+            lockedBranchId ??
+            (branches.some((b) => b.id === filterOptions.branchId)
+                ? filterOptions.branchId
+                : branches[0].id);
+        if (targetBranchId !== filterOptions.branchId) {
+            setFilters({branchId: targetBranchId});
+        }
+    }, [branches, lockedBranchId, filterOptions.branchId, setFilters]);
+
+    // Tự động tải lịch tuần và lịch khả dụng của chi nhánh từ backend
     React.useEffect(() => {
         const branchId = filterOptions.branchId || 1;
         fetchWeeklySchedule(branchId, currentStartDate);
@@ -87,7 +169,6 @@ export const SchedulePage: React.FC = () => {
     const [copyDialogOpen, setCopyDialogOpen] = useState(false);
     const [publishDialogOpen, setPublishDialogOpen] = useState(false);
     const [unpublishDialogOpen, setUnpublishDialogOpen] = useState(false);
-    const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
 
     const baseMonday = useMemo(() => parseISO(currentStartDate), [currentStartDate]);
     const [monthDate, setMonthDate] = useState<Date>(() => startOfMonth(parseISO(currentStartDate)));
@@ -154,12 +235,41 @@ export const SchedulePage: React.FC = () => {
         }
     };
 
-    // Filter Employees
+    // Employees for Weekly Matrix (Never emptied out by conflict filter to prevent false 'Chưa phân ca')
+    const gridEmployees = useMemo(() => {
+        return employees.filter((emp) => {
+            if (emp.employmentStatus === 'RESIGNED') {
+                return false;
+            }
+            if (emp.positionId === 1) {
+                return false;
+            }
+            if (filterOptions.branchId && emp.branchId !== filterOptions.branchId) {
+                return false;
+            }
+            if (filterOptions.searchTerm) {
+                const term = filterOptions.searchTerm.toLowerCase();
+                const matchesName = emp.fullName.toLowerCase().includes(term);
+                const matchesCode = emp.employeeCode.toLowerCase().includes(term);
+                if (!matchesName && !matchesCode) return false;
+            }
+            return true;
+        });
+    }, [employees, filterOptions.branchId, filterOptions.searchTerm]);
+
+    // Filter Employees (Used for filter counter and bottom hours summary table)
     const filteredEmployees = useMemo(() => {
         const allAssignmentsList: ShiftAssignment[] = Object.values(assignments).flat();
+        const sundayDate = addDays(baseMonday, 6);
+        const sundayStr = format(sundayDate, 'yyyy-MM-dd');
 
         return employees.filter((emp) => {
             if (emp.employmentStatus === 'RESIGNED') {
+                return false;
+            }
+
+            // Exclude Director (Giám đốc) from shift scheduling
+            if (emp.positionId === 1) {
                 return false;
             }
 
@@ -184,15 +294,21 @@ export const SchedulePage: React.FC = () => {
             }
 
             if (filterOptions.onlyShowConflicts) {
-                const hasConflict = Object.keys(conflicts).some((key) => {
-                    return key.startsWith(`${emp.id}_`) && (conflicts[key]?.length || 0) > 0;
+                const hasConflictThisWeek = Object.keys(conflicts).some((key) => {
+                    const [empIdStr, dateStr] = key.split('_');
+                    return (
+                        Number(empIdStr) === emp.id &&
+                        dateStr >= currentStartDate &&
+                        dateStr <= sundayStr &&
+                        (conflicts[key]?.length || 0) > 0
+                    );
                 });
-                if (!hasConflict) return false;
+                if (!hasConflictThisWeek) return false;
             }
 
             return true;
         });
-    }, [employees, filterOptions, assignments, conflicts, shiftTemplates]);
+    }, [employees, filterOptions, assignments, conflicts, shiftTemplates, baseMonday, currentStartDate]);
 
     // Summary Metrics Calculation
     const {totalShifts, totalHours, conflictCount, understaffedDaysCount} = useMemo(() => {
@@ -323,7 +439,7 @@ export const SchedulePage: React.FC = () => {
     };
 
     // Auto Assign Handlers
-    const handleGenerateAutoAssign = (fromDate: string, toDate: string) => {
+    const handleGenerateAutoAssign = (fromDate: string, toDate: string, mode: 'REPLACE_ALL' | 'FILL_MISSING' = 'REPLACE_ALL') => {
         if (scheduleStatus === 'PUBLISHED') {
             addToast({
                 type: 'error',
@@ -346,39 +462,60 @@ export const SchedulePage: React.FC = () => {
         }
 
         const branchId = filterOptions.branchId || 1;
+        const allAssignments = Object.values(assignments).flat();
+        // If REPLACE_ALL, simulate empty assignments within [fromDate, toDate] so auto-assigner allocates clean slots without quota violations
+        const existingForAlgo = mode === 'REPLACE_ALL'
+            ? allAssignments.filter((a) => a.workDate < fromDate || a.workDate > toDate)
+            : allAssignments;
+
         return autoAssignShifts({
             fromDate,
             toDate,
-            employees: employees.filter((e) => e.branchId === branchId),
+            employees: employees.filter((e) => e.branchId === branchId && e.positionId !== 1),
             shiftTemplates,
-            existingAssignments: Object.values(assignments).flat(),
+            existingAssignments: existingForAlgo,
             approvedLeaves,
             holidays,
             settings,
             scheduleId,
             isAvailable: (empId, dayOfWeek, shiftId) =>
                 useAvailabilityStore.getState().isAvailable(empId, dayOfWeek, shiftId),
+            isPreferred: (empId, shiftId) =>
+                useAvailabilityStore.getState().isPreferredShift(empId, shiftId),
         });
     };
 
-    const handleApplyAutoAssign = (newAssignments: ShiftAssignment[]) => {
-        applyAutoAssignments(newAssignments);
+    const handleApplyAutoAssign = (
+        newAssignments: ShiftAssignment[],
+        mode: 'REPLACE_ALL' | 'FILL_MISSING' = 'REPLACE_ALL',
+        fromDate?: string,
+        toDate?: string
+    ) => {
+        applyAutoAssignments(newAssignments, mode, fromDate, toDate);
         addToast({
             type: 'success',
             title: 'Xếp ca tự động hoàn tất',
-            message: `Đã xếp ${newAssignments.length} ca làm việc theo lịch khả dụng. Hãy kiểm tra các cảnh báo (nếu có) trước khi công bố.`,
+            message: `Đã xếp ${newAssignments.length} ca làm việc theo lịch khả dụng (${mode === 'REPLACE_ALL' ? 'Xếp lại toàn bộ' : 'Điền ca còn thiếu'}). Hãy kiểm tra các cảnh báo (nếu có) trước khi công bố.`,
         });
     };
 
     // Copy Week Handler
-    const handleConfirmCopyWeek = (mode: 'SKIP_OCCUPIED' | 'REPLACE_ALL') => {
-        const res = copyWeek(mode);
-        addToast({
-            type: 'success',
-            title: 'Sao chép tuần hoàn tất',
-            message: `Đã sao chép ${res.copiedCount} ca làm việc (Bỏ qua ${res.skippedCount} ca đã có).`,
-        });
-        setCopyDialogOpen(false);
+    const handleConfirmCopyWeek = async (mode: 'SKIP_OCCUPIED' | 'REPLACE_ALL') => {
+        try {
+            const res = await copyWeek(mode);
+            addToast({
+                type: 'success',
+                title: 'Sao chép tuần hoàn tất',
+                message: `Đã sao chép ${res.copiedCount} ca làm việc từ tuần trước (Bỏ qua ${res.skippedCount} ca đã có). Dữ liệu đã được lưu trữ vĩnh viễn.`,
+            });
+            setCopyDialogOpen(false);
+        } catch (err: any) {
+            addToast({
+                type: 'error',
+                title: 'Không thể sao chép tuần',
+                message: err?.response?.data?.error?.message || err?.message || 'Đã xảy ra lỗi khi sao chép lịch tuần.',
+            });
+        }
     };
 
     // Publish Schedule Handler
@@ -442,8 +579,6 @@ export const SchedulePage: React.FC = () => {
             <ScheduleToolbar
                 baseMonday={baseMonday}
                 monthDate={monthDate}
-                branches={branches}
-                selectedBranchId={filterOptions.branchId || (branches[0]?.id || 1)}
                 scheduleStatus={scheduleStatus}
                 viewMode={viewMode}
                 currentRole={currentRole}
@@ -454,7 +589,6 @@ export const SchedulePage: React.FC = () => {
                 onNextMonth={handleNextMonth}
                 onCurrentMonth={handleCurrentMonth}
                 onSelectDate={handleSelectDate}
-                onSelectBranch={(branchId) => setFilters({branchId})}
                 onToggleViewMode={(mode) => {
                     setViewMode(mode);
                     if (mode === 'MONTH') {
@@ -467,7 +601,6 @@ export const SchedulePage: React.FC = () => {
                 onOpenBulkAssign={() => setBulkDialogOpen(true)}
                 onResetSchedule={handleResetSchedule}
                 onExportCsv={handleExportCsv}
-                onOpenHistory={() => setHistoryDrawerOpen(true)}
             />
 
             {/* 2. Executive Summary Metrics Cards */}
@@ -488,7 +621,11 @@ export const SchedulePage: React.FC = () => {
                 shiftCodeFilter={filterOptions.shiftCodeFilter || ''}
                 onlyShowConflicts={Boolean(filterOptions.onlyShowConflicts)}
                 shiftTemplates={shiftTemplates}
-                totalEmployees={employees.filter((e) => e.isActive && e.employmentStatus !== 'RESIGNED').length}
+                branches={branches}
+                selectedBranchId={filterOptions.branchId || (branches[0]?.id || 1)}
+                branchLocked={Boolean(lockedBranchId)}
+                onBranchChange={(branchId) => setFilters({branchId})}
+                totalEmployees={employees.filter((e) => e.isActive && e.employmentStatus !== 'RESIGNED' && e.positionId !== 1).length}
                 filteredCount={filteredEmployees.length}
                 onSearchChange={(val) => setFilters({searchTerm: val})}
                 onShiftFilterChange={(val) => setFilters({shiftCodeFilter: val})}
@@ -507,11 +644,12 @@ export const SchedulePage: React.FC = () => {
                     <WeeklyGrid
                         baseMonday={baseMonday}
                         shiftTemplates={shiftTemplates}
-                        employees={filteredEmployees}
+                        employees={gridEmployees}
                         assignmentsMap={assignments}
                         conflictsMap={conflicts}
                         holidays={holidays}
                         canEdit={currentRole !== 'ROLE_EMPLOYEE'}
+                        onlyShowConflicts={Boolean(filterOptions.onlyShowConflicts)}
                         onOpenAssignStaff={handleOpenAssignStaff}
                         onRemoveAssignment={handleRemoveAssignment}
                     />
@@ -585,12 +723,6 @@ export const SchedulePage: React.FC = () => {
                 isOpen={unpublishDialogOpen}
                 onClose={() => setUnpublishDialogOpen(false)}
                 onConfirm={handleConfirmUnpublish}
-            />
-
-            <ChangeHistoryDrawer
-                isOpen={historyDrawerOpen}
-                history={changeHistory}
-                onClose={() => setHistoryDrawerOpen(false)}
             />
         </div>
     );

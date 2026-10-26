@@ -35,11 +35,19 @@ public class ShiftOverlapRule implements ConflictRule {
                     context.getPlannedEndTime().isAfter(existing.getPlannedStartTime())) {
 
                 String empName = context.getEmployee() != null ? context.getEmployee().getFullName() : "Nhân viên #" + context.getEmployeeId();
-                String msg = String.format("Không thể xếp ca: Nhân viên %s đã có ca %s (%s - %s) trùng khung giờ với ca này.",
+                String branchSuffix = "";
+                if (context.getScheduleBranchNameMap() != null && existing.getScheduleId() != null) {
+                    String existingBranchName = context.getScheduleBranchNameMap().get(existing.getScheduleId());
+                    if (existingBranchName != null) {
+                        branchSuffix = " tại " + existingBranchName;
+                    }
+                }
+                String msg = String.format("Không thể xếp ca: Nhân viên %s đã có ca %s (%s - %s)%s trùng khung giờ với ca này.",
                         empName,
                         existing.getSnapshotShiftName(),
                         existing.getSnapshotStartTime().format(TIME_FMT),
-                        existing.getSnapshotEndTime().format(TIME_FMT));
+                        existing.getSnapshotEndTime().format(TIME_FMT),
+                        branchSuffix);
 
                 result.addMandatoryError(new ScheduleConflictDto(
                         "ERR_SHIFT_OVERLAP",

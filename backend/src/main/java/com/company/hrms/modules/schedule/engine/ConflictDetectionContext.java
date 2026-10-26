@@ -33,6 +33,12 @@ public class ConflictDetectionContext {
     private double maxDailyHours = 12.0;
     private String leaveSeverity = "WARNING";
 
+    private Long targetBranchId;
+    private String targetBranchName;
+    private Map<Long, Long> scheduleBranchIdMap = Collections.emptyMap();
+    private Map<Long, String> scheduleBranchNameMap = Collections.emptyMap();
+    private double travelBufferMinutes = 45.0;
+
     public ConflictDetectionContext(
             Long employeeId,
             LocalDate workDate,
@@ -81,4 +87,15 @@ public class ConflictDetectionContext {
     public void setMaxDailyHours(double maxDailyHours) { this.maxDailyHours = maxDailyHours; }
     public String getLeaveSeverity() { return leaveSeverity; }
     public void setLeaveSeverity(String leaveSeverity) { this.leaveSeverity = leaveSeverity; }
+
+    public Long getTargetBranchId() { return targetBranchId; }
+    public void setTargetBranchId(Long targetBranchId) { this.targetBranchId = targetBranchId; }
+    public String getTargetBranchName() { return targetBranchName; }
+    public void setTargetBranchName(String targetBranchName) { this.targetBranchName = targetBranchName; }
+    public Map<Long, Long> getScheduleBranchIdMap() { return scheduleBranchIdMap; }
+    public void setScheduleBranchIdMap(Map<Long, Long> scheduleBranchIdMap) { this.scheduleBranchIdMap = scheduleBranchIdMap != null ? scheduleBranchIdMap : Collections.emptyMap(); }
+    public Map<Long, String> getScheduleBranchNameMap() { return scheduleBranchNameMap; }
+    public void setScheduleBranchNameMap(Map<Long, String> scheduleBranchNameMap) { this.scheduleBranchNameMap = scheduleBranchNameMap != null ? scheduleBranchNameMap : Collections.emptyMap(); }
+    public double getTravelBufferMinutes() { return travelBufferMinutes; }
+    public void setTravelBufferMinutes(double travelBufferMinutes) { this.travelBufferMinutes = travelBufferMinutes; }
 }

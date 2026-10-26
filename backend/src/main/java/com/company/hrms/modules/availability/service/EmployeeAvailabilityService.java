@@ -1,8 +1,11 @@
 package com.company.hrms.modules.availability.service;
 
 import com.company.hrms.modules.availability.domain.EmployeeAvailability;
+import com.company.hrms.modules.availability.domain.EmployeePreferredShift;
+import com.company.hrms.modules.availability.dto.EmployeeAvailabilityDto;
 import com.company.hrms.modules.availability.dto.SaveAvailabilityRequest;
 import com.company.hrms.modules.availability.repository.EmployeeAvailabilityRepository;
+import com.company.hrms.modules.availability.repository.EmployeePreferredShiftRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,13 +18,17 @@ import java.util.Map;
 public class EmployeeAvailabilityService {
 
     private final EmployeeAvailabilityRepository availabilityRepository;
+    private final EmployeePreferredShiftRepository preferredShiftRepository;
 
-    public EmployeeAvailabilityService(EmployeeAvailabilityRepository availabilityRepository) {
+    public EmployeeAvailabilityService(
+            EmployeeAvailabilityRepository availabilityRepository,
+            EmployeePreferredShiftRepository preferredShiftRepository) {
         this.availabilityRepository = availabilityRepository;
+        this.preferredShiftRepository = preferredShiftRepository;
     }
 
     @Transactional(readOnly = true)
-    public Map<Integer, List<Long>> getEmployeeAvailability(Long employeeId) {
+    public EmployeeAvailabilityDto getEmployeeAvailability(Long employeeId) {
         List<EmployeeAvailability> records = availabilityRepository.findAllByEmployeeId(employeeId);
 
         Map<Integer, List<Long>> resultMap = new HashMap<>();
@@ -38,7 +45,16 @@ public class EmployeeAvailabilityService {
             }
         }
 
-        return resultMap;
+        List<EmployeePreferredShift> prefList = preferredShiftRepository.findAllByEmployeeId(employeeId);
+        List<Long> preferredShiftIds = prefList.stream()
+                .map(EmployeePreferredShift::getWorkShiftId)
+                .toList();
+
+        return EmployeeAvailabilityDto.builder()
+                .employeeId(employeeId)
+                .availabilities(resultMap)
+                .preferredShiftIds(preferredShiftIds)
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -47,7 +63,6 @@ public class EmployeeAvailabilityService {
 
         Map<Long, Map<Integer, List<Long>>> branchMap = new HashMap<>();
         for (EmployeeAvailability ea : records) {
-            // Kiểm tra active và ép Byte sang int để lấy đúng key Integer trong Map
             if (Boolean.TRUE.equals(ea.getIsAvailable()) && ea.getDayOfWeek() != null) {
                 int day = ea.getDayOfWeek().intValue();
                 if (day >= 1 && day <= 7) {
@@ -64,28 +79,49 @@ public class EmployeeAvailabilityService {
         return branchMap;
     }
 
+    @Transactional(readOnly = true)
+    public Map<Long, List<Long>> getBranchPreferredShifts(Long branchId) {
+        List<EmployeePreferredShift> records = preferredShiftRepository.findAllActiveByBranchId(branchId);
+        Map<Long, List<Long>> branchMap = new HashMap<>();
+        for (EmployeePreferredShift eps : records) {
+            branchMap.computeIfAbsent(eps.getEmployeeId(), k -> new ArrayList<>()).add(eps.getWorkShiftId());
+        }
+        return branchMap;
+    }
+
     @Transactional
     public void saveAvailability(Long employeeId, SaveAvailabilityRequest request) {
         availabilityRepository.deleteAllByEmployeeId(employeeId);
+        preferredShiftRepository.deleteAllByEmployeeId(employeeId);
 
-        if (request.getAvailabilities() == null || request.getAvailabilities().isEmpty()) {
-            return;
+        if (request.getAvailabilities() != null && !request.getAvailabilities().isEmpty()) {
+            List<EmployeeAvailability> entities = new ArrayList<>();
+            for (Map.Entry<Integer, List<Long>> entry : request.getAvailabilities().entrySet()) {
+                Integer dayOfWeek = entry.getKey();
+                List<Long> shiftIds = entry.getValue();
+
+                if (dayOfWeek < 1 || dayOfWeek > 7 || shiftIds == null) {
+                    continue;
+                }
+
+                for (Long shiftId : shiftIds) {
+                    entities.add(new EmployeeAvailability(employeeId, shiftId, dayOfWeek.byteValue(), true));
+                }
+            }
+            availabilityRepository.saveAll(entities);
         }
 
-        List<EmployeeAvailability> entities = new ArrayList<>();
-        for (Map.Entry<Integer, List<Long>> entry : request.getAvailabilities().entrySet()) {
-            Integer dayOfWeek = entry.getKey();
-            List<Long> shiftIds = entry.getValue();
-
-            if (dayOfWeek < 1 || dayOfWeek > 7 || shiftIds == null) {
-                continue;
+        if (request.getPreferredShiftIds() != null && !request.getPreferredShiftIds().isEmpty()) {
+            List<EmployeePreferredShift> prefEntities = new ArrayList<>();
+            for (Long shiftId : request.getPreferredShiftIds()) {
+                if (shiftId != null) {
+                    prefEntities.add(EmployeePreferredShift.builder()
+                            .employeeId(employeeId)
+                            .workShiftId(shiftId)
+                            .build());
+                }
             }
-
-            for (Long shiftId : shiftIds) {
-                entities.add(new EmployeeAvailability(employeeId, shiftId, dayOfWeek.byteValue(), true));
-            }
+            preferredShiftRepository.saveAll(prefEntities);
         }
-
-        availabilityRepository.saveAll(entities);
     }
 }

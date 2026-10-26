@@ -22,6 +22,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.company.hrms.modules.employee.domain.EmployeeSecondaryBranch;
+import com.company.hrms.modules.employee.dto.SecondaryBranchAssignmentDto;
+import com.company.hrms.modules.employee.repository.EmployeeSecondaryBranchRepository;
+import com.company.hrms.modules.position.domain.Position;
+import com.company.hrms.modules.position.repository.PositionRepository;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -34,24 +40,30 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final BranchRepository branchRepository;
+    private final PositionRepository positionRepository;
     private final ShiftAssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmployeeSecondaryBranchRepository secondaryBranchRepository;
 
     public EmployeeService(
             EmployeeRepository employeeRepository,
             BranchRepository branchRepository,
+            PositionRepository positionRepository,
             ShiftAssignmentRepository assignmentRepository,
             UserRepository userRepository,
             RoleRepository roleRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            EmployeeSecondaryBranchRepository secondaryBranchRepository) {
         this.employeeRepository = employeeRepository;
         this.branchRepository = branchRepository;
+        this.positionRepository = positionRepository;
         this.assignmentRepository = assignmentRepository;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.secondaryBranchRepository = secondaryBranchRepository;
     }
 
     @Transactional(readOnly = true)
@@ -130,6 +142,30 @@ public class EmployeeService {
         employee.setUserId(savedUser.getId());
 
         Employee saved = employeeRepository.save(employee);
+
+        if (request.getSecondaryBranches() != null && !request.getSecondaryBranches().isEmpty()) {
+            for (SecondaryBranchAssignmentDto item : request.getSecondaryBranches()) {
+                if (item.getBranchId() != null && !item.getBranchId().equals(saved.getBranchId())) {
+                    EmployeeSecondaryBranch esb = new EmployeeSecondaryBranch();
+                    esb.setEmployeeId(saved.getId());
+                    esb.setBranchId(item.getBranchId());
+                    esb.setPositionId(item.getPositionId());
+                    esb.setNotes("Chi nhánh kiêm nhiệm / hỗ trợ");
+                    secondaryBranchRepository.save(esb);
+                }
+            }
+        } else if (request.getSecondaryBranchIds() != null && !request.getSecondaryBranchIds().isEmpty()) {
+            for (Long branchId : request.getSecondaryBranchIds()) {
+                if (branchId != null && !branchId.equals(saved.getBranchId())) {
+                    EmployeeSecondaryBranch esb = new EmployeeSecondaryBranch();
+                    esb.setEmployeeId(saved.getId());
+                    esb.setBranchId(branchId);
+                    esb.setNotes("Chi nhánh kiêm nhiệm / hỗ trợ");
+                    secondaryBranchRepository.save(esb);
+                }
+            }
+        }
+
         return toDto(saved);
     }
 
@@ -206,6 +242,32 @@ public class EmployeeService {
                 if (!"CANCELLED".equalsIgnoreCase(shift.getStatus())) {
                     shift.setStatus("CANCELLED");
                     assignmentRepository.save(shift);
+                }
+            }
+        }
+
+        // Update secondary branches if provided
+        if (request.getSecondaryBranches() != null) {
+            secondaryBranchRepository.deleteAllByEmployeeId(updated.getId());
+            for (com.company.hrms.modules.employee.dto.SecondaryBranchAssignmentDto sec : request.getSecondaryBranches()) {
+                if (sec.getBranchId() != null && !sec.getBranchId().equals(updated.getBranchId())) {
+                    EmployeeSecondaryBranch esb = new EmployeeSecondaryBranch();
+                    esb.setEmployeeId(updated.getId());
+                    esb.setBranchId(sec.getBranchId());
+                    esb.setPositionId(sec.getPositionId());
+                    esb.setNotes("Chi nhánh kiêm nhiệm / hỗ trợ");
+                    secondaryBranchRepository.save(esb);
+                }
+            }
+        } else if (request.getSecondaryBranchIds() != null) {
+            secondaryBranchRepository.deleteAllByEmployeeId(updated.getId());
+            for (Long branchId : request.getSecondaryBranchIds()) {
+                if (branchId != null && !branchId.equals(updated.getBranchId())) {
+                    EmployeeSecondaryBranch esb = new EmployeeSecondaryBranch();
+                    esb.setEmployeeId(updated.getId());
+                    esb.setBranchId(branchId);
+                    esb.setNotes("Chi nhánh kiêm nhiệm / hỗ trợ");
+                    secondaryBranchRepository.save(esb);
                 }
             }
         }
@@ -291,6 +353,29 @@ public class EmployeeService {
         dto.setResignationDate(entity.getResignationDate());
         dto.setIsActive(entity.getIsActive());
         dto.setVersion(entity.getVersion());
+
+        List<EmployeeSecondaryBranch> secondaries = secondaryBranchRepository.findAllByEmployeeId(entity.getId());
+        if (!secondaries.isEmpty()) {
+            dto.setSecondaryBranchIds(secondaries.stream()
+                    .map(EmployeeSecondaryBranch::getBranchId)
+                    .collect(Collectors.toList()));
+            List<com.company.hrms.modules.employee.dto.SecondaryBranchAssignmentDto> secList = new java.util.ArrayList<>();
+            for (EmployeeSecondaryBranch esb : secondaries) {
+                String branchName = branchRepository.findByIdAndDeletedAtIsNull(esb.getBranchId())
+                        .map(Branch::getBranchName).orElse(null);
+                String positionName = esb.getPositionId() != null
+                        ? positionRepository.findByIdAndDeletedAtIsNull(esb.getPositionId()).map(Position::getPositionName).orElse(null)
+                        : null;
+                secList.add(new com.company.hrms.modules.employee.dto.SecondaryBranchAssignmentDto(
+                        esb.getBranchId(), esb.getPositionId(), branchName, positionName
+                ));
+            }
+            dto.setSecondaryBranches(secList);
+        } else {
+            dto.setSecondaryBranchIds(new java.util.ArrayList<>());
+            dto.setSecondaryBranches(new java.util.ArrayList<>());
+        }
+
         return dto;
     }
 }

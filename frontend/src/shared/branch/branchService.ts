@@ -9,6 +9,7 @@ const toBranch = (raw: any): Branch =>
       branchName: raw.branchName ?? raw.branch_name,
       address: raw.address,
       phoneNumber: raw.phoneNumber ?? raw.phone_number,
+      openedDate: raw.openedDate ?? raw.opened_date,
       managerId: raw.managerId ?? raw.manager_id,
       isActive: raw.isActive ?? raw.is_active,
       version: raw.version,
@@ -32,6 +33,7 @@ export const branchService = {
           branch_name: data.branchName,
           address: data.address,
           phone_number: data.phoneNumber,
+          opened_date: data.openedDate || data.opened_date,
           manager_id: data.managerId,
           is_active: data.isActive ?? true,
         })
@@ -45,6 +47,7 @@ export const branchService = {
           branch_name: data.branchName,
           address: data.address,
           phone_number: data.phoneNumber,
+          opened_date: data.openedDate || data.opened_date,
           manager_id: data.managerId,
           is_active: data.isActive,
         })

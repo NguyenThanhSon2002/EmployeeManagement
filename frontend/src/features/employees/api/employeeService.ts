@@ -1,4 +1,5 @@
 import { api } from '@/shared/api/apiClient';
+import type { EmployeeMonthlySchedule } from '@/types/domain.types';
 
 export interface Employee {
   id: number;
@@ -20,6 +21,13 @@ export interface Employee {
   resignation_date?: string;
   is_active: boolean;
   version?: number;
+  secondary_branch_ids?: number[];
+  secondary_branches?: Array<{
+    branch_id: number;
+    position_id: number;
+    branch_name?: string;
+    position_name?: string;
+  }>;
 }
 
 export const employeeService = {
@@ -48,5 +56,10 @@ export const employeeService = {
 
   async deleteEmployee(id: number): Promise<void> {
     return api.delete<void>(`/employees/${id}`);
+  },
+
+  async getEmployeeMonthlySchedule(id: number, month?: string): Promise<EmployeeMonthlySchedule> {
+    const query = month ? `?month=${encodeURIComponent(month)}` : '';
+    return api.get<EmployeeMonthlySchedule>(`/employees/${id}/shifts${query}`);
   },
 };

@@ -18,6 +18,7 @@ interface WeeklyGridProps {
   conflictsMap: Record<string, ScheduleConflict[]>;
   holidays: CompanyHoliday[];
   canEdit: boolean;
+  onlyShowConflicts?: boolean;
   onOpenAssignStaff: (shiftTemplateId: number, workDate: string) => void;
   onRemoveAssignment: (assignmentId: number) => void;
 }
@@ -30,6 +31,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   conflictsMap,
   holidays,
   canEdit,
+  onlyShowConflicts = false,
   onOpenAssignStaff,
   onRemoveAssignment,
 }) => {
@@ -86,6 +88,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
           conflictsMap={conflictsMap}
           todayDateStr={todayDateStr}
           canEdit={canEdit}
+          onlyShowConflicts={onlyShowConflicts}
           onOpenAssignDrawer={onOpenAssignStaff}
           onRemoveAssignment={onRemoveAssignment}
         />

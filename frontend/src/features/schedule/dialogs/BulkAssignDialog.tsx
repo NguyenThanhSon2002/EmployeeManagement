@@ -12,9 +12,9 @@ interface BulkAssignDialogProps {
     onClose: () => void;
 
     /** Chạy thuật toán xếp tự động (chỉ tính toán, chưa lưu). Trả về null nếu bị chặn. */
-    onGenerateAuto: (fromDate: string, toDate: string) => AutoAssignResult | null;
+    onGenerateAuto: (fromDate: string, toDate: string, mode: 'REPLACE_ALL' | 'FILL_MISSING') => AutoAssignResult | null;
     /** Lưu các ca đã duyệt từ bản xem trước */
-    onApplyAuto: (assignments: ShiftAssignment[]) => void;
+    onApplyAuto: (assignments: ShiftAssignment[], mode: 'REPLACE_ALL' | 'FILL_MISSING', fromDate: string, toDate: string) => void;
 }
 
 const DAY_SHORT = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -61,6 +61,7 @@ export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
 
     const [fromDate, setFromDate] = useState<string>(currentStartDate);
     const [toDate, setToDate] = useState<string>(addDaysIso(currentStartDate, 6));
+    const [mode, setMode] = useState<'REPLACE_ALL' | 'FILL_MISSING'>('REPLACE_ALL');
     const [preview, setPreview] = useState<AutoAssignResult | null>(null);
     const [autoError, setAutoError] = useState<string | null>(null);
 
@@ -69,6 +70,7 @@ export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
         if (isOpen) {
             setFromDate(currentStartDate);
             setToDate(addDaysIso(currentStartDate, 6));
+            setMode('REPLACE_ALL');
             setPreview(null);
             setAutoError(null);
         }
@@ -83,12 +85,12 @@ export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
             return;
         }
         // null nghĩa là bị chặn (ví dụ lịch đã công bố), SchedulePage sẽ hiện thông báo
-        setPreview(onGenerateAuto(fromDate, toDate));
+        setPreview(onGenerateAuto(fromDate, toDate, mode));
     };
 
     const handleApplyAuto = () => {
         if (!preview || preview.proposals.length === 0) return;
-        onApplyAuto(preview.proposals.map((p) => p.assignment));
+        onApplyAuto(preview.proposals.map((p) => p.assignment), mode, fromDate, toDate);
         onClose();
     };
 
@@ -186,6 +188,53 @@ export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
                                     setPreview(null);
                                 }}
                             />
+                        </div>
+                    </div>
+
+                    {/* Chế độ xếp ca */}
+                    <div style={{marginBottom: 'var(--space-md)', padding: '10px 12px', background: '#F8FAFC', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)'}}>
+                        <div style={{fontWeight: 600, fontSize: 'var(--font-caption)', marginBottom: 8}}>
+                            Chế độ xếp ca:
+                        </div>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+                            <label style={{display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', fontSize: 'var(--font-caption)'}}>
+                                <input
+                                    type="radio"
+                                    name="assignMode"
+                                    value="REPLACE_ALL"
+                                    checked={mode === 'REPLACE_ALL'}
+                                    onChange={() => {
+                                        setMode('REPLACE_ALL');
+                                        setPreview(null);
+                                    }}
+                                    style={{marginTop: 2}}
+                                />
+                                <div>
+                                    <span style={{fontWeight: 600, color: '#1E293B'}}>Xếp lại toàn bộ (Khuyên dùng)</span>
+                                    <p style={{margin: '2px 0 0 0', color: 'var(--color-text-muted)', fontSize: 12}}>
+                                        Xóa các ca đã gán trong khoảng ngày này và tự động phân bổ lại toàn bộ, đảm bảo chuẩn định biên nhân sự trên từng ca (không bị vượt giới hạn).
+                                    </p>
+                                </div>
+                            </label>
+                            <label style={{display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', fontSize: 'var(--font-caption)'}}>
+                                <input
+                                    type="radio"
+                                    name="assignMode"
+                                    value="FILL_MISSING"
+                                    checked={mode === 'FILL_MISSING'}
+                                    onChange={() => {
+                                        setMode('FILL_MISSING');
+                                        setPreview(null);
+                                    }}
+                                    style={{marginTop: 2}}
+                                />
+                                <div>
+                                    <span style={{fontWeight: 600, color: '#1E293B'}}>Giữ ca hiện có, chỉ điền vào ca còn thiếu</span>
+                                    <p style={{margin: '2px 0 0 0', color: 'var(--color-text-muted)', fontSize: 12}}>
+                                        Giữ nguyên những ca đã xếp thủ công, chỉ tự động bổ sung nhân sự cho các ca chưa đủ định biên tối thiểu.
+                                    </p>
+                                </div>
+                            </label>
                         </div>
                     </div>
 

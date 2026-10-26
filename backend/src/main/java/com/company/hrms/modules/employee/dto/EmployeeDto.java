@@ -69,8 +69,20 @@ public class EmployeeDto {
     @JsonProperty("version")
     private Integer version;
 
+    @JsonProperty("secondary_branch_ids")
+    private java.util.List<Long> secondaryBranchIds;
+
+    @JsonProperty("secondary_branches")
+    private java.util.List<SecondaryBranchAssignmentDto> secondaryBranches;
+
     public EmployeeDto() {
     }
+
+    public java.util.List<Long> getSecondaryBranchIds() { return secondaryBranchIds; }
+    public void setSecondaryBranchIds(java.util.List<Long> secondaryBranchIds) { this.secondaryBranchIds = secondaryBranchIds; }
+
+    public java.util.List<SecondaryBranchAssignmentDto> getSecondaryBranches() { return secondaryBranches; }
+    public void setSecondaryBranches(java.util.List<SecondaryBranchAssignmentDto> secondaryBranches) { this.secondaryBranches = secondaryBranches; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

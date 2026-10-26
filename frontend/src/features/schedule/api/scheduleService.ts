@@ -30,6 +30,10 @@ export interface ShiftAssignment {
   override_rule?: string;
   override_reason?: string;
   version?: number;
+  branch_id?: number;
+  branch_name?: string;
+  is_external?: boolean;
+  read_only?: boolean;
 }
 
 export interface EmployeeSchedule {
@@ -38,6 +42,11 @@ export interface EmployeeSchedule {
   full_name: string;
   weekly_scheduled_hours: number;
   assignments: ShiftAssignment[];
+  has_multi_branch?: boolean;
+  home_branch_id?: number;
+  home_branch_name?: string;
+  branch_hours?: number;
+  total_chain_hours?: number;
 }
 
 export interface WeeklyScheduleData {
@@ -117,5 +126,36 @@ export const scheduleService = {
 
   async unpublishSchedule(scheduleId: number): Promise<WeeklyScheduleData> {
     return api.post<WeeklyScheduleData>(`/schedules/${scheduleId}/unpublish`);
+  },
+
+  async batchAssignShifts(data: {
+    schedule_id: number;
+    schedule_version?: number;
+    mode?: 'REPLACE_ALL' | 'FILL_MISSING';
+    from_date?: string;
+    to_date?: string;
+    assignments: Array<{
+      employee_id: number;
+      work_shift_id: number;
+      work_date: string;
+      override_rule?: string;
+      override_reason?: string;
+    }>;
+  }): Promise<ShiftAssignment[]> {
+    return api.post<ShiftAssignment[]>('/schedules/assignments/batch', data);
+  },
+
+  async copyScheduleWeek(data: {
+    branch_id: number;
+    source_start_date: string;
+    target_start_date: string;
+    mode: 'SKIP_OCCUPIED' | 'REPLACE_ALL';
+  }): Promise<{
+    copied_count: number;
+    skipped_count: number;
+    target_schedule_id: number;
+    message?: string;
+  }> {
+    return api.post('/schedules/copy-week', data);
   },
 };

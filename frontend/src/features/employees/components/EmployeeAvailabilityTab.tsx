@@ -11,6 +11,7 @@ import {
     Trash2,
     Clock,
     Loader2,
+    Star,
 } from 'lucide-react';
 
 interface EmployeeAvailabilityTabProps {
@@ -83,11 +84,19 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                                                                     canEdit = true,
                                                                                 }) => {
     const { addToast } = useUIStore();
-    const { getAvailability, saveAvailability, fetchEmployeeAvailability } = useAvailabilityStore();
+    const {
+        getAvailability,
+        getPreferredShiftIds,
+        saveAvailability,
+        fetchEmployeeAvailability,
+    } = useAvailabilityStore();
     const { shiftTemplates, fetchShiftTemplates } = useScheduleStore();
 
     const [localGrid, setLocalGrid] = useState<Record<number, number[]>>(() =>
         getAvailability(employeeId)
+    );
+    const [localPreferredShifts, setLocalPreferredShifts] = useState<number[]>(() =>
+        getPreferredShiftIds(employeeId)
     );
     const [isDirty, setIsDirty] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -106,9 +115,10 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
             if (!employeeId) return;
             setIsLoading(true);
             try {
-                const data = await fetchEmployeeAvailability(employeeId);
+                const res = await fetchEmployeeAvailability(employeeId);
                 if (isMounted) {
-                    setLocalGrid(data);
+                    setLocalGrid(res.availabilities);
+                    setLocalPreferredShifts(res.preferredShiftIds);
                     setIsDirty(false);
                 }
             } catch (err) {
@@ -169,6 +179,16 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
         setIsDirty(true);
     };
 
+    // Toggle preferred shift
+    const handleTogglePreferredShift = (shiftId: number) => {
+        if (!canEdit) return;
+        setLocalPreferredShifts((prev) => {
+            const exists = prev.includes(shiftId);
+            return exists ? prev.filter((id) => id !== shiftId) : [...prev, shiftId];
+        });
+        setIsDirty(true);
+    };
+
     // Clear all
     const handleClearAll = () => {
         if (!canEdit) return;
@@ -182,12 +202,14 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
             7: [],
         };
         setLocalGrid(cleared);
+        setLocalPreferredShifts([]);
         setIsDirty(true);
     };
 
     // Reset to saved state
     const handleReset = () => {
         setLocalGrid(getAvailability(employeeId));
+        setLocalPreferredShifts(getPreferredShiftIds(employeeId));
         setIsDirty(false);
     };
 
@@ -196,13 +218,13 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
         if (!canEdit || isSaving) return;
         setIsSaving(true);
         try {
-            const success = await saveAvailability(employeeId, localGrid);
+            const success = await saveAvailability(employeeId, localGrid, localPreferredShifts);
             if (success) {
                 setIsDirty(false);
                 addToast({
                     type: 'success',
                     title: 'Lưu thành công',
-                    message: `Đã cập nhật lịch làm việc khả dụng cho nhân sự ${employeeName}.`,
+                    message: `Đã cập nhật lịch làm việc và ca ưu tiên cho nhân sự ${employeeName}.`,
                 });
             } else {
                 addToast({
@@ -257,7 +279,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                         <Clock size={20} />
                     </div>
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
                                 Lịch Làm Việc Khả Dụng Trong Tuần
                             </h2>
@@ -270,8 +292,26 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                     fontSize: 12,
                                 }}
                             >
-                {isLoading ? 'Đang nạp dữ liệu...' : `${totalSlots} ca khả dụng/tuần`}
-              </span>
+                                {isLoading ? 'Đang nạp dữ liệu...' : `${totalSlots} ca khả dụng/tuần`}
+                            </span>
+                            {localPreferredShifts.length > 0 && (
+                                <span
+                                    className="badge"
+                                    style={{
+                                        backgroundColor: '#FEF3C7',
+                                        color: '#B45309',
+                                        fontWeight: 600,
+                                        fontSize: 12,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        border: '1px solid #FDE68A',
+                                    }}
+                                >
+                                    <Star size={11} fill="#B45309" color="#B45309" />
+                                    {localPreferredShifts.length} ca ưu tiên
+                                </span>
+                            )}
                         </div>
                         <p
                             style={{
@@ -281,8 +321,8 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                 lineHeight: 1.4,
                             }}
                         >
-                            Tích chọn các ca mà nhân sự có thể tiếp nhận làm việc từ Thứ Hai đến Chủ Nhật.
-                            Khi người quản lý xếp ca, hệ thống sẽ tự động lọc và ưu tiên những nhân sự có lịch rảnh khớp với ca đó.
+                            Tích chọn các ca mà nhân sự có thể làm việc từ Thứ Hai đến Chủ Nhật.
+                            Bấm biểu tượng ngôi sao ⭐ cạnh tên ca để đánh dấu các ca nhân sự mong muốn ưu tiên làm việc.
                         </p>
                     </div>
                 </div>
@@ -412,6 +452,8 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                             (localGrid[d.day] || []).includes(template.id)
                         );
 
+                        const isPreferred = localPreferredShifts.includes(template.id);
+
                         return (
                             <tr
                                 key={template.id}
@@ -431,19 +473,85 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                         borderRight: '1px solid var(--color-border)',
                                     }}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                                            {/* Star Button for Favorite Shift */}
+                                            {canEdit ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleTogglePreferredShift(template.id)}
+                                                    style={{
+                                                        background: isPreferred ? '#FEF3C7' : 'transparent',
+                                                        border: isPreferred ? '1px solid #FDE68A' : '1px solid transparent',
+                                                        padding: 5,
+                                                        borderRadius: 6,
+                                                        cursor: 'pointer',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: isPreferred ? '#D97706' : '#94A3B8',
+                                                        transition: 'all 0.15s ease',
+                                                        flexShrink: 0,
+                                                    }}
+                                                    title={isPreferred ? 'Bỏ đánh dấu ca ưu tiên' : 'Đánh dấu ca này là ca ưu tiên làm việc'}
+                                                >
+                                                    <Star
+                                                        size={16}
+                                                        fill={isPreferred ? '#F59E0B' : 'transparent'}
+                                                        color={isPreferred ? '#D97706' : '#94A3B8'}
+                                                    />
+                                                </button>
+                                            ) : isPreferred ? (
+                                                <div
+                                                    style={{
+                                                        padding: 5,
+                                                        borderRadius: 6,
+                                                        backgroundColor: '#FEF3C7',
+                                                        border: '1px solid #FDE68A',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        flexShrink: 0,
+                                                    }}
+                                                    title="Ca ưu tiên làm việc"
+                                                >
+                                                    <Star size={16} fill="#F59E0B" color="#D97706" />
+                                                </div>
+                                            ) : null}
+
+                                            {/* Shift Color Indicator */}
                                             <div
                                                 style={{
-                                                    width: 12,
-                                                    height: 12,
+                                                    width: 10,
+                                                    height: 10,
                                                     borderRadius: '50%',
                                                     backgroundColor: template.colorCode || '#2563EB',
                                                     flexShrink: 0,
                                                 }}
                                             />
-                                            <div>
-                                                <div style={{ fontWeight: 700, fontSize: 14 }}>{template.shiftName}</div>
+
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                    <span style={{ fontWeight: 700, fontSize: 14 }}>{template.shiftName}</span>
+                                                    {isPreferred && (
+                                                        <span
+                                                            style={{
+                                                                fontSize: 10,
+                                                                fontWeight: 700,
+                                                                backgroundColor: '#FEF3C7',
+                                                                color: '#B45309',
+                                                                padding: '1px 6px',
+                                                                borderRadius: 10,
+                                                                border: '1px solid #FDE68A',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: 3,
+                                                            }}
+                                                        >
+                                                            Ưu tiên
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div
                                                     style={{
                                                         fontSize: 12,
@@ -463,7 +571,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                                 onClick={() => handleToggleShiftRow(template.id)}
                                                 style={{
                                                     fontSize: 11,
-                                                    padding: '3px 8px',
+                                                    padding: '4px 10px',
                                                     borderRadius: 4,
                                                     border: '1px solid var(--color-border)',
                                                     backgroundColor: isRowFullySelected ? '#EFF6FF' : '#F9FAFB',
@@ -471,6 +579,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                                     cursor: 'pointer',
                                                     fontWeight: 600,
                                                     whiteSpace: 'nowrap',
+                                                    flexShrink: 0,
                                                 }}
                                                 title={isRowFullySelected ? 'Bỏ chọn cả tuần' : 'Chọn nhanh cả tuần'}
                                             >
@@ -499,13 +608,13 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                                 onClick={() => handleToggleCell(template.id, d.day)}
                                                 style={{
                                                     width: '100%',
-                                                    minHeight: 44,
+                                                    minHeight: 46,
                                                     padding: '6px 4px',
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    gap: 3,
+                                                    gap: 2,
                                                     borderRadius: 6,
                                                     border: isSelected ? '1.5px solid #10B981' : '1px dashed #CBD5E1',
                                                     backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
@@ -515,12 +624,34 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                                     cursor: canEdit && !isLoading ? 'pointer' : 'default',
                                                     transition: 'all 0.15s ease',
                                                 }}
-                                                title={`${d.label} - ${template.shiftName}: ${isSelected ? 'Đang sẵn sàng' : 'Không làm việc'}`}
+                                                title={`${d.label} - ${template.shiftName}: ${
+                                                    isSelected
+                                                        ? isPreferred ? 'Sẵn sàng (Thuộc ca ưu tiên)' : 'Đang sẵn sàng'
+                                                        : 'Không làm việc'
+                                                }`}
                                             >
                                                 {isSelected ? (
                                                     <>
-                                                        <CheckCircle2 size={16} color="#10B981" />
-                                                        <span style={{ fontSize: 11 }}>Sẵn sàng</span>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <CheckCircle2 size={15} color="#10B981" />
+                                                            <span style={{ fontSize: 11 }}>Sẵn sàng</span>
+                                                        </div>
+                                                        {isPreferred && (
+                                                            <div
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: 3,
+                                                                    fontSize: 10,
+                                                                    fontWeight: 700,
+                                                                    color: '#B45309',
+                                                                    lineHeight: 1,
+                                                                }}
+                                                            >
+                                                                <Star size={10} fill="#F59E0B" color="#D97706" />
+                                                                <span>Ưu tiên</span>
+                                                            </div>
+                                                        )}
                                                     </>
                                                 ) : (
                                                     <span style={{ fontSize: 14, color: '#94A3B8' }}>-</span>

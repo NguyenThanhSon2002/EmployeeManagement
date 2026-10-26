@@ -18,9 +18,24 @@ export function getWeekDays(monday: Date): Date[] {
 /**
  * Formats a Date or ISO string into Vietnamese standard display: "dd/MM/yyyy".
  */
-export function formatDateVi(date: Date | string): string {
-  const d = typeof date === 'string' ? parseISO(date) : date;
-  return format(d, 'dd/MM/yyyy');
+export function formatDateVi(date?: Date | string | null): string {
+  if (!date) return '';
+  try {
+    const d = typeof date === 'string' ? parseISO(date) : date;
+    if (!d || isNaN(d.getTime())) {
+      // Fallback if date is "YYYY-MM-DD"
+      if (typeof date === 'string' && date.includes('-')) {
+        const parts = date.split('T')[0].split('-');
+        if (parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      }
+      return String(date);
+    }
+    return format(d, 'dd/MM/yyyy');
+  } catch {
+    return String(date || '');
+  }
 }
 
 /**

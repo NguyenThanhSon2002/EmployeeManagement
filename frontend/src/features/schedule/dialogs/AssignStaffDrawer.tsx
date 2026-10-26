@@ -11,6 +11,7 @@ import { formatDateVi } from '@/utils/date.utils';
 import {
   checkShiftOverlap,
   checkRestTimeBetweenShifts,
+  checkTravelBufferBetweenBranches,
   getShiftAbsoluteTimeRange,
 } from '@/utils/conflict-detector.utils';
 import { calculateShiftDurations, sumWeeklyScheduledHours } from '@/utils/schedule-calc.utils';
@@ -25,8 +26,10 @@ import {
   Info,
   UserCheck,
   Users,
+  Star,
 } from 'lucide-react';
 import { useAvailabilityStore } from '@/features/employees/store/useAvailabilityStore';
+import { useUIStore } from '@/shared/store/useUIStore';
 
 interface AssignStaffDrawerProps {
   isOpen: boolean;
@@ -68,6 +71,8 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
   const [filterMode, setFilterMode] = useState<'AVAILABLE' | 'ALL'>('AVAILABLE');
 
   const isAvailable = useAvailabilityStore((s) => s.isAvailable);
+  const isPreferredShift = useAvailabilityStore((s) => s.isPreferredShift);
+  const addToast = useUIStore((s) => s.addToast);
 
   // Day of week: 1 = Monday, ..., 7 = Sunday
   const dayOfWeek = useMemo(() => {
@@ -138,14 +143,18 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
     if (!shiftTemplate || !workDate || !shiftInfo) return [];
 
     return employees
-      .filter((emp) => emp.employmentStatus !== 'RESIGNED')
+      .filter((emp) => emp.employmentStatus !== 'RESIGNED' && emp.positionId !== 1)
       .map((emp) => {
         const isAlreadyInThisShift = currentAssignedMap.has(Number(emp.id));
-      const isAvailableForShift = isAvailable(
-        Number(emp.id),
-        dayOfWeek,
-        Number(shiftTemplate.id)
-      );
+        const isAvailableForShift = isAvailable(
+          Number(emp.id),
+          dayOfWeek,
+          Number(shiftTemplate.id)
+        );
+        const isPreferred = isPreferredShift(
+          Number(emp.id),
+          Number(shiftTemplate.id)
+        );
 
       // Leaves
       const leave = approvedLeaves.find(
@@ -172,14 +181,26 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
       const sameDayShifts = otherShifts.filter((s) => s.workDate === workDate);
       const overlapCheck = checkShiftOverlap(shiftInfo.timeRange, sameDayShifts);
 
-      // 2. Check Rest Interval (< 12h)
+      // 2. Check Travel Buffer Between Branches (< 45m)
+      const travelCheck = checkTravelBufferBetweenBranches(
+        shiftInfo.timeRange,
+        otherShifts,
+        undefined,
+        undefined,
+        45
+      );
+
+      // External shift info on the same day if any
+      const sameDayExternalShift = sameDayShifts.find((s) => s.isExternal);
+
+      // 3. Check Rest Interval (< 12h)
       const restCheck = checkRestTimeBetweenShifts(
         shiftInfo.timeRange,
         otherShifts,
         settings?.minRestBetweenShiftsHours || 12
       );
 
-      // 3. Check Daily Hours Limit (> 12h)
+      // 4. Check Daily Hours Limit (> 12h)
       let sameDayOtherHours = 0;
       for (const s of sameDayShifts) {
         const { netHours } = calculateShiftDurations(
@@ -197,16 +218,21 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
         emp,
         isAlreadyInThisShift,
         isAvailableForShift,
+        isPreferred,
         leave,
         hasOverlap: overlapCheck.hasOverlap,
         overlapMessage: overlapCheck.message,
+        hasTravelWarning: travelCheck.hasBufferConflict,
+        travelMessage: travelCheck.message,
+        travelConflictShift: travelCheck.conflictingShift,
+        sameDayExternalShift,
         hasRestWarning: restCheck.isRestViolated,
         restMessage: restCheck.message,
         restHours: restCheck.actualRestHours,
         isDailyExceeded,
         totalDailyHours,
         weeklyHours,
-        hasWarning: restCheck.isRestViolated || isDailyExceeded,
+        hasWarning: restCheck.isRestViolated || isDailyExceeded || travelCheck.hasBufferConflict,
       };
     });
   }, [
@@ -220,6 +246,7 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
     settings,
     dayOfWeek,
     isAvailable,
+    isPreferredShift,
   ]);
 
   // Count available staff
@@ -230,40 +257,84 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
   }, [employeeStatusList]);
   const totalCount = employeeStatusList.length;
 
-  // Filtered by availability mode and search term
+  // Filtered by availability mode and search term, sorted with preferred candidates first
   const filteredList = useMemo(() => {
     let list = employeeStatusList;
     if (filterMode === 'AVAILABLE') {
       list = list.filter((item) => item.isAvailableForShift || item.isAlreadyInThisShift);
     }
-    if (!searchTerm.trim()) return list;
-    const term = searchTerm.toLowerCase();
-    return list.filter(
-      (item) =>
-        item.emp.fullName.toLowerCase().includes(term) ||
-        item.emp.employeeCode.toLowerCase().includes(term)
-    );
-  }, [employeeStatusList, filterMode, searchTerm]);
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      list = list.filter(
+        (item) =>
+          item.emp.fullName.toLowerCase().includes(term) ||
+          item.emp.employeeCode.toLowerCase().includes(term)
+      );
+    }
+
+    // Sort priority:
+    // 1. Currently selected (đã chọn)
+    // 2. Preferred shift (ca ưu tiên của nhân viên)
+    // 3. Available for shift (khả dụng)
+    // 4. Overlap status (không trùng giờ lên trước)
+    // 5. Warning status (không cảnh báo lên trước)
+    // 6. Weekly hours ascending
+    return [...list].sort((a, b) => {
+      const aSelected = selectedEmpIds.has(Number(a.emp.id)) ? 1 : 0;
+      const bSelected = selectedEmpIds.has(Number(b.emp.id)) ? 1 : 0;
+      if (aSelected !== bSelected) return bSelected - aSelected;
+
+      const aPreferred = a.isPreferred ? 1 : 0;
+      const bPreferred = b.isPreferred ? 1 : 0;
+      if (aPreferred !== bPreferred) return bPreferred - aPreferred;
+
+      const aAvailable = a.isAvailableForShift ? 1 : 0;
+      const bAvailable = b.isAvailableForShift ? 1 : 0;
+      if (aAvailable !== bAvailable) return bAvailable - aAvailable;
+
+      const aOverlap = a.hasOverlap ? 1 : 0;
+      const bOverlap = b.hasOverlap ? 1 : 0;
+      if (aOverlap !== bOverlap) return aOverlap - bOverlap;
+
+      const aWarning = a.hasWarning ? 1 : 0;
+      const bWarning = b.hasWarning ? 1 : 0;
+      if (aWarning !== bWarning) return aWarning - bWarning;
+
+      return a.weeklyHours - b.weeklyHours;
+    });
+  }, [employeeStatusList, filterMode, searchTerm, selectedEmpIds]);
 
   if (!isOpen || !shiftTemplate || !workDate || !shiftInfo) return null;
 
   const minStaffing = shiftTemplate.minStaffing || 1;
+  const maxStaffing = shiftTemplate.maxStaffing || minStaffing;
   const currentSelectedCount = selectedEmpIds.size;
-  const isQuotaMet = currentSelectedCount >= minStaffing;
+  const isQuotaMet = currentSelectedCount >= minStaffing && currentSelectedCount <= maxStaffing;
+  const isOverQuota = currentSelectedCount > maxStaffing;
 
   const handleToggleEmployee = (empId: number, hasOverlap: boolean) => {
     if (hasOverlap || !canEdit) return;
 
-    setSelectedEmpIds((prev) => {
-      const next = new Set(prev);
-      const idNum = Number(empId);
-      if (next.has(idNum)) {
-        next.delete(idNum);
-      } else {
-        next.add(idNum);
+    const idNum = Number(empId);
+    if (!selectedEmpIds.has(idNum)) {
+      // Adding a new employee: check maxStaffing limit
+      if (selectedEmpIds.size >= maxStaffing) {
+        addToast({
+          type: 'warning',
+          title: 'Đã đạt định biên tối đa',
+          message: `Ca ${shiftTemplate.shiftName} có định biên tối đa ${maxStaffing} nhân sự. Hãy bỏ chọn nhân sự hiện tại trước khi thêm người mới.`,
+        });
+        return;
       }
-      return next;
-    });
+      setSelectedEmpIds((prev) => new Set(prev).add(idNum));
+    } else {
+      // Deselect employee
+      setSelectedEmpIds((prev) => {
+        const next = new Set(prev);
+        next.delete(idNum);
+        return next;
+      });
+    }
   };
 
   const handleSave = () => {
@@ -359,11 +430,19 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                   fontWeight: 600,
                   padding: '2px 8px',
                   borderRadius: 'var(--radius-full)',
-                  backgroundColor: isQuotaMet ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                  color: isQuotaMet ? '#059669' : '#D97706',
+                  backgroundColor: isOverQuota
+                    ? 'rgba(239, 68, 68, 0.15)'
+                    : isQuotaMet
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : 'rgba(245, 158, 11, 0.15)',
+                  color: isOverQuota ? '#DC2626' : isQuotaMet ? '#059669' : '#D97706',
                 }}
               >
-                {isQuotaMet ? '✓ Đủ định biên' : `▲ Cần ${minStaffing} NV`} ({currentSelectedCount}/{minStaffing})
+                {isOverQuota
+                  ? `▲ Vượt định biên (${currentSelectedCount}/${maxStaffing})`
+                  : isQuotaMet
+                  ? `✓ Đủ định biên (${currentSelectedCount}/${minStaffing}${minStaffing !== maxStaffing ? ` - ${maxStaffing}` : ''} NV)`
+                  : `▲ Cần ${minStaffing} NV (${currentSelectedCount}/${minStaffing})`}
               </span>
             </div>
 
@@ -534,12 +613,20 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
               {filteredList.map((item) => {
                 const isSelected = selectedEmpIds.has(Number(item.emp.id));
                 const isOverlapped = item.hasOverlap;
-                const isDisabled = isOverlapped;
+                const isCapacityReached = !isSelected && selectedEmpIds.size >= maxStaffing;
+                const isDisabled = isOverlapped || isCapacityReached;
 
                 return (
                   <div
                     key={item.emp.id}
                     onClick={() => handleToggleEmployee(item.emp.id, item.hasOverlap)}
+                    title={
+                      isCapacityReached
+                        ? `Ca làm việc đã đủ định biên tối đa (${maxStaffing} NV). Bỏ chọn nhân viên hiện tại để đổi người.`
+                        : isOverlapped
+                        ? item.overlapMessage || 'Trùng giờ với ca khác'
+                        : undefined
+                    }
                     style={{
                       borderRadius: 'var(--radius-md)',
                       border: isSelected
@@ -552,7 +639,7 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                         : '#FFFFFF',
                       padding: '12px 14px',
                       transition: 'all 0.15s ease',
-                      opacity: isDisabled ? 0.6 : 1,
+                      opacity: isDisabled ? 0.65 : 1,
                       cursor: isDisabled ? 'not-allowed' : 'pointer',
                     }}
                   >
@@ -618,6 +705,22 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                             <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
                               ({item.emp.employeeCode})
                             </span>
+                            {item.emp.hasMultiBranch && (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  backgroundColor: '#EFF6FF',
+                                  color: '#1D4ED8',
+                                  padding: '1px 5px',
+                                  borderRadius: 4,
+                                  border: '1px solid #BFDBFE',
+                                }}
+                                title="Nhân viên làm việc luân phiên/kiêm nhiệm nhiều cơ sở"
+                              >
+                                Đa cơ sở
+                              </span>
+                            )}
                             {item.emp.employmentStatus === 'ON_LEAVE' && (
                               <span
                                 style={{
@@ -632,6 +735,26 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                                 title="Nhân viên đang trong thời gian nghỉ chế độ / tạm hoãn"
                               >
                                 Nghỉ chế độ
+                              </span>
+                            )}
+                            {item.isPreferred && (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  backgroundColor: '#FEF3C7',
+                                  color: '#B45309',
+                                  padding: '1px 6px',
+                                  borderRadius: 4,
+                                  border: '1px solid #FDE68A',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 3,
+                                }}
+                                title="Nhân viên đã đăng ký ưu tiên nhận làm ca này"
+                              >
+                                <Star size={10} fill="#B45309" color="#B45309" />
+                                Ưu tiên ca này
                               </span>
                             )}
                             <a
@@ -656,9 +779,35 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                               Lịch rảnh ↗
                             </a>
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                            Đã xếp tuần: <strong>{item.weeklyHours.toFixed(1)}h / 48h</strong>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span>Đã xếp tuần: <strong>{item.weeklyHours.toFixed(1)}h / 48h</strong></span>
+                            {item.emp.homeBranchName && (
+                              <span style={{ color: '#64748B' }}>
+                                • Cơ sở gốc: {item.emp.homeBranchName.replace('Chi nhánh ', 'CN ')}
+                              </span>
+                            )}
                           </div>
+                          {item.sameDayExternalShift && (
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: '#1E40AF',
+                                backgroundColor: '#EFF6FF',
+                                border: '1px solid #DBEAFE',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                marginTop: 4,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                              }}
+                            >
+                              <span>📍</span>
+                              <span>
+                                Đang có ca tại <strong>{item.sameDayExternalShift.branchName || 'cơ sở khác'}</strong> ({item.sameDayExternalShift.snapshotStartTime.slice(0, 5)} - {item.sameDayExternalShift.snapshotEndTime.slice(0, 5)})
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -728,6 +877,26 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                             title={item.overlapMessage || 'Trùng giờ ca khác'}
                           >
                             <AlertCircle size={11} /> Trùng ca khác
+                          </span>
+                        )}
+
+                        {!isOverlapped && item.hasTravelWarning && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: '#D97706',
+                              backgroundColor: '#FEF3C7',
+                              border: '1px solid #FDE68A',
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3,
+                            }}
+                            title={item.travelMessage || 'Khoảng đệm di chuyển giữa 2 cơ sở dưới 45 phút'}
+                          >
+                            <AlertTriangle size={11} color="#D97706" /> Di chuyển &lt;45p
                           </span>
                         )}
 

@@ -18,4 +18,7 @@ public class EmployeeAvailabilityDto {
 
     // Map: dayOfWeek (1..7) -> List<workShiftId>
     private Map<Integer, List<Long>> availabilities;
+
+    @JsonProperty("preferred_shift_ids")
+    private List<Long> preferredShiftIds;
 }

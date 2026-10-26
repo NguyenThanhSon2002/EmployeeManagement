@@ -24,9 +24,12 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
 
   // Filter employees
   const filteredEmployees = useMemo(() => {
-    if (!searchTerm.trim()) return employees;
+    const activeStaff = employees.filter(
+      (emp) => emp.employmentStatus !== 'RESIGNED' && emp.positionId !== 1
+    );
+    if (!searchTerm.trim()) return activeStaff;
     const term = searchTerm.toLowerCase();
-    return employees.filter(
+    return activeStaff.filter(
       (emp) =>
         emp.fullName.toLowerCase().includes(term) ||
         emp.employeeCode.toLowerCase().includes(term)
@@ -72,11 +75,23 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
       grandTotalHours += empTotalHours;
       grandTotalShifts += empTotalShifts;
 
+      // Multi-branch calculation: check if employee has shifts in other branches or flag
+      const hasExternalShifts = allAssignments.some(
+        (a) => a.employeeId === emp.id && a.isExternal && a.status !== 'CANCELLED'
+      );
+      const isMultiBranch = Boolean(emp.hasMultiBranch || hasExternalShifts);
+      const branchHours = Math.round(empTotalHours * 10) / 10;
+      const chainHours = emp.totalChainHours !== undefined
+        ? Math.round(emp.totalChainHours * 10) / 10
+        : branchHours;
+
       return {
         emp,
         dailyData,
         totalShifts: empTotalShifts,
-        totalHours: Math.round(empTotalHours * 10) / 10,
+        totalHours: branchHours,
+        chainHours,
+        isMultiBranch,
       };
     });
 
@@ -96,12 +111,12 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
     <div
       className="card"
       style={{
-        padding: '20px 24px',
+        padding: '18px 22px',
         backgroundColor: '#FFFFFF',
-        borderRadius: 'var(--radius-xl)',
-        border: '1px solid var(--color-border)',
-        boxShadow: 'var(--shadow-sm)',
-        marginTop: 'var(--space-md)',
+        borderRadius: '12px',
+        border: '1px solid #E2E8F0',
+        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+        marginTop: '16px',
       }}
     >
       {/* 1. Header Bar */}
@@ -114,63 +129,63 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
           gap: 12,
           marginBottom: 16,
           paddingBottom: 14,
-          borderBottom: '1px solid var(--color-border-subtle)',
+          borderBottom: '1px solid #F1F5F9',
         }}
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 18 }}>📊</span>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A', margin: 0, letterSpacing: '-0.01em' }}>
               Bảng Tổng Hợp Giờ Công Nhân Viên Trong Tuần
             </h3>
           </div>
-          <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
-            Tổng hợp giờ làm theo mẫu ca thực tế (part-time) và số ca làm việc từ Thứ Hai đến Chủ Nhật.
+          <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0 0' }}>
+            Tổng hợp giờ làm theo mẫu ca thực tế và số ca làm việc từ Thứ Hai đến Chủ Nhật.
           </p>
         </div>
 
         {/* Quick summary stats */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div
             style={{
-              padding: '6px 12px',
+              padding: '5px 12px',
               backgroundColor: '#F8FAFC',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-border-subtle)',
-              fontSize: 12,
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              fontSize: '12px',
             }}
           >
-            <span style={{ color: 'var(--color-text-muted)' }}>Nhân sự: </span>
-            <strong style={{ color: 'var(--color-text-primary)' }}>{filteredEmployees.length}</strong>
+            <span style={{ color: '#64748B' }}>Nhân sự: </span>
+            <strong style={{ color: '#0F172A', fontWeight: 700 }}>{filteredEmployees.length}</strong>
           </div>
 
           <div
             style={{
-              padding: '6px 12px',
+              padding: '5px 12px',
               backgroundColor: '#F8FAFC',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-border-subtle)',
-              fontSize: 12,
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              fontSize: '12px',
             }}
           >
-            <span style={{ color: 'var(--color-text-muted)' }}>Tổng ca: </span>
-            <strong style={{ color: 'var(--color-primary)' }}>{totalShiftsAllEmployees} ca</strong>
+            <span style={{ color: '#64748B' }}>Tổng ca: </span>
+            <strong style={{ color: '#2563EB', fontWeight: 700 }}>{totalShiftsAllEmployees} ca</strong>
           </div>
 
           <div
             style={{
-              padding: '6px 12px',
-              backgroundColor: 'rgba(37, 99, 235, 0.08)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(37, 99, 235, 0.2)',
-              fontSize: 12,
+              padding: '5px 12px',
+              backgroundColor: '#EFF6FF',
+              borderRadius: '8px',
+              border: '1px solid #DBEAFE',
+              fontSize: '12px',
             }}
           >
-            <span style={{ color: 'var(--color-text-muted)' }}>Tổng giờ toàn tuần: </span>
-            <strong style={{ color: 'var(--color-primary)', fontSize: 13 }}>
+            <span style={{ color: '#1E40AF' }}>Tổng giờ toàn tuần: </span>
+            <strong style={{ color: '#1D4ED8', fontSize: '13px', fontWeight: 700 }}>
               {totalWeekHoursAllEmployees}h
             </strong>
-            <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 4 }}>
+            <span style={{ fontSize: '11px', color: '#64748B', marginLeft: 4 }}>
               (TB: {avgHoursPerEmp}h/người)
             </span>
           </div>
@@ -271,10 +286,26 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
                           </div>
                         )}
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
                               {row.emp.fullName}
                             </span>
+                            {row.isMultiBranch && (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  backgroundColor: '#EFF6FF',
+                                  color: '#1D4ED8',
+                                  padding: '1px 5px',
+                                  borderRadius: 4,
+                                  border: '1px solid #BFDBFE',
+                                }}
+                                title="Nhân viên làm việc luân phiên/kiêm nhiệm nhiều cơ sở"
+                              >
+                                Đa cơ sở
+                              </span>
+                            )}
                             {row.emp.employmentStatus === 'ON_LEAVE' && (
                               <span
                                 style={{
@@ -291,8 +322,13 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                            {row.emp.employeeCode}
+                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span>{row.emp.employeeCode}</span>
+                            {row.emp.homeBranchName && (
+                              <span style={{ color: '#64748B', fontSize: 10 }}>
+                                • Gốc: {row.emp.homeBranchName.replace('Chi nhánh ', 'CN ')}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -349,19 +385,34 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
 
                     {/* Total Hours */}
                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          fontSize: 14,
-                          color: isOverLimit
-                            ? '#DC2626'
-                            : row.totalHours > 0
-                            ? 'var(--color-primary)'
-                            : 'var(--color-text-muted)',
-                        }}
-                      >
-                        {row.totalHours.toFixed(1)}h
-                      </span>
+                      <div>
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            fontSize: 14,
+                            color: isOverLimit
+                              ? '#DC2626'
+                              : row.totalHours > 0
+                              ? 'var(--color-primary)'
+                              : 'var(--color-text-muted)',
+                          }}
+                        >
+                          {row.totalHours.toFixed(1)}h
+                        </span>
+                        {row.isMultiBranch && row.chainHours > row.totalHours && (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: '#64748B',
+                              fontWeight: 500,
+                              marginTop: 2,
+                            }}
+                            title={`Tổng giờ làm việc toàn chuỗi: ${row.chainHours.toFixed(1)}h`}
+                          >
+                            (Chuỗi: {row.chainHours.toFixed(1)}h)
+                          </div>
+                        )}
+                      </div>
                     </td>
 
                     {/* Status Badge */}

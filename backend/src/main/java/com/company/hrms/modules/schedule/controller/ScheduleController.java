@@ -90,6 +90,28 @@ public class ScheduleController {
         return ApiResponse.success(assignments);
     }
 
+    @PostMapping("/assignments/batch")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
+    @Operation(summary = "Lưu phân ca hàng loạt", description = "Lưu danh sách phân ca tự động trong 1 transaction")
+    public ApiResponse<List<ShiftAssignmentDto>> batchAssignShifts(
+            @Valid @RequestBody BatchAssignItemsRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Long userId = principal != null ? principal.getId() : 1L;
+        List<ShiftAssignmentDto> dtos = scheduleService.batchAssignShifts(request, userId);
+        return ApiResponse.success(dtos);
+    }
+
+    @PostMapping("/copy-week")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
+    @Operation(summary = "Sao chép lịch tuần", description = "Sao chép toàn bộ phân ca từ tuần nguồn sang tuần đích trong 1 transaction")
+    public ApiResponse<CopyWeekResponse> copyScheduleWeek(
+            @Valid @RequestBody CopyWeekRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Long userId = principal != null ? principal.getId() : 1L;
+        CopyWeekResponse response = scheduleService.copyScheduleWeek(request, userId);
+        return ApiResponse.success(response);
+    }
+
     @PostMapping("/{id}/publish")
     @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Công bố lịch làm việc chính thức", description = "Chuyển trạng thái lịch sang PUBLISHED")

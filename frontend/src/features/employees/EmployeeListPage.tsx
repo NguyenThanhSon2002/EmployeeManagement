@@ -10,7 +10,7 @@ import { employeeService } from './api/employeeService';
 import { branchService } from '@/shared/branch/branchService';
 import { isMockEnabled } from '@/config/env.config';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock, Users } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock, Users, ChevronDown, ChevronUp, Building2, Briefcase, Sparkles } from 'lucide-react';
 import { useAvailabilityStore } from './store/useAvailabilityStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 
@@ -36,6 +36,13 @@ export const EmployeeListPage: React.FC = () => {
   const [selectedBranchId, setSelectedBranchId] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+  const [expandedEmployeeIds, setExpandedEmployeeIds] = useState<number[]>([]);
+
+  const toggleExpandEmployee = (id: number) => {
+    setExpandedEmployeeIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
   useEffect(() => {
     if (isMockEnabled()) {
@@ -106,6 +113,18 @@ export const EmployeeListPage: React.FC = () => {
           hireDate: dto.hire_date || dto.hireDate || '2026-01-01',
           isActive: dto.is_active !== undefined ? dto.is_active : true,
           version: dto.version || 1,
+          secondaryBranchIds: dto.secondary_branch_ids || dto.secondaryBranchIds || [],
+          secondaryBranches: (dto.secondary_branches || dto.secondaryBranches || []).map((sb: any) => ({
+            branchId: sb.branch_id || sb.branchId,
+            positionId: sb.position_id || sb.positionId || 3,
+            branchName: sb.branch_name || sb.branchName,
+            positionName: sb.position_name || sb.positionName,
+          })),
+          hasMultiBranch: Boolean(
+            (dto.secondary_branches && dto.secondary_branches.length > 0) ||
+            (dto.secondary_branch_ids && dto.secondary_branch_ids.length > 0) ||
+            (dto.secondaryBranchIds && dto.secondaryBranchIds.length > 0)
+          ),
         }));
         setEmployeesList(mappedEmps);
 
@@ -201,6 +220,11 @@ export const EmployeeListPage: React.FC = () => {
       email: data.email,
       phone_number: data.phoneNumber,
       branch_id: data.branchId,
+      secondary_branch_ids: data.secondaryBranchIds || [],
+      secondary_branches: (data.secondaryBranches || []).map((sb) => ({
+        branch_id: sb.branchId,
+        position_id: sb.positionId,
+      })),
       position_id: data.positionId,
       employment_status: data.employmentStatus,
       hire_date: data.hireDate,
@@ -526,9 +550,9 @@ export const EmployeeListPage: React.FC = () => {
                   }
 
                   return (
+                    <React.Fragment key={emp.id}>
                       <tr
-                          key={emp.id}
-                          style={{
+                        style={{
                             borderBottom: '1px solid var(--color-border-subtle)',
                             transition: 'background-color var(--transition-fast), opacity var(--transition-fast)',
                             opacity: isResigned ? 0.55 : 1,
@@ -564,16 +588,71 @@ export const EmployeeListPage: React.FC = () => {
                           </div>
                         </td>
                         <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-                      <span
-                          style={{
-                            padding: '2px 8px',
-                            borderRadius: 'var(--radius-sm)',
-                            backgroundColor: '#F1F5F9',
-                            fontSize: '12px',
-                          }}
-                      >
-                        {getBranchName(emp.branchId)}
-                      </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  padding: '3px 9px',
+                                  borderRadius: '6px',
+                                  backgroundColor: '#F8FAFC',
+                                  border: '1px solid #E2E8F0',
+                                  fontSize: '12.5px',
+                                  fontWeight: 600,
+                                  color: '#0F172A',
+                                  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)',
+                                }}
+                              >
+                                <Building2 size={13} color="#2563EB" />
+                                {getBranchName(emp.branchId)}
+                              </span>
+                            </div>
+
+                            {/* Dropdown toggle button for secondary branches */}
+                            {((emp.secondaryBranches && emp.secondaryBranches.length > 0) ||
+                              (emp.secondaryBranchIds && emp.secondaryBranchIds.length > 0)) && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpandEmployee(emp.id)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  color: expandedEmployeeIds.includes(emp.id) ? '#1E40AF' : '#2563EB',
+                                  backgroundColor: expandedEmployeeIds.includes(emp.id) ? '#EFF6FF' : '#F0F7FF',
+                                  border: expandedEmployeeIds.includes(emp.id) ? '1px solid #93C5FD' : '1px solid #BFDBFE',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  boxShadow: '0 1px 2px rgba(37, 99, 235, 0.05)',
+                                }}
+                                title="Bấm để xem danh sách chi nhánh phụ trách & chức danh tương ứng"
+                              >
+                                <span
+                                  style={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    backgroundColor: '#2563EB',
+                                    display: 'inline-block',
+                                  }}
+                                />
+                                <span>
+                                  CN phụ trách ({emp.secondaryBranches?.length || emp.secondaryBranchIds?.length || 0})
+                                </span>
+                                {expandedEmployeeIds.includes(emp.id) ? (
+                                  <ChevronUp size={13} strokeWidth={2.2} />
+                                ) : (
+                                  <ChevronDown size={13} strokeWidth={2.2} />
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
                           {getPositionName(emp.positionId)}
@@ -694,6 +773,183 @@ export const EmployeeListPage: React.FC = () => {
                           </div>
                         </td>
                       </tr>
+
+                      {/* Expandable row: secondary branches details */}
+                      {expandedEmployeeIds.includes(emp.id) && (
+                        <tr
+                          key={`expanded-${emp.id}`}
+                          style={{
+                            backgroundColor: '#F8FAFC',
+                            borderBottom: '1px solid var(--color-border-subtle)',
+                          }}
+                        >
+                          <td colSpan={8} style={{ padding: '12px 24px 16px 48px' }}>
+                            <div
+                              style={{
+                                padding: '14px 18px',
+                                backgroundColor: '#FFFFFF',
+                                border: '1px solid #E2E8F0',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 12,
+                                boxShadow: '0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.03)',
+                                animation: 'fadeIn 0.15s ease-out',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  borderBottom: '1px solid #F1F5F9',
+                                  paddingBottom: 8,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontSize: '12.5px',
+                                    fontWeight: 700,
+                                    color: '#1E293B',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 7,
+                                  }}
+                                >
+                                  <Sparkles size={14} color="#2563EB" />
+                                  <span>Phân công phụ trách & vai trò tại cơ sở khác:</span>
+                                </div>
+                                <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                  Nhân sự có thể được phân công làm việc và xếp ca tại các cơ sở này
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+                                {(emp.secondaryBranches && emp.secondaryBranches.length > 0) ? (
+                                  emp.secondaryBranches.map((sb, idx) => (
+                                    <div
+                                      key={idx}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '10px 14px',
+                                        borderRadius: '8px',
+                                        backgroundColor: '#F8FAFC',
+                                        border: '1px solid #E2E8F0',
+                                        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.02)',
+                                        transition: 'all 0.15s ease',
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div
+                                          style={{
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: '6px',
+                                            backgroundColor: '#EFF6FF',
+                                            color: '#2563EB',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                          }}
+                                        >
+                                          <Building2 size={15} />
+                                        </div>
+                                        <div>
+                                          <div style={{ fontWeight: 600, color: '#0F172A', fontSize: '13px' }}>
+                                            {sb.branchName || getBranchName(sb.branchId)}
+                                          </div>
+                                          <div style={{ fontSize: '11px', color: '#64748B' }}>
+                                            Cơ sở kiêm nhiệm
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: 4,
+                                          fontSize: '11.5px',
+                                          fontWeight: 600,
+                                          color: '#1D4ED8',
+                                          backgroundColor: '#EFF6FF',
+                                          padding: '3px 8px',
+                                          borderRadius: '6px',
+                                          border: '1px solid #BFDBFE',
+                                        }}
+                                      >
+                                        <Briefcase size={12} color="#2563EB" />
+                                        <span>{sb.positionName || getPositionName(sb.positionId)}</span>
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  emp.secondaryBranchIds?.map((bId) => (
+                                    <div
+                                      key={bId}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '10px 14px',
+                                        borderRadius: '8px',
+                                        backgroundColor: '#F8FAFC',
+                                        border: '1px solid #E2E8F0',
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div
+                                          style={{
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: '6px',
+                                            backgroundColor: '#EFF6FF',
+                                            color: '#2563EB',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                          }}
+                                        >
+                                          <Building2 size={15} />
+                                        </div>
+                                        <div>
+                                          <div style={{ fontWeight: 600, color: '#0F172A', fontSize: '13px' }}>
+                                            {getBranchName(bId)}
+                                          </div>
+                                          <div style={{ fontSize: '11px', color: '#64748B' }}>
+                                            Cơ sở kiêm nhiệm
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: 4,
+                                          fontSize: '11.5px',
+                                          fontWeight: 600,
+                                          color: '#1D4ED8',
+                                          backgroundColor: '#EFF6FF',
+                                          padding: '3px 8px',
+                                          borderRadius: '6px',
+                                          border: '1px solid #BFDBFE',
+                                        }}
+                                      >
+                                        <Briefcase size={12} color="#2563EB" />
+                                        <span>Nhân viên</span>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
             )}

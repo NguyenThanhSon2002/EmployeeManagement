@@ -22,5 +22,8 @@ public class SaveAvailabilityRequest {
     // Key: 1..7 (Thứ 2 -> Chủ Nhật), Value: danh sách id ca làm việc
     @NotNull(message = "Danh sách ca không được để trống")
     private Map<Integer, List<Long>> availabilities;
+
+    @JsonProperty("preferred_shift_ids")
+    private List<Long> preferredShiftIds;
 }
 
