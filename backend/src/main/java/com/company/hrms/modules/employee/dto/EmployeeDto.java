@@ -60,6 +60,9 @@ public class EmployeeDto {
     @JsonProperty("hire_date")
     private LocalDate hireDate;
 
+    @JsonProperty("avatar_url")
+    private String avatarUrl;
+
     @JsonProperty("resignation_date")
     private LocalDate resignationDate;
 
@@ -118,6 +121,8 @@ public class EmployeeDto {
     public void setEmploymentType(String employmentType) { this.employmentType = employmentType; }
     public LocalDate getHireDate() { return hireDate; }
     public void setHireDate(LocalDate hireDate) { this.hireDate = hireDate; }
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
     public LocalDate getResignationDate() { return resignationDate; }
     public void setResignationDate(LocalDate resignationDate) { this.resignationDate = resignationDate; }
     public Boolean getIsActive() { return isActive; }

@@ -50,4 +50,13 @@ public class AuthController {
         AuthResponse.UserInfo userInfo = authService.getCurrentUser(principal);
         return ApiResponse.success(userInfo);
     }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "Đổi mật khẩu người dùng hiện tại", description = "Cho phép người dùng đang đăng nhập đổi mật khẩu tài khoản")
+    public ApiResponse<Void> changePassword(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody com.company.hrms.modules.auth.dto.ChangePasswordRequest request) {
+        authService.changePassword(principal, request);
+        return ApiResponse.success(null);
+    }
 }

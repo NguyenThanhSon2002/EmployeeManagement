@@ -30,3 +30,7 @@ target/
 plans/
 docs/brainstorms/
 docs/archive/
+
+# Uploads
+uploads/
+backend/uploads/

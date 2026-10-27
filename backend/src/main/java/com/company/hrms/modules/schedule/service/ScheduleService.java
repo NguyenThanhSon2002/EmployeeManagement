@@ -262,10 +262,22 @@ public class ScheduleService {
         return overall;
     }
 
+    private void assertScheduleNotLocked(Schedule schedule) {
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            throw new BusinessException(
+                    "SCHEDULE_LOCKED",
+                    "Lịch làm việc đã được công bố chính thức và đang bị khóa. Chỉ Giám đốc hoặc Admin mới có quyền thu hồi về bản nháp để điều chỉnh.",
+                    HttpStatus.FORBIDDEN
+            );
+        }
+    }
+
     @Transactional
     public ShiftAssignmentDto assignSingleShift(AssignSingleShiftRequest request, Long currentUserId) {
         Schedule schedule = scheduleRepository.findById(request.getScheduleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));
+
+        assertScheduleNotLocked(schedule);
 
         if (request.getScheduleVersion() != null && !schedule.getVersion().equals(request.getScheduleVersion())) {
             throw new ObjectOptimisticLockingFailureException(Schedule.class, schedule.getId());
@@ -360,6 +372,8 @@ public class ScheduleService {
         Schedule schedule = scheduleRepository.findById(request.getScheduleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));
 
+        assertScheduleNotLocked(schedule);
+
         if (request.getScheduleVersion() != null && !schedule.getVersion().equals(request.getScheduleVersion())) {
             throw new ObjectOptimisticLockingFailureException(Schedule.class, schedule.getId());
         }
@@ -434,6 +448,8 @@ public class ScheduleService {
     public List<ShiftAssignmentDto> batchAssignShifts(BatchAssignItemsRequest request, Long currentUserId) {
         Schedule schedule = scheduleRepository.findById(request.getScheduleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));
+
+        assertScheduleNotLocked(schedule);
 
         if (request.getScheduleVersion() != null && !schedule.getVersion().equals(request.getScheduleVersion())) {
             throw new ObjectOptimisticLockingFailureException(Schedule.class, schedule.getId());
@@ -566,6 +582,8 @@ public class ScheduleService {
 
         Schedule schedule = scheduleRepository.findById(assignment.getScheduleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", assignment.getScheduleId()));
+
+        assertScheduleNotLocked(schedule);
 
         if (scheduleVersion != null && !schedule.getVersion().equals(scheduleVersion)) {
             throw new ObjectOptimisticLockingFailureException(Schedule.class, schedule.getId());

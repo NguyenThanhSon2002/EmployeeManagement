@@ -4,6 +4,7 @@ import { format, addMonths, subMonths, parse } from 'date-fns';
 import type { Employee, Branch, ShiftAssignment, EmployeeMonthlySchedule } from '@/types/domain.types';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { EmployeeAvailabilityTab } from './components/EmployeeAvailabilityTab';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
@@ -12,6 +13,10 @@ import { employeeService } from './api/employeeService';
 import { branchService } from '@/shared/branch/branchService';
 import { isMockEnabled } from '@/config/env.config';
 import { formatDateVi } from '@/utils/date.utils';
+import { UserAvatar } from '@/components/common/UserAvatar';
+import { EmploymentStatusBadge } from '@/components/common/EmploymentStatusBadge';
+
+
 import {
   ArrowLeft,
   User,
@@ -28,6 +33,9 @@ import {
   ChevronRight,
   RefreshCw,
   Sparkles,
+  Camera,
+  KeyRound,
+  Loader2,
 } from 'lucide-react';
 
 export const EmployeeDetailPage: React.FC = () => {
@@ -61,11 +69,16 @@ export const EmployeeDetailPage: React.FC = () => {
     navigate(`/employees/${id}?tab=${newTab}`, { replace: true });
   };
 
-  const { currentRole } = useAuthStore();
+  const { currentRole, currentUser, setUser } = useAuthStore();
   const { addToast } = useUIStore();
   const canDelete = currentRole === 'ROLE_DIRECTOR';
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Change Password & Avatar Upload States
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { assignments, approvedLeaves } = useScheduleStore();
   const { getEmployeeById, branches, positions } = useDirectoryStore();
@@ -88,6 +101,9 @@ export const EmployeeDetailPage: React.FC = () => {
   const [employee, setEmployee] = useState<Employee | null>(
     isMockEnabled() ? (cachedEmployee || fallbackEmp) : null
   );
+
+  const isSelf = Boolean(currentUser && employee && currentUser.id === employee.id);
+  const canManagePassword = isSelf || currentRole === 'ROLE_DIRECTOR';
   const [branchesList, setBranchesList] = useState<Branch[]>(isMockEnabled() ? branches : []);
   const [isLoading, setIsLoading] = useState<boolean>(!isMockEnabled());
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -145,6 +161,7 @@ export const EmployeeDetailPage: React.FC = () => {
             employmentStatus: empData.employment_status || (empData as any).employmentStatus || 'OFFICIAL',
             employmentType: empData.employment_type || (empData as any).employmentType || 'FULL_TIME',
             hireDate: empData.hire_date || (empData as any).hireDate || '2026-01-01',
+            avatarUrl: empData.avatar_url || (empData as any).avatarUrl,
             isActive: empData.is_active !== undefined ? empData.is_active : true,
             version: empData.version || 1,
             secondaryBranchIds: secBranchIds,
@@ -414,6 +431,61 @@ export const EmployeeDetailPage: React.FC = () => {
     }
   };
 
+  const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !employee) return;
+
+    // Check size (< 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast({
+        type: 'error',
+        title: 'Tập tin quá lớn',
+        message: 'Kích thước ảnh tối đa cho phép là 5MB.',
+      });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      let updatedAvatarUrl = '';
+      if (!isMockEnabled()) {
+        const updatedEmp = await employeeService.uploadAvatar(employee.id, file);
+        updatedAvatarUrl = updatedEmp.avatar_url || (updatedEmp as any).avatarUrl || '';
+      } else {
+        // Mock fallback: create local object URL
+        updatedAvatarUrl = URL.createObjectURL(file);
+      }
+
+      setEmployee((prev) => (prev ? { ...prev, avatarUrl: updatedAvatarUrl } : null));
+
+      // If user is viewing their own profile, sync with useAuthStore and directory store
+      if (currentUser && currentUser.id === employee.id) {
+        setUser({ ...currentUser, avatarUrl: updatedAvatarUrl });
+      }
+
+      useDirectoryStore.getState().upsertEmployeeInDirectory({ ...employee, avatarUrl: updatedAvatarUrl });
+
+      addToast({
+        type: 'success',
+        title: 'Cập nhật ảnh thành công',
+        message: 'Ảnh đại diện đã được lưu và cập nhật trên toàn hệ thống.',
+      });
+    } catch (err: any) {
+      console.error('Lỗi khi tải ảnh đại diện:', err);
+      const msg = err?.message || err?.error?.message || 'Không thể tải ảnh đại diện lên máy chủ';
+      addToast({
+        type: 'error',
+        title: 'Tải ảnh thất bại',
+        message: msg,
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {/* Back button */}
@@ -456,33 +528,72 @@ export const EmployeeDetailPage: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          <img
-            src={
-              employee.avatarUrl ||
-              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-            }
-            alt={employee.fullName}
+          {/* Avatar with Camera upload overlay */}
+          <div
             style={{
-              width: 64,
-              height: 64,
+              position: 'relative',
+              width: 68,
+              height: 68,
               borderRadius: 'var(--radius-full)',
-              objectFit: 'cover',
-              border: '3px solid var(--color-border)',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              flexShrink: 0,
             }}
-          />
+            onClick={() => fileInputRef.current?.click()}
+            title="Nhấp để thay đổi ảnh đại diện"
+          >
+            <UserAvatar
+              name={employee.fullName}
+              src={employee.avatarUrl}
+              size={68}
+              border="3px solid var(--color-border)"
+            />
+            {/* Hover overlay */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+                opacity: isUploadingAvatar ? 1 : 0,
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!isUploadingAvatar) e.currentTarget.style.opacity = '1';
+              }}
+              onMouseLeave={(e) => {
+                if (!isUploadingAvatar) e.currentTarget.style.opacity = '0';
+              }}
+            >
+              {isUploadingAvatar ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <>
+                  <Camera size={18} />
+                  <span style={{ fontSize: 9, fontWeight: 600, marginTop: 2 }}>Đổi ảnh</span>
+                </>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              style={{ display: 'none' }}
+              onChange={handleAvatarFileSelected}
+              disabled={isUploadingAvatar}
+            />
+          </div>
+
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <h1 style={{ fontSize: 'var(--font-h2)', fontWeight: 700 }}>{employee.fullName}</h1>
               <span className="badge badge-info">{employee.employeeCode}</span>
-              {employee.isActive ? (
-                <span className="badge badge-success">
-                  <span className="badge-dot" /> Đang làm việc
-                </span>
-              ) : (
-                <span className="badge badge-error">
-                  <span className="badge-dot" /> Đã nghỉ việc
-                </span>
-              )}
+              <EmploymentStatusBadge status={employee.employmentStatus} />
             </div>
 
             <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 'var(--font-caption)', color: 'var(--color-text-secondary)', flexWrap: 'wrap' }}>
@@ -503,6 +614,32 @@ export const EmployeeDetailPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Nút Cập nhật / Đổi mật khẩu */}
+          {canManagePassword && (
+            <button
+              type="button"
+              onClick={() => setIsPasswordModalOpen(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 14px',
+                backgroundColor: '#F8FAFC',
+                color: '#334155',
+                border: '1.5px solid #CBD5E1',
+                borderRadius: 'var(--radius-md, 6px)',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title={isSelf ? 'Đổi mật khẩu tài khoản của bạn' : 'Quản trị viên đặt lại mật khẩu cho nhân viên'}
+            >
+              <KeyRound size={15} color="var(--color-primary)" />
+              {isSelf ? 'Đổi mật khẩu' : 'Đặt lại mật khẩu'}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setActiveTab('AVAILABILITY')}
@@ -694,23 +831,36 @@ export const EmployeeDetailPage: React.FC = () => {
             </div>
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Chi nhánh / Cơ sở chính (Home Branch)</div>
-              <div style={{ fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span>{branch?.branchName}</span>
-                {employee.hasMultiBranch && (
+              <div style={{ marginTop: 4 }}>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 10px',
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: 6,
+                    fontSize: 12,
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: '#1E293B' }}>
+                    🏢 {branch?.branchName || 'Chưa gán'}
+                  </span>
                   <span
                     style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      backgroundColor: '#EFF6FF',
-                      color: '#1D4ED8',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: '#4338CA',
+                      backgroundColor: '#EEF2FF',
                       padding: '1px 6px',
                       borderRadius: 4,
-                      border: '1px solid #BFDBFE',
+                      border: '1px solid #C7D2FE',
                     }}
                   >
-                    Đa cơ sở
+                    💼 {position?.positionName || 'Chưa gán'}
                   </span>
-                )}
+                </div>
               </div>
             </div>
             <div>
@@ -782,13 +932,12 @@ export const EmployeeDetailPage: React.FC = () => {
                 )}
               </div>
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Chức danh chuyên môn</div>
-              <div style={{ fontWeight: 600, marginTop: 2 }}>{position?.positionName}</div>
-            </div>
+
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Loại hình hợp đồng</div>
-              <div style={{ fontWeight: 600, marginTop: 2 }}>Hợp đồng lao động không xác định thời hạn</div>
+              <div style={{ marginTop: 4 }}>
+                <EmploymentStatusBadge status={employee.employmentStatus} />
+              </div>
             </div>
             <div>
               <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Ngày ký hợp đồng / Vào làm</div>
@@ -1272,6 +1421,18 @@ export const EmployeeDetailPage: React.FC = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
       />
+
+      {/* Change / Reset Password Modal */}
+      {employee && (
+        <ChangePasswordModal
+          isOpen={isPasswordModalOpen}
+          onClose={() => setIsPasswordModalOpen(false)}
+          employeeId={employee.id}
+          employeeName={employee.fullName}
+          isSelf={isSelf}
+          isDirectorReset={currentRole === 'ROLE_DIRECTOR'}
+        />
+      )}
     </>
   )}
 </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { UserProfileDropdown } from './UserProfileDropdown';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { ChevronDown } from 'lucide-react';
 
 export const Topbar: React.FC = () => {
@@ -65,19 +66,11 @@ export const Topbar: React.FC = () => {
             aria-haspopup="menu"
             aria-expanded={isDropdownOpen}
           >
-            <img
-              src={
-                currentUser?.avatarUrl ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-              }
-              alt={currentUser?.fullName || 'User'}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 'var(--radius-full)',
-                objectFit: 'cover',
-                border: '2px solid var(--color-primary-light)',
-              }}
+            <UserAvatar
+              name={currentUser?.fullName || 'User'}
+              src={currentUser?.avatarUrl}
+              size={32}
+              border="2px solid var(--color-primary-light)"
             />
             <span
               style={{

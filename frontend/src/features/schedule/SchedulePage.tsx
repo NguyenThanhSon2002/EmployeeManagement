@@ -56,6 +56,8 @@ export const SchedulePage: React.FC = () => {
     const isDirector = currentRole === 'ROLE_DIRECTOR';
     // Người không phải Giám đốc bị khóa ở chi nhánh của mình
     const lockedBranchId = !isDirector ? currentUser?.branchId : undefined;
+    const isScheduleLocked = scheduleStatus === 'PUBLISHED';
+    const canEditSchedule = !isScheduleLocked && currentRole !== 'ROLE_EMPLOYEE';
     const {settings} = useSettingsStore();
     const {addToast} = useUIStore();
     const {
@@ -365,6 +367,7 @@ export const SchedulePage: React.FC = () => {
 
     // Shift-Centric Drawer Opening Handlers
     const handleOpenAssignStaff = (shiftTemplateId: number, workDate: string) => {
+        if (!canEditSchedule) return;
         setSelectedShiftCell({shiftTemplateId, workDate});
         setDrawerOpen(true);
     };
@@ -385,6 +388,15 @@ export const SchedulePage: React.FC = () => {
         overrideRule?: string | null;
         overrideReason?: string | null;
     }) => {
+        if (!canEditSchedule) {
+            addToast({
+                type: 'error',
+                title: 'Lịch đang bị khóa',
+                message: 'Lịch tuần đã công bố chính thức. Chỉ Giám đốc/Admin mới có quyền thu hồi về bản nháp để điều chỉnh.',
+            });
+            return;
+        }
+
         const res = assignShift({
             employeeId: payload.employeeId,
             workShiftId: payload.workShiftId,
@@ -409,6 +421,15 @@ export const SchedulePage: React.FC = () => {
     };
 
     const handleRemoveAssignment = (assignmentId: number) => {
+        if (!canEditSchedule) {
+            addToast({
+                type: 'error',
+                title: 'Lịch đang bị khóa',
+                message: 'Lịch tuần đã công bố chính thức. Chỉ Giám đốc/Admin mới có quyền thu hồi về bản nháp để điều chỉnh.',
+            });
+            return;
+        }
+
         deleteAssignment(assignmentId, undefined, currentRole);
         addToast({
             type: 'info',
@@ -648,7 +669,7 @@ export const SchedulePage: React.FC = () => {
                         assignmentsMap={assignments}
                         conflictsMap={conflicts}
                         holidays={holidays}
-                        canEdit={currentRole !== 'ROLE_EMPLOYEE'}
+                        canEdit={canEditSchedule}
                         onlyShowConflicts={Boolean(filterOptions.onlyShowConflicts)}
                         onOpenAssignStaff={handleOpenAssignStaff}
                         onRemoveAssignment={handleRemoveAssignment}
@@ -674,13 +695,15 @@ export const SchedulePage: React.FC = () => {
                 )}
             </div>
 
-            {/* 5. Employee Weekly Hours Summary Table */}
-            <EmployeeWeeklyHoursTable
-                employees={filteredEmployees}
-                weekDays={getWeekDays(baseMonday)}
-                assignmentsMap={assignments}
-                searchTerm={filterOptions.searchTerm || ''}
-            />
+            {/* 5. Employee Weekly Hours Summary Table (Chỉ hiển thị cho Giám đốc và Quản lý) */}
+            {currentRole !== 'ROLE_EMPLOYEE' && (
+                <EmployeeWeeklyHoursTable
+                    employees={filteredEmployees}
+                    weekDays={getWeekDays(baseMonday)}
+                    assignmentsMap={assignments}
+                    searchTerm={filterOptions.searchTerm || ''}
+                />
+            )}
 
             {/* 6. Drawers & Dialogs */}
             <AssignStaffDrawer
@@ -693,7 +716,7 @@ export const SchedulePage: React.FC = () => {
                 approvedLeaves={approvedLeaves}
                 holidays={holidays}
                 settings={settings}
-                canEdit={currentRole !== 'ROLE_EMPLOYEE'}
+                canEdit={canEditSchedule}
                 onAssignEmployee={handleAssignEmployee}
                 onRemoveAssignment={handleRemoveAssignment}
             />
@@ -726,6 +749,11 @@ export const SchedulePage: React.FC = () => {
             <PublishConfirmDialog
                 isOpen={publishDialogOpen}
                 conflicts={conflicts}
+                startDate={currentStartDate}
+                endDate={format(addDays(baseMonday, 6), 'yyyy-MM-dd')}
+                employees={employees}
+                assignments={assignments}
+                onDeleteAssignment={(assignmentId) => deleteAssignment(assignmentId)}
                 onClose={() => setPublishDialogOpen(false)}
                 onConfirm={handleConfirmPublish}
             />

@@ -14,6 +14,7 @@ import {
   Clock,
   UserCheck,
 } from 'lucide-react';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 export const AttendanceOverviewPage: React.FC = () => {
   const {
@@ -344,10 +345,10 @@ export const AttendanceOverviewPage: React.FC = () => {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <img
-                          src={emp?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                          alt={emp?.fullName}
-                          style={{ width: 32, height: 32, borderRadius: 'var(--radius-full)', objectFit: 'cover', border: '1.5px solid var(--color-border)' }}
+                        <UserAvatar
+                          name={emp?.fullName || 'Nhân viên'}
+                          src={emp?.avatarUrl}
+                          size={32}
                         />
                         <span style={{ fontWeight: 600 }}>{emp?.fullName}</span>
                       </div>

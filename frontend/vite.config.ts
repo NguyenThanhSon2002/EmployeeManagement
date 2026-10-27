@@ -45,6 +45,10 @@ export default defineConfig({
           });
         },
       },
+      '/uploads': {
+        target: process.env.VITE_BACKEND_URL || 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
     },
   },
 });

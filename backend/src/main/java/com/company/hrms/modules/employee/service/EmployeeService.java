@@ -46,6 +46,7 @@ public class EmployeeService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmployeeSecondaryBranchRepository secondaryBranchRepository;
+    private final com.company.hrms.common.service.FileStorageService fileStorageService;
 
     public EmployeeService(
             EmployeeRepository employeeRepository,
@@ -55,7 +56,8 @@ public class EmployeeService {
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
-            EmployeeSecondaryBranchRepository secondaryBranchRepository) {
+            EmployeeSecondaryBranchRepository secondaryBranchRepository,
+            com.company.hrms.common.service.FileStorageService fileStorageService) {
         this.employeeRepository = employeeRepository;
         this.branchRepository = branchRepository;
         this.positionRepository = positionRepository;
@@ -64,6 +66,7 @@ public class EmployeeService {
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.secondaryBranchRepository = secondaryBranchRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -276,6 +279,17 @@ public class EmployeeService {
     }
 
     @Transactional
+    public EmployeeDto uploadAvatar(Long id, org.springframework.web.multipart.MultipartFile file) {
+        Employee employee = employeeRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", id));
+
+        String avatarUrl = fileStorageService.storeAvatar(id, file);
+        employee.setAvatarUrl(avatarUrl);
+        Employee saved = employeeRepository.save(employee);
+        return toDto(saved);
+    }
+
+    @Transactional
     public void deleteEmployee(Long id) {
         Employee employee = employeeRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", id));
@@ -328,6 +342,9 @@ public class EmployeeService {
         if (dto.getEmploymentType() != null) {
             entity.setEmploymentType(dto.getEmploymentType());
         }
+        if (dto.getAvatarUrl() != null) {
+            entity.setAvatarUrl(dto.getAvatarUrl());
+        }
         entity.setHireDate(dto.getHireDate());
         entity.setResignationDate(dto.getResignationDate());
     }
@@ -350,6 +367,7 @@ public class EmployeeService {
         dto.setEmploymentStatus(entity.getEmploymentStatus());
         dto.setEmploymentType(entity.getEmploymentType());
         dto.setHireDate(entity.getHireDate());
+        dto.setAvatarUrl(entity.getAvatarUrl());
         dto.setResignationDate(entity.getResignationDate());
         dto.setIsActive(entity.getIsActive());
         dto.setVersion(entity.getVersion());

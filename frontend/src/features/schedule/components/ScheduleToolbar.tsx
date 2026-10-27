@@ -14,6 +14,7 @@ import {
     RotateCcw,
 } from 'lucide-react';
 import { DatePickerPopover } from './DatePickerPopover';
+import { Tooltip } from '@/shared/components/Tooltip';
 
 interface ScheduleToolbarProps {
     baseMonday: Date;
@@ -62,7 +63,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
     const sunday = offsetWeeks(baseMonday, 0);
     sunday.setDate(baseMonday.getDate() + 6);
 
+    const isDirector = currentRole === 'ROLE_DIRECTOR';
     const isEmployeeRole = currentRole === 'ROLE_EMPLOYEE';
+    const isPublished = scheduleStatus === 'PUBLISHED';
 
     return (
         <div
@@ -321,16 +324,41 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                     {/* Manager/Admin Actions */}
                     {!isEmployeeRole && (
                         <>
-                            <button
-                                type="button"
-                                className="btn btn-default"
-                                onClick={onOpenCopyWeek}
-                                title="Sao chép toàn bộ ca từ tuần trước sang tuần này"
-                                style={{ height: 34, padding: '0 12px', fontSize: '12.5px', borderRadius: '8px', gap: 6 }}
-                            >
-                                <Copy size={14} color="#64748B" />
-                                Sao chép tuần
-                            </button>
+                            {isPublished ? (
+                                <Tooltip content="Lịch tuần đã công bố chính thức. Hãy chuyển về Bản nháp trước khi sao chép.">
+                                    <button
+                                        type="button"
+                                        className="btn btn-default"
+                                        disabled
+                                        style={{
+                                            height: 34,
+                                            padding: '0 12px',
+                                            fontSize: '12.5px',
+                                            borderRadius: '8px',
+                                            gap: 6,
+                                            color: '#94A3B8',
+                                            borderColor: '#E2E8F0',
+                                            backgroundColor: '#F8FAFC',
+                                            cursor: 'not-allowed',
+                                            opacity: 0.7,
+                                        }}
+                                    >
+                                        <Copy size={14} color="#94A3B8" />
+                                        Sao chép tuần
+                                    </button>
+                                </Tooltip>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="btn btn-default"
+                                    onClick={onOpenCopyWeek}
+                                    title="Sao chép toàn bộ ca từ tuần trước sang tuần này"
+                                    style={{ height: 34, padding: '0 12px', fontSize: '12.5px', borderRadius: '8px', gap: 6 }}
+                                >
+                                    <Copy size={14} color="#64748B" />
+                                    Sao chép tuần
+                                </button>
+                            )}
 
                             {/* Nút Reset lịch */}
                             {onResetSchedule && (
@@ -363,16 +391,41 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                 </button>
                             )}
 
-                            <button
-                                type="button"
-                                className="btn btn-default"
-                                onClick={onOpenBulkAssign}
-                                title="Gán ca đồng loạt cho nhiều người"
-                                style={{ height: 34, padding: '0 12px', fontSize: '12.5px', borderRadius: '8px', gap: 6 }}
-                            >
-                                <Plus size={14} color="#64748B" />
-                                Gán hàng loạt
-                            </button>
+                            {isPublished ? (
+                                <Tooltip content="Lịch tuần đã công bố chính thức. Hãy chuyển về Bản nháp trước khi gán ca.">
+                                    <button
+                                        type="button"
+                                        className="btn btn-default"
+                                        disabled
+                                        style={{
+                                            height: 34,
+                                            padding: '0 12px',
+                                            fontSize: '12.5px',
+                                            borderRadius: '8px',
+                                            gap: 6,
+                                            color: '#94A3B8',
+                                            borderColor: '#E2E8F0',
+                                            backgroundColor: '#F8FAFC',
+                                            cursor: 'not-allowed',
+                                            opacity: 0.7,
+                                        }}
+                                    >
+                                        <Plus size={14} color="#94A3B8" />
+                                        Gán hàng loạt
+                                    </button>
+                                </Tooltip>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="btn btn-default"
+                                    onClick={onOpenBulkAssign}
+                                    title="Gán ca đồng loạt cho nhiều người"
+                                    style={{ height: 34, padding: '0 12px', fontSize: '12.5px', borderRadius: '8px', gap: 6 }}
+                                >
+                                    <Plus size={14} color="#64748B" />
+                                    Gán hàng loạt
+                                </button>
+                            )}
 
                             {scheduleStatus === 'DRAFT' ? (
                                 <button
@@ -407,29 +460,60 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                         <Sparkles size={14} />
                                         Đã xuất bản
                                     </button>
+
+                                    {/* Nút Quay lại bản nháp: Chỉ Giám đốc/Admin mới có quyền bấm, Quản lý bị disabled kèm Tooltip */}
                                     {onOpenUnpublish && (
-                                        <button
-                                            type="button"
-                                            className="btn btn-default"
-                                            onClick={onOpenUnpublish}
-                                            title="Thu hồi lịch về trạng thái bản nháp nếu bạn bấm nhầm"
-                                            style={{
-                                                height: 34,
-                                                padding: '0 12px',
-                                                fontSize: '12.5px',
-                                                borderRadius: '8px',
-                                                color: '#D97706',
-                                                borderColor: '#FDE68A',
-                                                backgroundColor: '#FFFBEB',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: 6,
-                                                fontWeight: 600,
-                                            }}
-                                        >
-                                            <RotateCcw size={14} />
-                                            Quay lại bản nháp
-                                        </button>
+                                        isDirector ? (
+                                            <button
+                                                type="button"
+                                                className="btn btn-default"
+                                                onClick={onOpenUnpublish}
+                                                title="Thu hồi lịch về trạng thái bản nháp để chỉnh sửa"
+                                                style={{
+                                                    height: 34,
+                                                    padding: '0 12px',
+                                                    fontSize: '12.5px',
+                                                    borderRadius: '8px',
+                                                    color: '#D97706',
+                                                    borderColor: '#FDE68A',
+                                                    backgroundColor: '#FFFBEB',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: 6,
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                <RotateCcw size={14} />
+                                                Quay lại bản nháp
+                                            </button>
+                                        ) : (
+                                            <Tooltip content="Chỉ Giám đốc hoặc Admin mới có quyền thu hồi lịch đã công bố về bản nháp.">
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-default"
+                                                    disabled
+                                                    style={{
+                                                        height: 34,
+                                                        padding: '0 12px',
+                                                        fontSize: '12.5px',
+                                                        borderRadius: '8px',
+                                                        color: '#94A3B8',
+                                                        borderColor: '#E2E8F0',
+                                                        backgroundColor: '#F8FAFC',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: 6,
+                                                        fontWeight: 500,
+                                                        cursor: 'not-allowed',
+                                                        opacity: 0.7,
+                                                    }}
+                                                >
+                                                    <RotateCcw size={14} />
+                                                    Quay lại bản nháp
+                                                </button>
+                                            </Tooltip>
+                                        )
                                     )}
                                 </div>
                             )}

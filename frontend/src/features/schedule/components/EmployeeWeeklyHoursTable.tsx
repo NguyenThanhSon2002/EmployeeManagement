@@ -4,6 +4,7 @@ import { formatDateIso, getDayOfWeekVi } from '@/utils/date.utils';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
 import { AlertTriangle } from 'lucide-react';
 import { EmploymentStatusBadge } from '@/components/common/EmploymentStatusBadge';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 interface EmployeeWeeklyHoursTableProps {
   employees: Employee[];
@@ -261,30 +262,11 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
                     {/* Employee Profile */}
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {row.emp.avatarUrl ? (
-                          <img
-                            src={row.emp.avatarUrl}
-                            alt={row.emp.fullName}
-                            style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: '50%',
-                              backgroundColor: 'var(--color-primary-light)',
-                              color: 'var(--color-primary)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 700,
-                              fontSize: 11,
-                            }}
-                          >
-                            {row.emp.fullName.charAt(0)}
-                          </div>
-                        )}
+                        <UserAvatar
+                          name={row.emp.fullName}
+                          src={row.emp.avatarUrl}
+                          size={28}
+                        />
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>

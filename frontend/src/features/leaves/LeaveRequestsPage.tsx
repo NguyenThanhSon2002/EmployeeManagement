@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Palmtree,
 } from 'lucide-react';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 export const LeaveRequestsPage: React.FC = () => {
   const { leaves, getBalance, cancelLeave, fetchLeaves } = useLeaveStore();
@@ -214,10 +215,10 @@ export const LeaveRequestsPage: React.FC = () => {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <img
-                          src={emp?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                          alt={emp?.fullName}
-                          style={{ width: 32, height: 32, borderRadius: 'var(--radius-full)', objectFit: 'cover', border: '1.5px solid var(--color-border)' }}
+                        <UserAvatar
+                          name={emp?.fullName || 'Nhân viên'}
+                          src={emp?.avatarUrl}
+                          size={32}
                         />
                         <div>
                           <div style={{ fontWeight: 600 }}>{emp?.fullName}</div>

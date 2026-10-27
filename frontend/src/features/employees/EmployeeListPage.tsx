@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock, Users, ChevronDown, ChevronUp, Building2, Briefcase, Sparkles } from 'lucide-react';
 import { useAvailabilityStore } from './store/useAvailabilityStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 const toArray = (res: any): any[] => {
   if (Array.isArray(res)) return res;
@@ -111,6 +112,7 @@ export const EmployeeListPage: React.FC = () => {
           employmentStatus: dto.employment_status || dto.employmentStatus || 'OFFICIAL',
           employmentType: dto.employment_type || dto.employmentType || 'FULL_TIME',
           hireDate: dto.hire_date || dto.hireDate || '2026-01-01',
+          avatarUrl: dto.avatar_url || dto.avatarUrl || '',
           isActive: dto.is_active !== undefined ? dto.is_active : true,
           version: dto.version || 1,
           secondaryBranchIds: dto.secondary_branch_ids || dto.secondaryBranchIds || [],
@@ -564,20 +566,13 @@ export const EmployeeListPage: React.FC = () => {
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <img
-                                src={
-                                    emp.avatarUrl ||
-                                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-                                }
-                                alt={emp.fullName}
-                                style={{
-                                  width: 34,
-                                  height: 34,
-                                  borderRadius: 'var(--radius-full)',
-                                  objectFit: 'cover',
-                                  border: '1.5px solid var(--color-border)',
-                                  filter: isResigned ? 'grayscale(100%)' : 'none',
-                                }}
+                            <UserAvatar
+                              name={emp.fullName}
+                              src={emp.avatarUrl}
+                              size={34}
+                              style={{
+                                filter: isResigned ? 'grayscale(100%)' : 'none',
+                              }}
                             />
                             <div>
                               <div style={{ fontWeight: 600, color: isResigned ? 'var(--color-text-secondary)' : 'var(--color-text-primary)' }}>{emp.fullName}</div>

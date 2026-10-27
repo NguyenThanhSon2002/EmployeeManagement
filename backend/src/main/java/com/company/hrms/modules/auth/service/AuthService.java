@@ -44,6 +44,7 @@ public class AuthService {
     private final EmployeeRepository employeeRepository;
     private final BranchRepository branchRepository;
     private final JwtTokenProvider tokenProvider;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Value("${security.jwt.access-token-expiration-seconds:86400}")
     private long accessTokenExpirationSeconds;
@@ -53,13 +54,15 @@ public class AuthService {
                        RoleRepository roleRepository,
                        EmployeeRepository employeeRepository,
                        BranchRepository branchRepository,
-                       JwtTokenProvider tokenProvider) {
+                       JwtTokenProvider tokenProvider,
+                       org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.employeeRepository = employeeRepository;
         this.branchRepository = branchRepository;
         this.tokenProvider = tokenProvider;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -149,6 +152,43 @@ public class AuthService {
         userRepository.save(user);
 
         return buildUserInfo(user, empOpt);
+    }
+
+    @Transactional
+    public void changePassword(UserPrincipal principal, com.company.hrms.modules.auth.dto.ChangePasswordRequest request) {
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new BusinessException("RESOURCE_NOT_FOUND", "Không tìm thấy thông tin tài khoản", HttpStatus.NOT_FOUND));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new BusinessException("BAD_REQUEST", "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST);
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new BusinessException("BAD_REQUEST", "Mật khẩu mới không được trùng với mật khẩu hiện tại", HttpStatus.BAD_REQUEST);
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+        log.info("[AuthService] Người dùng {} ({}) đã đổi mật khẩu thành công", user.getUsername(), user.getId());
+    }
+
+    @Transactional
+    public void resetEmployeePassword(Long employeeId, com.company.hrms.modules.auth.dto.ResetPasswordRequest request) {
+        Employee employee = employeeRepository.findByIdAndDeletedAtIsNull(employeeId)
+                .orElseThrow(() -> new BusinessException("RESOURCE_NOT_FOUND", "Không tìm thấy hồ sơ nhân viên", HttpStatus.NOT_FOUND));
+
+        if (employee.getUserId() == null) {
+            throw new BusinessException("BAD_REQUEST", "Nhân viên chưa được liên kết với tài khoản người dùng", HttpStatus.BAD_REQUEST);
+        }
+
+        User user = userRepository.findById(employee.getUserId())
+                .orElseThrow(() -> new BusinessException("RESOURCE_NOT_FOUND", "Không tìm thấy tài khoản người dùng của nhân viên", HttpStatus.NOT_FOUND));
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+        log.info("[AuthService] Quản trị viên đã đặt lại mật khẩu cho nhân viên {} / tài khoản {}", employee.getEmployeeCode(), user.getUsername());
     }
 
     private void syncUserRoleWithEmployeePosition(User user, Optional<Employee> empOpt) {
