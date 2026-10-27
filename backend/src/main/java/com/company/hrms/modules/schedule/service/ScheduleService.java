@@ -237,8 +237,8 @@ public class ScheduleService {
                 .map(h -> new WeeklyScheduleResponse.HolidayDto(h.getHolidayDate(), h.getHolidayName()))
                 .collect(Collectors.toList()));
 
-        // Templates
-        response.setShiftTemplates(workShiftService.getAllWorkShifts());
+        // Templates (Scoped to current branch or global)
+        response.setShiftTemplates(workShiftService.getAllWorkShifts(branchId));
 
         return response;
     }

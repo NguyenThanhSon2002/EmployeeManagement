@@ -237,7 +237,12 @@ function computeAllConflicts(
   const templates = shiftTemplates || [];
 
   if (templates.length > 0) {
-    const templateMap = new Map(templates.map((t) => [t.id, t]));
+    const templateMap = new Map<number | string, ShiftTemplate>();
+    for (const t of templates) {
+      templateMap.set(t.id, t);
+      templateMap.set(Number(t.id), t);
+      templateMap.set(String(t.id), t);
+    }
     const cellGroups = new Map<string, ShiftAssignment[]>();
 
     for (const a of allAssignmentsList) {
@@ -250,12 +255,12 @@ function computeAllConflicts(
 
     for (const [cKey, list] of cellGroups.entries()) {
       const [shiftIdStr, dateStr] = cKey.split('_');
-      const tmpl = templateMap.get(Number(shiftIdStr));
+      const tmpl = templateMap.get(Number(shiftIdStr)) || templateMap.get(shiftIdStr);
       const maxCap = tmpl?.maxStaffing || tmpl?.minStaffing || 1;
 
       if (tmpl && list.length > maxCap) {
         // Sắp xếp theo ID tăng dần (ID nhỏ hơn = tạo trước = ca gốc hợp lệ; ID lớn hơn = tạo sau = ca bổ sung)
-        list.sort((a, b) => (a.id || 0) - (b.id || 0));
+        list.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
 
         // Gán cảnh báo cho các nhân sự từ vị trí vượt định biên
         for (let i = maxCap; i < list.length; i++) {
@@ -629,8 +634,16 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
                     [key]: updatedList,
                   };
                   saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, newAssignmentsMap, prev.currentStartDate);
+                  const recomputedConflicts = computeAllConflicts(
+                    newAssignmentsMap,
+                    prev.employees,
+                    prev.approvedLeaves,
+                    prev.holidays,
+                    prev.shiftTemplates
+                  );
                   return {
                     assignments: newAssignmentsMap,
+                    conflicts: recomputedConflicts,
                     scheduleVersion: (prev.scheduleVersion || 1) + 1,
                   };
                 });
