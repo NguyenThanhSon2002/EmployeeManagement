@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import type { ShiftTemplate } from '@/types/domain.types';
 import { ShiftTemplateCard } from './components/ShiftTemplateCard';
 import { ShiftTemplateFormModal } from './components/ShiftTemplateFormModal';
@@ -13,21 +14,33 @@ import {
   Moon,
   Users,
   CalendarCheck,
+  Building2,
 } from 'lucide-react';
 
 export const ShiftTemplatesPage: React.FC = () => {
   const { shiftTemplates, fetchShiftTemplates, addShiftTemplate, updateShiftTemplate, deleteShiftTemplate } =
     useScheduleStore();
   const { addToast } = useUIStore();
-  const { currentRole } = useAuthStore();
-  const canManageShifts = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_MANAGER';
+  const { currentRole, currentUser } = useAuthStore();
+  const { branches, fetchDirectory } = useDirectoryStore();
+  const isDirector = currentRole === 'ROLE_DIRECTOR';
+  const canManageShifts = isDirector || currentRole === 'ROLE_MANAGER';
+
+  // Quản lý cơ sở: Quản lý cố định chi nhánh của mình, Giám đốc mặc định xem tất cả (undefined)
+  const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(() => {
+    return !isDirector && currentUser?.branchId ? currentUser.branchId : undefined;
+  });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ShiftTemplate | null>(null);
 
   useEffect(() => {
-    fetchShiftTemplates();
-  }, [fetchShiftTemplates]);
+    fetchDirectory();
+  }, [fetchDirectory]);
+
+  useEffect(() => {
+    fetchShiftTemplates(selectedBranchId);
+  }, [fetchShiftTemplates, selectedBranchId]);
 
   const handleCreateNew = () => {
     if (!canManageShifts) {
@@ -136,25 +149,69 @@ export const ShiftTemplatesPage: React.FC = () => {
         title="Danh Mục Mẫu Ca Làm Việc"
         subtitle="Quản lý chuẩn hóa khung giờ ca làm việc, định biên nhân sự tối thiểu/tối đa và màu sắc nhận diện trực quan."
         action={
-          canManageShifts ? (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleCreateNew}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {/* Dropdown Lọc Theo Chi Nhánh */}
+            <div
               style={{
-                height: 42,
-                padding: '0 20px',
-                fontSize: 14,
-                fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E2E8F0',
+                borderRadius: 8,
+                padding: '4px 10px',
+                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
               }}
             >
-              <Plus size={18} strokeWidth={2.5} /> Thêm Mẫu Ca Mới
-            </button>
-          ) : undefined
+              <Building2 size={16} color="#64748B" />
+              <select
+                aria-label="Lọc mẫu ca theo chi nhánh"
+                value={selectedBranchId ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedBranchId(val ? Number(val) : undefined);
+                }}
+                disabled={!isDirector && Boolean(currentUser?.branchId)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  backgroundColor: 'transparent',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#1E293B',
+                  cursor: !isDirector && Boolean(currentUser?.branchId) ? 'not-allowed' : 'pointer',
+                  paddingRight: 6,
+                }}
+              >
+                {isDirector && <option value="">🌐 Tất cả chi nhánh (Chuỗi)</option>}
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    📍 {b.branchName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {canManageShifts && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleCreateNew}
+                style={{
+                  height: 40,
+                  padding: '0 18px',
+                  fontSize: 13.5,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                }}
+              >
+                <Plus size={17} strokeWidth={2.5} /> Thêm Mẫu Ca Mới
+              </button>
+            )}
+          </div>
         }
       />
 
@@ -365,6 +422,7 @@ export const ShiftTemplatesPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
         initialData={editingTemplate}
+        defaultBranchId={selectedBranchId}
       />
     </div>
   );

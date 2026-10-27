@@ -6,7 +6,7 @@ import { isMockEnabled } from '@/config/env.config';
 const STORAGE_KEY = 'EMS_SETTINGS_STATE_V1';
 
 const DEFAULT_SETTINGS: DemoSettings = {
-  minRestBetweenShiftsHours: 11.0,
+  minRestBetweenShiftsHours: 12.0,
   maxWeeklyHours: 48.0,
   maxDailyHours: 12.0,
   gracePeriodMinutes: 5,

@@ -10,10 +10,9 @@ import type {
 import {formatDateVi} from '@/utils/date.utils';
 import {
     checkShiftOverlap,
-    checkRestTimeBetweenShifts,
+    checkRestTimeWithDailyThreshold,
     checkTravelBufferBetweenBranches,
     getShiftAbsoluteTimeRange,
-    MIN_DAILY_HOURS_FOR_REST_RULE,
 } from '@/utils/conflict-detector.utils';
 import {calculateShiftDurations} from '@/utils/schedule-calc.utils';
 import {sumEmployeeHoursInWeek} from '@/utils/weekly-hours.utils';
@@ -43,6 +42,8 @@ interface AssignStaffDrawerProps {
     approvedLeaves: LeaveRequest[];
     holidays: CompanyHoliday[];
     settings: DemoSettings;
+    branchId?: number;
+    branchName?: string;
     canEdit: boolean;
     onAssignEmployee: (payload: {
         employeeId: number;
@@ -62,6 +63,8 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                                                                         employees = [],
                                                                         allAssignments = [],
                                                                         approvedLeaves = [],
+                                                                        branchId,
+                                                                        branchName,
                                                                         settings,
                                                                         canEdit,
                                                                         onAssignEmployee,
@@ -184,12 +187,11 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                 const sameDayShifts = otherShifts.filter((s) => s.workDate === workDate);
                 const overlapCheck = checkShiftOverlap(shiftInfo.timeRange, sameDayShifts);
 
-                // 2. Check Travel Buffer Between Branches (< 45m)
                 const travelCheck = checkTravelBufferBetweenBranches(
                     shiftInfo.timeRange,
                     otherShifts,
-                    undefined,
-                    undefined,
+                    branchId,
+                    branchName,
                     45
                 );
 
@@ -197,8 +199,9 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                 const sameDayExternalShift = sameDayShifts.find((s) => s.isExternal);
 
                 // 3. Check Rest Interval (< 12h)
-                const restCheck = checkRestTimeBetweenShifts(
+                const restCheck = checkRestTimeWithDailyThreshold(
                     shiftInfo.timeRange,
+                    shiftInfo.netHours,
                     otherShifts,
                     settings?.minRestBetweenShiftsHours || 12
                 );
@@ -218,10 +221,6 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                 const totalDailyHours = sameDayOtherHours + shiftInfo.netHours;
                 const isDailyExceeded = totalDailyHours > 12.0;
 
-                // Quy tắc nghỉ giữa ca chỉ áp dụng khi làm đủ 8h/ngày trở lên
-                const isRestWarningApplicable =
-                    restCheck.isRestViolated && totalDailyHours >= MIN_DAILY_HOURS_FOR_REST_RULE;
-
                 return {
                     emp,
                     isAlreadyInThisShift,
@@ -234,13 +233,13 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                     travelMessage: travelCheck.message,
                     travelConflictShift: travelCheck.conflictingShift,
                     sameDayExternalShift,
-                    hasRestWarning: isRestWarningApplicable,
+                    hasRestWarning: restCheck.isRestViolated,
                     restMessage: restCheck.message,
                     restHours: restCheck.actualRestHours,
                     isDailyExceeded,
                     totalDailyHours,
                     weeklyHours,
-                    hasWarning: isRestWarningApplicable || isDailyExceeded || travelCheck.hasBufferConflict,
+                    hasWarning: restCheck.isRestViolated || isDailyExceeded || travelCheck.hasBufferConflict,
                 };
             });
     }, [
@@ -255,6 +254,8 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
         dayOfWeek,
         isAvailable,
         isPreferredShift,
+        branchId,
+        branchName,
     ]);
 
     // Count available staff
@@ -352,20 +353,14 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                 const status = employeeStatusList.find((s) => Number(s.emp.id) === Number(empId));
                 const hasWarning = status?.hasWarning;
                 const isOverMax = selectedEmpIds.size > maxStaffing;
-                const customReason = overrideReasons[empId]?.trim();
-                const defaultReason = isOverMax
-                    ? 'Bổ sung nhân sự tăng cường ngoài định biên theo nhu cầu ca làm'
-                    : hasWarning
-                        ? 'Phê duyệt phân ca part-time theo nhu cầu'
-                        : null;
-                const reason = customReason || defaultReason;
+                const customReason = overrideReasons[empId]?.trim() || null;
 
                 onAssignEmployee({
                     employeeId: Number(empId),
                     workShiftId: Number(shiftTemplate.id),
                     workDate,
-                    overrideRule: (isOverMax || hasWarning) ? 'BR-006' : null,
-                    overrideReason: reason,
+                    overrideRule: (isOverMax || hasWarning) ? 'WARN_STAFFING_CAPACITY' : null,
+                    overrideReason: customReason,
                 });
             }
         }

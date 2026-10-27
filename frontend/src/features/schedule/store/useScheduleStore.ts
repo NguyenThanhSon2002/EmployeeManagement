@@ -45,7 +45,11 @@ function normalizeAssignmentsMap(map: Record<string, any>): Record<string, Shift
 function loadBranchScheduleFromStorage(branchId: number, startDate?: string): Record<string, ShiftAssignment[]> {
   try {
     const key = startDate ? `${STORAGE_PREFIX}${branchId}_${startDate}` : `${STORAGE_PREFIX}${branchId}`;
-    const raw = localStorage.getItem(key);
+    let raw = localStorage.getItem(key);
+    if (!raw && startDate) {
+      // Fallback to legacy/general branch cache if week-specific key doesn't exist yet
+      raw = localStorage.getItem(`${STORAGE_PREFIX}${branchId}`);
+    }
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
@@ -126,7 +130,10 @@ interface ScheduleState {
   /** Xóa toàn bộ phân ca trong tuần hiện tại đang chọn */
   resetCurrentWeekSchedule: () => Promise<boolean>;
 
-  fetchShiftTemplates: () => Promise<void>;
+  /** Cập nhật giải trình đặc cách cho ca phân công (hỗ trợ null để xóa giải trình) */
+  updateAssignmentOverride: (assignmentId: number, overrideReason: string | null, overrideRule?: string) => Promise<boolean>;
+
+  fetchShiftTemplates: (branchId?: number) => Promise<void>;
   addShiftTemplate: (template: Omit<ShiftTemplate, 'id'>) => Promise<ShiftTemplate> | ShiftTemplate;
   updateShiftTemplate: (id: number, data: Partial<ShiftTemplate>) => Promise<void> | void;
   deleteShiftTemplate: (id: number) => Promise<{ success: boolean; error?: string }> | { success: boolean; error?: string };
@@ -142,7 +149,7 @@ function initializeStateFromSeed(branchId: number = 1) {
   const currentMondayStr = format(monday, 'yyyy-MM-dd');
 
   // Attempt initial load from localStorage
-  const cachedAssignments = loadBranchScheduleFromStorage(branchId);
+  const cachedAssignments = loadBranchScheduleFromStorage(branchId, currentMondayStr);
 
   return {
     currentStartDate: currentMondayStr,
@@ -216,8 +223,13 @@ function computeAllConflicts(
     });
 
     if (cellConflicts.length > 0) {
+      const conflictsWithContext = cellConflicts.map((c) => ({
+        ...c,
+        workShiftId: Number(assignment.workShiftId),
+        assignmentId: assignment.id,
+      }));
       const key = `${assignment.employeeId}_${assignment.workDate}`;
-      conflictsMap[key] = [...(conflictsMap[key] || []), ...cellConflicts];
+      conflictsMap[key] = [...(conflictsMap[key] || []), ...conflictsWithContext];
     }
   }
 
@@ -225,7 +237,12 @@ function computeAllConflicts(
   const templates = shiftTemplates || [];
 
   if (templates.length > 0) {
-    const templateMap = new Map(templates.map((t) => [t.id, t]));
+    const templateMap = new Map<number | string, ShiftTemplate>();
+    for (const t of templates) {
+      templateMap.set(t.id, t);
+      templateMap.set(Number(t.id), t);
+      templateMap.set(String(t.id), t);
+    }
     const cellGroups = new Map<string, ShiftAssignment[]>();
 
     for (const a of allAssignmentsList) {
@@ -238,20 +255,25 @@ function computeAllConflicts(
 
     for (const [cKey, list] of cellGroups.entries()) {
       const [shiftIdStr, dateStr] = cKey.split('_');
-      const tmpl = templateMap.get(Number(shiftIdStr));
+      const tmpl = templateMap.get(Number(shiftIdStr)) || templateMap.get(shiftIdStr);
       const maxCap = tmpl?.maxStaffing || tmpl?.minStaffing || 1;
 
       if (tmpl && list.length > maxCap) {
+        // Sắp xếp theo ID tăng dần (ID nhỏ hơn = tạo trước = ca gốc hợp lệ; ID lớn hơn = tạo sau = ca bổ sung)
+        list.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+
         // Gán cảnh báo cho các nhân sự từ vị trí vượt định biên
         for (let i = maxCap; i < list.length; i++) {
           const extraAssignment = list[i];
           const k = `${extraAssignment.employeeId}_${dateStr}`;
           const capacityWarning: ScheduleConflict = {
-            id: `WARN_CAPACITY_${extraAssignment.employeeId}_${dateStr}`,
+            id: `WARN_CAPACITY_${extraAssignment.employeeId}_${dateStr}_${extraAssignment.workShiftId}`,
             ruleCode: 'WARN_STAFFING_CAPACITY',
             severity: 'WARNING',
             employeeId: extraAssignment.employeeId,
             workDate: dateStr,
+            workShiftId: Number(extraAssignment.workShiftId),
+            assignmentId: extraAssignment.id,
             message: `Ca ${extraAssignment.snapshotShiftName} đã vượt định biên tối đa (${list.length}/${maxCap} NV). Bổ sung nhân sự tăng cường.`,
             canOverride: true,
           };
@@ -394,6 +416,29 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           }
         }
 
+        // Merge any unsynced or locally pending assignments from localCache that aren't in backend yet
+        if (Object.keys(localCache).length > 0) {
+          for (const [key, list] of Object.entries(localCache)) {
+            for (const localItem of list) {
+              if (localItem.workDate >= monStr && localItem.workDate <= sunStr) {
+                const alreadyInBackend = (thisWeekOnlyAssignments[key] || []).some(
+                  (b) => b.id === localItem.id ||
+                         (b.employeeId === localItem.employeeId && b.workDate === localItem.workDate && b.workShiftId === localItem.workShiftId)
+                );
+                if (!alreadyInBackend) {
+                  const existingList = mergedAssignments[key] ? [...mergedAssignments[key]] : [];
+                  existingList.push(localItem);
+                  mergedAssignments[key] = existingList;
+
+                  const weekList = thisWeekOnlyAssignments[key] ? [...thisWeekOnlyAssignments[key]] : [];
+                  weekList.push(localItem);
+                  thisWeekOnlyAssignments[key] = weekList;
+                }
+              }
+            }
+          }
+        }
+
         saveBranchScheduleToStorage(branchId, thisWeekOnlyAssignments, startDate);
 
         const templates: ShiftTemplate[] = (data.shift_templates || []).map((t: any) => ({
@@ -435,7 +480,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
     setWeek: (mondayDateStr) => {
       set({ currentStartDate: mondayDateStr });
       const branchId = get().filterOptions.branchId || 1;
-      const cached = loadBranchScheduleFromStorage(branchId);
+      const cached = loadBranchScheduleFromStorage(branchId, mondayDateStr);
       if (Object.keys(cached).length > 0) {
         set((state) => ({
           assignments: {
@@ -459,7 +504,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         let updatedAssignments = state.assignments;
         let updatedEmployees = state.employees;
         if (branchChanged && newFilters.branchId) {
-          const branchCache = loadBranchScheduleFromStorage(newFilters.branchId);
+          const branchCache = loadBranchScheduleFromStorage(newFilters.branchId, state.currentStartDate);
           updatedAssignments = { ...updatedAssignments, ...branchCache };
           // Nhân sự phải khớp chi nhánh mới ngay, tránh còn sót danh sách chi nhánh cũ
           updatedEmployees = useDirectoryStore
@@ -550,7 +595,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       };
 
       // Persist to localStorage immediately (offline-first)
-      saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments);
+      saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments, state.currentStartDate);
 
       const updatedConflicts = computeAllConflicts(
           updatedAssignments,
@@ -588,9 +633,17 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
                     ...prev.assignments,
                     [key]: updatedList,
                   };
-                  saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, newAssignmentsMap);
+                  saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, newAssignmentsMap, prev.currentStartDate);
+                  const recomputedConflicts = computeAllConflicts(
+                    newAssignmentsMap,
+                    prev.employees,
+                    prev.approvedLeaves,
+                    prev.holidays,
+                    prev.shiftTemplates
+                  );
                   return {
                     assignments: newAssignmentsMap,
+                    conflicts: recomputedConflicts,
                     scheduleVersion: (prev.scheduleVersion || 1) + 1,
                   };
                 });
@@ -645,7 +698,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         delete updatedAssignments[targetKey];
       }
 
-      saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments);
+      saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments, state.currentStartDate);
 
       const updatedConflicts = computeAllConflicts(
           updatedAssignments,
@@ -660,6 +713,94 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         conflicts: updatedConflicts,
         changeHistory: state.changeHistory,
       });
+    },
+
+    updateAssignmentOverride: async (assignmentId: number, overrideReason: string | null, overrideRule?: string) => {
+      const state = get();
+      if (state.scheduleStatus === 'PUBLISHED') {
+        return false;
+      }
+
+      const normalizedReason = overrideReason && overrideReason.trim().length > 0 ? overrideReason.trim() : null;
+
+      let found = false;
+      let targetKey: string | null = null;
+      const updatedAssignments: Record<string, ShiftAssignment[]> = { ...state.assignments };
+
+      for (const key of Object.keys(updatedAssignments)) {
+        const list = updatedAssignments[key];
+        const idx = list.findIndex((a) => Number(a.id) === Number(assignmentId));
+        if (idx >= 0) {
+          const updatedItem: ShiftAssignment = {
+            ...list[idx],
+            overrideReason: normalizedReason,
+            overrideRule: normalizedReason ? (overrideRule || list[idx].overrideRule || 'WARN_STAFFING_CAPACITY') : null,
+          };
+          updatedAssignments[key] = [
+            ...list.slice(0, idx),
+            updatedItem,
+            ...list.slice(idx + 1),
+          ];
+          found = true;
+          targetKey = key;
+          break;
+        }
+      }
+
+      if (!found) return false;
+
+      saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments, state.currentStartDate);
+      const updatedConflicts = computeAllConflicts(
+        updatedAssignments,
+        state.employees,
+        state.approvedLeaves,
+        state.holidays,
+        state.shiftTemplates
+      );
+
+      set({
+        assignments: updatedAssignments,
+        conflicts: updatedConflicts,
+      });
+
+      if (!isMockEnabled()) {
+        try {
+          const saved = await scheduleService.updateAssignmentOverride(assignmentId, {
+            override_reason: normalizedReason,
+            override_rule: normalizedReason ? overrideRule : null,
+            schedule_version: state.scheduleVersion,
+          });
+
+          if (saved && targetKey) {
+            set((prev) => {
+              const currentList = prev.assignments[targetKey!] || [];
+              const nextList = currentList.map((item) =>
+                Number(item.id) === Number(assignmentId)
+                  ? {
+                      ...item,
+                      overrideReason: saved.override_reason !== undefined ? saved.override_reason : normalizedReason,
+                      overrideRule: saved.override_rule !== undefined ? saved.override_rule : (normalizedReason ? item.overrideRule : null),
+                      version: saved.version || item.version,
+                    }
+                  : item
+              );
+              const nextMap = {
+                ...prev.assignments,
+                [targetKey!]: nextList,
+              };
+              saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, nextMap, prev.currentStartDate);
+              return {
+                assignments: nextMap,
+                scheduleVersion: (prev.scheduleVersion || 1) + 1,
+              };
+            });
+          }
+        } catch (err) {
+          console.error('Failed to update override reason to backend:', err);
+        }
+      }
+
+      return true;
     },
 
     applyAutoAssignments: (
@@ -953,13 +1094,13 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       });
     },
 
-    fetchShiftTemplates: async () => {
+    fetchShiftTemplates: async (branchId?: number) => {
       if (isMockEnabled() || import.meta.env.MODE === 'test') {
         return;
       }
       try {
-        const list = await workShiftService.getAllWorkShifts();
-        if (list && list.length > 0) {
+        const list = await workShiftService.getAllWorkShifts(branchId);
+        if (list) {
           set({ shiftTemplates: list });
         }
       } catch (err) {

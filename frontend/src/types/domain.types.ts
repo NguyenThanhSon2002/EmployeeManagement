@@ -82,6 +82,8 @@ export interface ShiftTemplate {
   id: number;
   shiftCode: string;
   shiftName: string;
+  branchId?: number | null;
+  branchName?: string | null;
   startTime: string; // HH:mm or HH:mm:ss
   endTime: string;   // HH:mm or HH:mm:ss
   breakMinutes: number;
@@ -166,6 +168,8 @@ export interface ScheduleConflict {
   workDate: string;
   message: string;
   canOverride: boolean;
+  workShiftId?: number;
+  assignmentId?: number;
 }
 
 /** Attendance Record */

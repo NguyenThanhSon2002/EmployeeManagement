@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { ShiftTemplate } from '@/types/domain.types';
-import { X, Moon, AlertCircle, Check, Layers } from 'lucide-react';
+import { X, Moon, AlertCircle, Check, Layers, Globe, MapPin } from 'lucide-react';
 import { SmartTimePicker } from './SmartTimePicker';
 import { generateSlugCode } from '@/utils/code-generator.utils';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
 
 interface ShiftTemplateFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (templateData: Omit<ShiftTemplate, 'id'>, editId?: number) => void;
   initialData?: ShiftTemplate | null;
+  defaultBranchId?: number;
 }
 
 const COLOR_PRESETS = [
@@ -27,11 +30,16 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
   onClose,
   onSave,
   initialData,
+  defaultBranchId,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  const { branches } = useDirectoryStore();
+  const { currentRole, currentUser } = useAuthStore();
+  const isDirector = currentRole === 'ROLE_DIRECTOR';
 
   const [shiftCode, setShiftCode] = useState('');
   const [shiftName, setShiftName] = useState('');
+  const [branchId, setBranchId] = useState<number | null>(null);
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('17:00');
   const [breakMinutes, setBreakMinutes] = useState(60);
@@ -45,6 +53,7 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
     if (initialData) {
       setShiftCode(initialData.shiftCode);
       setShiftName(initialData.shiftName);
+      setBranchId(initialData.branchId ?? null);
       setStartTime(initialData.startTime);
       setEndTime(initialData.endTime);
       setBreakMinutes(initialData.breakMinutes);
@@ -55,6 +64,11 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
     } else {
       setShiftCode('');
       setShiftName('');
+      // Quản lý cơ sở luôn gắn với cơ sở của mình; Giám đốc nhận defaultBranchId nếu có
+      const initBranch = !isDirector && currentUser?.branchId
+        ? currentUser.branchId
+        : (defaultBranchId ?? null);
+      setBranchId(initBranch);
       setStartTime('08:00');
       setEndTime('17:00');
       setBreakMinutes(60);
@@ -64,7 +78,7 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
       setTextColor('#0958D9');
     }
     setError(null);
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, defaultBranchId, isDirector, currentUser]);
 
   // Handle ESC key to dismiss modal
   useEffect(() => {
@@ -121,6 +135,7 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
       {
         shiftCode: finalShiftCode.toUpperCase().trim(),
         shiftName: shiftName.trim(),
+        branchId: branchId ? Number(branchId) : null,
         startTime,
         endTime,
         breakMinutes: Number(breakMinutes),
@@ -262,6 +277,96 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
                 <span>{error}</span>
               </div>
             )}
+
+            {/* Hàng 0: Phạm vi áp dụng (Chi nhánh / Toàn hệ thống) */}
+            <div>
+              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                Phạm vi áp dụng <span style={{ color: '#DC2626' }}>*</span>
+              </label>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+                {isDirector && (
+                  <button
+                    type="button"
+                    onClick={() => setBranchId(null)}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: branchId === null ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
+                      backgroundColor: branchId === null ? '#EFF6FF' : '#FFFFFF',
+                      color: branchId === null ? '#1D4ED8' : '#475569',
+                      fontSize: 12.5,
+                      fontWeight: branchId === null ? 700 : 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Globe size={14} color={branchId === null ? '#2563EB' : '#64748B'} />
+                    Toàn hệ thống (Dùng chung)
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (branchId === null) {
+                      setBranchId(currentUser?.branchId || branches[0]?.id || 1);
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: branchId !== null ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
+                    backgroundColor: branchId !== null ? '#EFF6FF' : '#FFFFFF',
+                    color: branchId !== null ? '#1D4ED8' : '#475569',
+                    fontSize: 12.5,
+                    fontWeight: branchId !== null ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <MapPin size={14} color={branchId !== null ? '#2563EB' : '#64748B'} />
+                  Theo Chi Nhánh Cụ Thể
+                </button>
+              </div>
+
+              {branchId !== null && (
+                <div style={{ marginTop: 6 }}>
+                  <select
+                    className="input-base"
+                    aria-label="Chọn chi nhánh áp dụng ca"
+                    value={branchId ?? ''}
+                    onChange={(e) => setBranchId(Number(e.target.value))}
+                    disabled={!isDirector && Boolean(currentUser?.branchId)}
+                    style={{
+                      width: '100%',
+                      backgroundColor: !isDirector ? '#F8FAFC' : '#FFFFFF',
+                      cursor: !isDirector ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        📍 {b.branchName} ({b.branchCode})
+                      </option>
+                    ))}
+                  </select>
+                  {!isDirector && (
+                    <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 4 }}>
+                      * Với quyền Quản lý, mẫu ca tạo mới sẽ tự động gắn vào cơ sở hiện tại của bạn.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Hàng 1: Tên ca làm việc */}
             <div>

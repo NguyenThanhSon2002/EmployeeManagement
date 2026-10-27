@@ -21,6 +21,7 @@ interface WeeklyGridProps {
   onlyShowConflicts?: boolean;
   onOpenAssignStaff: (shiftTemplateId: number, workDate: string) => void;
   onRemoveAssignment: (assignmentId: number) => void;
+  onOpenOverrideModal?: (assignment: ShiftAssignment) => void;
 }
 
 export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
@@ -34,6 +35,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   onlyShowConflicts = false,
   onOpenAssignStaff,
   onRemoveAssignment,
+  onOpenOverrideModal,
 }) => {
   const weekDays = getWeekDays(baseMonday);
   const todayDateStr = formatDateIso(new Date());
@@ -91,6 +93,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
           onlyShowConflicts={onlyShowConflicts}
           onOpenAssignDrawer={onOpenAssignStaff}
           onRemoveAssignment={onRemoveAssignment}
+          onOpenOverrideModal={onOpenOverrideModal}
         />
       ))}
     </div>

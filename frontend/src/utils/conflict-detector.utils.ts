@@ -1,4 +1,4 @@
-import { addDays, parseISO, format } from 'date-fns';
+import { addDays, parseISO, format, differenceInCalendarDays } from 'date-fns';
 import type {
   Employee,
   ShiftAssignment,
@@ -123,8 +123,13 @@ export function checkTravelBufferBetweenBranches(
     if (shift.status === 'CANCELLED') continue;
     if (newShift.id !== undefined && shift.id === newShift.id) continue;
 
-    // Only check between DIFFERENT branches
-    if (!shift.branchId || (targetBranchId && shift.branchId === targetBranchId)) {
+    // Chỉ kiểm tra khi biết rõ hai ca thuộc hai chi nhánh KHÁC nhau.
+    // Cùng chi nhánh (hoặc chưa biết chi nhánh của ca đang xét) thì không cần thời gian di chuyển.
+    if (
+        !targetBranchId ||
+        !shift.branchId ||
+        Number(shift.branchId) === Number(targetBranchId)
+    ) {
       continue;
     }
 
@@ -220,19 +225,71 @@ export function checkWeeklyHoursLimit(
   return { isExceeded: false, totalHours: total, message: null };
 }
 
+export const DAILY_HOURS_THRESHOLD_FOR_REST_RULE = 8.0;
+
 /**
- * BR-006: Check minimum rest time between adjacent shifts (default 11.0h or 12.0h).
+ * Tính tổng số giờ làm việc thực tế của nhân viên trong một ngày cụ thể (trừ giờ nghỉ giữa ca).
+ * Hỗ trợ tính cả ca ứng viên candidateShift nếu được cung cấp.
+ */
+export function calculateEmployeeDailyHours(
+  targetDate: string,
+  employeeShifts: ShiftAssignment[],
+  candidateShift?: ShiftTimeRange,
+  candidateNetHours?: number
+): number {
+  let totalMinutes = 0;
+
+  // Cộng ca ứng viên nếu ca đó thuộc đúng ngày targetDate
+  if (candidateShift && candidateShift.workDate === targetDate) {
+    if (candidateNetHours !== undefined) {
+      totalMinutes += Math.round(candidateNetHours * 60);
+    } else {
+      const { netHours } = calculateShiftDurations(
+        candidateShift.startTime,
+        candidateShift.endTime,
+        0,
+        candidateShift.isCrossMidnight
+      );
+      totalMinutes += Math.round(netHours * 60);
+    }
+  }
+
+  // Cộng các ca đã phân công khác của nhân viên trong ngày đó
+  for (const s of employeeShifts) {
+    if (s.status === 'CANCELLED') continue;
+    if (candidateShift?.id !== undefined && s.id === candidateShift.id) continue;
+    if (s.workDate !== targetDate) continue;
+
+    const { netHours } = calculateShiftDurations(
+      s.snapshotStartTime,
+      s.snapshotEndTime,
+      s.snapshotBreakMinutes,
+      s.snapshotCrossMidnight
+    );
+    totalMinutes += Math.round(netHours * 60);
+  }
+
+  return Math.round((totalMinutes / 60) * 10) / 10;
+}
+
+/**
+ * BR-006: Check minimum rest time between adjacent shifts (default 12.0h).
+ * Quy tắc nghỉ tối thiểu giữa 2 ca:
+ * - Chỉ áp dụng giữa Ngày N và Ngày N+1 (KHÔNG áp dụng cùng ngày).
+ * - CHỈ kích hoạt khi ngày đứng trước đạt tổng thời gian làm việc >= 8.0 giờ.
+ *   (Nếu ngày đứng trước làm < 8.0h thì KHÔNG cảnh báo nghỉ ngơi).
  * Severity: WARNING
  */
 export function checkRestTimeBetweenShifts(
   currentShift: ShiftTimeRange,
   allEmployeeShifts: ShiftAssignment[],
-  minRestHours: number = 11.0
+  minRestHours: number = 12.0,
+  _currentNetHours?: number
 ): {
   isRestViolated: boolean;
   actualRestHours: number;
   adjacentShift: ShiftAssignment | null;
-  direction: 'PREVIOUS' | 'NEXT' | null;
+  direction: 'PREVIOUS' | null;
   message: string | null;
 } {
   const otherRanges = allEmployeeShifts
@@ -240,37 +297,35 @@ export function checkRestTimeBetweenShifts(
     .map((s) => ({ assignment: s, range: assignmentToTimeRange(s) }))
     .sort((a, b) => a.range.startMs - b.range.startMs);
 
-  // 1. Check with preceding shift (ends before or at current shift start)
-  const prevShifts = otherRanges.filter((o) => o.range.endMs <= currentShift.startMs);
+  const currDate = parseISO(currentShift.workDate);
+
+  // Kiểm tra với ca muộn nhất của ngày liền trước (N-1)
+  // Chỉ cảnh báo ở ca ngày hôm sau khi ngày hôm trước nhân viên làm >= 8h và chưa nghỉ đủ 12h
+  const prevShifts = otherRanges.filter((o) => {
+    if (o.range.endMs > currentShift.startMs) return false;
+    const prevDate = parseISO(o.assignment.workDate);
+    // Chỉ áp dụng khi ca trước thuộc Ngày N-1 (differenceInCalendarDays === 1)
+    return differenceInCalendarDays(currDate, prevDate) === 1;
+  });
+
   if (prevShifts.length > 0) {
     const latestPrev = prevShifts[prevShifts.length - 1];
-    const diffHours = (currentShift.startMs - latestPrev.range.endMs) / (1000 * 60 * 60);
-    const roundedDiff = Math.round(diffHours * 10) / 10;
-    if (roundedDiff < minRestHours) {
-      return {
-        isRestViolated: true,
-        actualRestHours: roundedDiff,
-        adjacentShift: latestPrev.assignment,
-        direction: 'PREVIOUS',
-        message: `Khoảng nghỉ sau ca trước chỉ có ${roundedDiff.toFixed(1)}h (dưới ${minRestHours.toFixed(1)}h)`,
-      };
-    }
-  }
+    const prevWorkDate = latestPrev.assignment.workDate;
+    const prevDayTotalHours = calculateEmployeeDailyHours(prevWorkDate, allEmployeeShifts);
 
-  // 2. Check with subsequent shift (starts after or at current shift end)
-  const nextShifts = otherRanges.filter((o) => o.range.startMs >= currentShift.endMs);
-  if (nextShifts.length > 0) {
-    const earliestNext = nextShifts[0];
-    const diffHours = (earliestNext.range.startMs - currentShift.endMs) / (1000 * 60 * 60);
-    const roundedDiff = Math.round(diffHours * 10) / 10;
-    if (roundedDiff < minRestHours) {
-      return {
-        isRestViolated: true,
-        actualRestHours: roundedDiff,
-        adjacentShift: earliestNext.assignment,
-        direction: 'NEXT',
-        message: `Khoảng nghỉ trước ca sau chỉ có ${roundedDiff.toFixed(1)}h (dưới ${minRestHours.toFixed(1)}h)`,
-      };
+    // CHỈ áp dụng nếu tổng thời gian làm việc của nhân viên trong ngày N-1 đạt >= 8.0 giờ
+    if (prevDayTotalHours >= DAILY_HOURS_THRESHOLD_FOR_REST_RULE) {
+      const diffHours = (currentShift.startMs - latestPrev.range.endMs) / (1000 * 60 * 60);
+      const roundedDiff = Math.round(diffHours * 10) / 10;
+      if (roundedDiff < minRestHours) {
+        return {
+          isRestViolated: true,
+          actualRestHours: roundedDiff,
+          adjacentShift: latestPrev.assignment,
+          direction: 'PREVIOUS',
+          message: `Khoảng nghỉ sau ca ngày hôm trước chỉ có ${roundedDiff.toFixed(1)}h (dưới ${minRestHours.toFixed(1)}h sau khi làm việc ${prevDayTotalHours.toFixed(1)}h trong ngày ${prevWorkDate})`,
+        };
+      }
     }
   }
 
@@ -281,6 +336,18 @@ export function checkRestTimeBetweenShifts(
     direction: null,
     message: null,
   };
+}
+
+export const REST_RULE_INCLUDES_SAME_DAY_SHIFTS = false;
+
+export function checkRestTimeWithDailyThreshold(
+    currentShift: ShiftTimeRange,
+    currentNetHours: number,
+    allEmployeeShifts: ShiftAssignment[],
+    minRestHours: number = 12.0,
+    _minDailyHours: number = MIN_DAILY_HOURS_FOR_REST_RULE
+): ReturnType<typeof checkRestTimeBetweenShifts> {
+  return checkRestTimeBetweenShifts(currentShift, allEmployeeShifts, minRestHours, currentNetHours);
 }
 
 /**
@@ -378,36 +445,14 @@ export function validateAllShiftConflicts(params: {
     });
   }
 
-  // BR-006: Rest time between shifts
-  const restCheck = checkRestTimeBetweenShifts(
-    newShiftRange,
-    existingShifts,
-    settings.minRestBetweenShiftsHours
+  // BR-006: Rest time between shifts (chỉ áp dụng khi ngày làm của ca đứng trước đủ >= 8h)
+  const restCheck = checkRestTimeWithDailyThreshold(
+      newShiftRange,
+      newShiftNetHours,
+      existingShifts,
+      settings?.minRestBetweenShiftsHours || 12.0
   );
-
-  // Tổng giờ làm trong ngày của ca này (gồm các ca khác cùng ngày)
-  const sameDayHoursForRest = existingShifts
-      .filter(
-          (s) =>
-              s.status !== 'CANCELLED' &&
-              s.workDate === newShiftRange.workDate &&
-              (newShiftRange.id === undefined || s.id !== newShiftRange.id)
-      )
-      .reduce(
-          (sum, s) =>
-              sum +
-              calculateShiftDurations(
-                  s.snapshotStartTime,
-                  s.snapshotEndTime,
-                  s.snapshotBreakMinutes,
-                  s.snapshotCrossMidnight
-              ).netHours,
-          0
-      );
-  const isFullDayForRestRule =
-      sameDayHoursForRest + newShiftNetHours >= MIN_DAILY_HOURS_FOR_REST_RULE;
-
-  if (restCheck.isRestViolated && isFullDayForRestRule) {
+  if (restCheck.isRestViolated) {
     conflicts.push({
       id: `BR-006_${employee.id}_${newShiftRange.workDate}`,
       ruleCode: 'BR-006',

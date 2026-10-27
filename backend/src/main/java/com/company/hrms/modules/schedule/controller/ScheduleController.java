@@ -79,6 +79,18 @@ public class ScheduleController {
         return ApiResponse.success(null);
     }
 
+    @PatchMapping("/assignments/{id}/override")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
+    @Operation(summary = "Cập nhật giải trình đặc cách cho ca phân công", description = "Cập nhật override_reason và override_rule cho ca phân công")
+    public ApiResponse<ShiftAssignmentDto> updateOverrideReason(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateOverrideReasonRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Long userId = principal != null ? principal.getId() : 1L;
+        ShiftAssignmentDto assignment = scheduleService.updateOverrideReason(id, request, userId);
+        return ApiResponse.success(assignment);
+    }
+
     @PostMapping("/bulk-assign")
     @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Gán ca hàng loạt", description = "Gán ca cho nhiều nhân sự trên một khoảng ngày trong một transaction")
