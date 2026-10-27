@@ -36,12 +36,12 @@ public class StaffingCapacityRule implements ConflictRule {
         String empName = context.getEmployee() != null ? context.getEmployee().getFullName() : "Nhân viên #" + context.getEmployeeId();
 
         if (count > shift.getMaxStaffing()) {
-            String msg = String.format("Ca %s ngày %s đã đạt định biên tối đa %d NV. Không thể phân công thêm nhân sự.",
+            String msg = String.format("Ca %s ngày %s đã vượt định biên tối đa (%d NV). Bổ sung nhân sự cần ghi nhận lý do tăng cường.",
                     shift.getShiftName(), context.getWorkDate(), shift.getMaxStaffing());
 
-            result.addMandatoryError(new ScheduleConflictDto(
-                    "ERR_STAFFING_CAPACITY",
-                    "MANDATORY",
+            result.addWarning(new ScheduleConflictDto(
+                    "WARN_STAFFING_CAPACITY",
+                    "WARNING",
                     context.getEmployeeId(),
                     empName,
                     context.getWorkDate(),

@@ -9,6 +9,12 @@ import type {
 } from '@/types/domain.types';
 import { calculateShiftDurations, sumWeeklyScheduledHours } from './schedule-calc.utils';
 
+/**
+ * Quy tắc nghỉ tối thiểu giữa các ca (BR-006) chỉ áp dụng khi nhân viên làm từ ngần này giờ/ngày trở lên.
+ * Làm ít hơn thì không cảnh báo thiếu giờ nghỉ.
+ */
+export const MIN_DAILY_HOURS_FOR_REST_RULE = 8;
+
 export interface ShiftTimeRange {
   id?: number;
   workDate: string;
@@ -378,7 +384,30 @@ export function validateAllShiftConflicts(params: {
     existingShifts,
     settings.minRestBetweenShiftsHours
   );
-  if (restCheck.isRestViolated) {
+
+  // Tổng giờ làm trong ngày của ca này (gồm các ca khác cùng ngày)
+  const sameDayHoursForRest = existingShifts
+      .filter(
+          (s) =>
+              s.status !== 'CANCELLED' &&
+              s.workDate === newShiftRange.workDate &&
+              (newShiftRange.id === undefined || s.id !== newShiftRange.id)
+      )
+      .reduce(
+          (sum, s) =>
+              sum +
+              calculateShiftDurations(
+                  s.snapshotStartTime,
+                  s.snapshotEndTime,
+                  s.snapshotBreakMinutes,
+                  s.snapshotCrossMidnight
+              ).netHours,
+          0
+      );
+  const isFullDayForRestRule =
+      sameDayHoursForRest + newShiftNetHours >= MIN_DAILY_HOURS_FOR_REST_RULE;
+
+  if (restCheck.isRestViolated && isFullDayForRestRule) {
     conflicts.push({
       id: `BR-006_${employee.id}_${newShiftRange.workDate}`,
       ruleCode: 'BR-006',

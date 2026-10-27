@@ -6,13 +6,23 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Sliders, RotateCcw, Check, ShieldAlert, Settings } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
-  const { settings, updateSettings } = useSettingsStore();
+  const { settings, updateSettings, fetchSettings } = useSettingsStore();
   const { resetDemoData, recomputeAllConflicts } = useScheduleStore();
   const { addToast } = useUIStore();
 
   const [minRest, setMinRest] = useState<number>(settings.minRestBetweenShiftsHours);
   const [maxWeekly, setMaxWeekly] = useState<number>(settings.maxWeeklyHours);
   const [gracePeriod, setGracePeriod] = useState<number>(settings.gracePeriodMinutes);
+
+  React.useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  React.useEffect(() => {
+    setMinRest(settings.minRestBetweenShiftsHours);
+    setMaxWeekly(settings.maxWeeklyHours);
+    setGracePeriod(settings.gracePeriodMinutes);
+  }, [settings]);
 
   const handleSavePolicy = (e: React.FormEvent) => {
     e.preventDefault();

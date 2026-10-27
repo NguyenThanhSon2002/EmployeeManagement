@@ -14,4 +14,6 @@ public interface AttendanceCorrectionRepository extends JpaRepository<Attendance
     List<AttendanceCorrection> findAllByEmployeeIdOrderByCreatedAtDesc(Long employeeId);
 
     Page<AttendanceCorrection> findAllByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
+
+    List<AttendanceCorrection> findAllByStatusOrderByCreatedAtDesc(String status);
 }

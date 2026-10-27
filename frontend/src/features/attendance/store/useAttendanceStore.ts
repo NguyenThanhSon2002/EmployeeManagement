@@ -78,6 +78,38 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
         rejectionReason: null,
       };
       set({ corrections: [newCorrection, ...state.corrections] });
+
+      if (!isMockEnabled()) {
+        const targetRecord = state.records.find((r) => r.id === payload.attendanceRecordId);
+        const workDate = targetRecord?.workDate || format(new Date(), 'yyyy-MM-dd');
+        const reqCheckIn = payload.requestedCheckIn.includes('T')
+          ? payload.requestedCheckIn
+          : `${workDate}T${payload.requestedCheckIn.length === 5 ? payload.requestedCheckIn + ':00' : payload.requestedCheckIn}`;
+        const reqCheckOut = payload.requestedCheckOut.includes('T')
+          ? payload.requestedCheckOut
+          : `${workDate}T${payload.requestedCheckOut.length === 5 ? payload.requestedCheckOut + ':00' : payload.requestedCheckOut}`;
+
+        attendanceService
+          .submitCorrection({
+            attendance_record_id: payload.attendanceRecordId,
+            requested_check_in: reqCheckIn,
+            requested_check_out: reqCheckOut,
+            reason: payload.reason,
+            attachment_url: payload.attachmentUrl || undefined,
+          })
+          .then((res: any) => {
+            if (res && res.id) {
+              set((curr) => ({
+                corrections: curr.corrections.map((c) =>
+                  c.id === newId ? { ...c, id: res.id } : c
+                ),
+              }));
+            }
+          })
+          .catch((err) => {
+            console.warn('Backend submitCorrection failed:', err);
+          });
+      }
     },
 
     approveCorrection: (correctionId, reviewerId) => {
@@ -125,6 +157,16 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
         corrections: updatedCorrections,
         records: updatedRecords,
       });
+
+      if (!isMockEnabled()) {
+        attendanceService
+          .reviewCorrection(correctionId, {
+            action: 'APPROVE',
+          })
+          .catch((err) => {
+            console.warn('Backend reviewCorrection (APPROVE) failed:', err);
+          });
+      }
     },
 
     rejectCorrection: (correctionId, reviewerId, rejectionReason) => {
@@ -142,6 +184,17 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
             : c
         ),
       });
+
+      if (!isMockEnabled()) {
+        attendanceService
+          .reviewCorrection(correctionId, {
+            action: 'REJECT',
+            rejection_reason: rejectionReason,
+          })
+          .catch((err) => {
+            console.warn('Backend reviewCorrection (REJECT) failed:', err);
+          });
+      }
     },
 
     checkIn: (employeeId) => {

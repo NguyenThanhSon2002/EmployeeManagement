@@ -92,17 +92,17 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                         padding: '2px 8px',
                         borderRadius: '6px',
                         backgroundColor: isOverCapacity
-                            ? '#FEF2F2'
+                            ? '#EFF6FF'
                             : isSufficient
                             ? '#ECFDF5'
                             : '#FFFBEB',
                         color: isOverCapacity
-                            ? '#DC2626'
+                            ? '#1D4ED8'
                             : isSufficient
                             ? '#047857'
                             : '#B45309',
                         border: isOverCapacity
-                            ? '1px solid #FECACA'
+                            ? '1px solid #BFDBFE'
                             : isSufficient
                             ? '1px solid #A7F3D0'
                             : '1px solid #FDE68A',
@@ -110,14 +110,14 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                     }}
                     title={
                         isOverCapacity
-                            ? `Vượt định biên tối đa (${currentCount}/${maxCapacity} nhân sự)`
+                            ? `Ca được bổ sung tăng cường (${currentCount}/${minRequired} nhân sự)`
                             : isSufficient
                             ? `Đạt định biên ca (${currentCount}/${minRequired} nhân sự)`
                             : `Thiếu ${minRequired - currentCount} nhân sự theo định biên (${currentCount}/${minRequired})`
                     }
                 >
                     {isOverCapacity ? (
-                        <AlertTriangle size={11} strokeWidth={2.5} />
+                        <Users size={11} strokeWidth={2.5} />
                     ) : isSufficient ? (
                         <CheckCircle2 size={11} strokeWidth={2.5} />
                     ) : (

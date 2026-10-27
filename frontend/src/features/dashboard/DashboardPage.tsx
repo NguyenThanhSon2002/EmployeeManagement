@@ -1,14 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
+import { dashboardService, type DashboardOverview } from './api/dashboardService';
 import { TrendBarChart } from '@/components/charts/TrendBarChart';
 import { QuickAttendanceCard } from './components/QuickAttendanceCard';
 import { PendingApprovalsWidget } from './components/PendingApprovalsWidget';
+import { isMockEnabled } from '@/config/env.config';
 import { Users, UserCheck, Clock, Palmtree, Calendar, Sparkles } from 'lucide-react';
+import { format, addDays } from 'date-fns';
 
 export const DashboardPage: React.FC = () => {
   const { currentUser, currentRole } = useAuthStore();
+  const { assignments } = useScheduleStore();
 
   const isEmployeeRole = currentRole === 'ROLE_EMPLOYEE';
+  const isDirector = currentRole === 'ROLE_DIRECTOR';
+  const effectiveBranchId = !isDirector ? currentUser?.branchId : undefined;
+
+  const [overview, setOverview] = useState<DashboardOverview>({
+    total_employees: 10,
+    present_count: 8,
+    late_count: 1,
+    on_leave_count: 1,
+    active_contract_rate: 100.0,
+    attendance_rate: 80.0,
+  });
+
+  useEffect(() => {
+    if (isMockEnabled()) return;
+
+    let isMounted = true;
+    dashboardService
+      .getOverview(effectiveBranchId)
+      .then((res) => {
+        if (isMounted && res) {
+          setOverview(res);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch dashboard overview:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveBranchId]);
+
+  // Today & Tomorrow shifts for Employee
+  const today = new Date();
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const tomorrow = addDays(today, 1);
+  const tomorrowStr = format(tomorrow, 'yyyy-MM-dd');
+
+  const todayKey = `${currentUser.id}_${todayStr}`;
+  const tomorrowKey = `${currentUser.id}_${tomorrowStr}`;
+
+  const todayShifts = (assignments[todayKey] || []).filter((a) => a.status !== 'CANCELLED');
+  const tomorrowShifts = (assignments[tomorrowKey] || []).filter((a) => a.status !== 'CANCELLED');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
@@ -72,7 +120,7 @@ export const DashboardPage: React.FC = () => {
             }}
           >
             <span className="pulse-dot-green" />
-            <span>38/45 Nhân sự đang trực</span>
+            <span>{overview.present_count}/{overview.total_employees} Nhân sự đang trực</span>
           </div>
         </div>
       </div>
@@ -107,10 +155,10 @@ export const DashboardPage: React.FC = () => {
               Tổng Quân Số Bộ Phận
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-              45 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+              {overview.total_employees} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
             </div>
             <div style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginTop: 2 }}>
-              100% hợp đồng hoạt động
+              {overview.active_contract_rate || 100}% hợp đồng hoạt động
             </div>
           </div>
         </div>
@@ -137,10 +185,10 @@ export const DashboardPage: React.FC = () => {
               Đang Có Mặt / Check-in
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#047857', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-              38 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+              {overview.present_count} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
             </div>
             <div style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginTop: 2 }}>
-              84.4% tỷ lệ hiện diện
+              {overview.attendance_rate}% tỷ lệ hiện diện
             </div>
           </div>
         </div>
@@ -167,10 +215,10 @@ export const DashboardPage: React.FC = () => {
               Đi Muộn / Về Sớm
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#B45309', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-              2 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+              {overview.late_count} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
             </div>
             <div style={{ fontSize: 11, color: '#B45309', fontWeight: 600, marginTop: 2 }}>
-              Giảm 1 trường hợp so với hôm qua
+              Ghi nhận trong ngày hôm nay
             </div>
           </div>
         </div>
@@ -197,10 +245,10 @@ export const DashboardPage: React.FC = () => {
               Đang Nghỉ Phép Hợp Lệ
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#BE185D', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-              3 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
+              {overview.on_leave_count} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-muted)' }}>người</span>
             </div>
             <div style={{ fontSize: 11, color: '#BE185D', fontWeight: 600, marginTop: 2 }}>
-              Đã duyệt quỹ phép năm
+              Đã duyệt phép trong ngày
             </div>
           </div>
         </div>
@@ -208,7 +256,7 @@ export const DashboardPage: React.FC = () => {
 
       {/* Middle Row: Trend Chart & Quick Attendance */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)' }}>
-        <TrendBarChart />
+        <TrendBarChart branchId={effectiveBranchId} />
         <QuickAttendanceCard />
       </div>
 
@@ -223,45 +271,68 @@ export const DashboardPage: React.FC = () => {
             <h3 style={{ fontSize: 'var(--font-h3)', fontWeight: 600 }}>Ca Trực Tiếp Theo Của Bạn</h3>
           </div>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+            {/* Hôm nay */}
             <div
               style={{
                 flex: 1,
                 minWidth: 220,
                 padding: '14px 16px',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'var(--shift-morning-bg)',
-                border: '1px solid var(--shift-morning-border)',
-                color: 'var(--shift-morning-text)',
+                backgroundColor: todayShifts.length > 0 ? 'var(--shift-morning-bg)' : '#F8FAFC',
+                border: todayShifts.length > 0 ? '1px solid var(--shift-morning-border)' : '1px dashed #CBD5E1',
+                color: todayShifts.length > 0 ? 'var(--shift-morning-text)' : '#64748B',
                 boxShadow: 'var(--shadow-xs)',
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 14 }}>Hôm nay (Thứ Ba)</div>
-              <div style={{ fontSize: 13.5, marginTop: 4, fontWeight: 600 }}>
-                Ca Sáng Tiêu Chuẩn: 08:00 — 17:00 (8.0h)
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>
-                Trực vận hành cổng thanh toán dịch vụ & CSKH
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Hôm nay ({todayStr})</div>
+              {todayShifts.length > 0 ? (
+                todayShifts.map((s) => (
+                  <div key={s.id} style={{ marginTop: 4 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>
+                      {s.snapshotShiftName}: {s.snapshotStartTime} — {s.snapshotEndTime}
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>
+                      Tại {s.branchName || 'Chi nhánh làm việc'}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ fontSize: 13, marginTop: 4, fontStyle: 'italic' }}>
+                  Không có lịch trực trong ca hôm nay (Nghỉ)
+                </div>
+              )}
             </div>
+
+            {/* Ngày mai */}
             <div
               style={{
                 flex: 1,
                 minWidth: 220,
                 padding: '14px 16px',
                 borderRadius: 'var(--radius-lg)',
-                backgroundColor: 'var(--shift-afternoon-bg)',
-                border: '1px solid var(--shift-afternoon-border)',
-                color: 'var(--shift-afternoon-text)',
+                backgroundColor: tomorrowShifts.length > 0 ? 'var(--shift-afternoon-bg)' : '#F8FAFC',
+                border: tomorrowShifts.length > 0 ? '1px solid var(--shift-afternoon-border)' : '1px dashed #CBD5E1',
+                color: tomorrowShifts.length > 0 ? 'var(--shift-afternoon-text)' : '#64748B',
                 boxShadow: 'var(--shadow-xs)',
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 14 }}>Ngày mai (Thứ Tư)</div>
-              <div style={{ fontSize: 13.5, marginTop: 4, fontWeight: 600 }}>
-                Ca Chiều: 14:00 — 22:00 (8.0h)
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>
-                Trực xử lý sự cố khách hàng & đối soát giao dịch
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Ngày mai ({tomorrowStr})</div>
+              {tomorrowShifts.length > 0 ? (
+                tomorrowShifts.map((s) => (
+                  <div key={s.id} style={{ marginTop: 4 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>
+                      {s.snapshotShiftName}: {s.snapshotStartTime} — {s.snapshotEndTime}
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>
+                      Tại {s.branchName || 'Chi nhánh làm việc'}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ fontSize: 13, marginTop: 4, fontStyle: 'italic' }}>
+                  Không có lịch trực ca ngày mai
+                </div>
+              )}
             </div>
           </div>
         </div>
