@@ -18,6 +18,12 @@ public class WorkShiftDto {
     @JsonProperty("shift_name")
     private String shiftName;
 
+    @JsonProperty("branch_id")
+    private Long branchId;
+
+    @JsonProperty("branch_name")
+    private String branchName;
+
     @NotNull(message = "Giờ bắt đầu không được để trống")
     @JsonProperty("start_time")
     private LocalTime startTime;
@@ -59,6 +65,10 @@ public class WorkShiftDto {
     public void setShiftCode(String shiftCode) { this.shiftCode = shiftCode; }
     public String getShiftName() { return shiftName; }
     public void setShiftName(String shiftName) { this.shiftName = shiftName; }
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
+    public String getBranchName() { return branchName; }
+    public void setBranchName(String branchName) { this.branchName = branchName; }
     public LocalTime getStartTime() { return startTime; }
     public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
     public LocalTime getEndTime() { return endTime; }

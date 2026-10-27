@@ -18,6 +18,7 @@ import {BulkAssignDialog} from './dialogs/BulkAssignDialog';
 import {CopyWeekDialog} from './dialogs/CopyWeekDialog';
 import {PublishConfirmDialog} from './dialogs/PublishConfirmDialog';
 import {UnpublishConfirmDialog} from './dialogs/UnpublishConfirmDialog';
+import {OverrideReasonModal} from './dialogs/OverrideReasonModal';
 import {buildWeeklyRosterCsv, downloadCsvFile} from '@/utils/csv-exporter.utils';
 import {calculateShiftDurations} from '@/utils/schedule-calc.utils';
 import type {ShiftAssignment} from '@/types/domain.types';
@@ -42,6 +43,7 @@ export const SchedulePage: React.FC = () => {
         setFilters,
         assignShift,
         deleteAssignment,
+        updateAssignmentOverride,
 
         scheduleId,
         applyAutoAssignments,
@@ -49,6 +51,7 @@ export const SchedulePage: React.FC = () => {
         publishSchedule,
         unpublishSchedule,
         fetchWeeklySchedule,
+        fetchShiftTemplates,
         resetCurrentWeekSchedule,
     } = useScheduleStore();
 
@@ -153,12 +156,13 @@ export const SchedulePage: React.FC = () => {
         }
     }, [branches, lockedBranchId, filterOptions.branchId, setFilters]);
 
-    // Tự động tải lịch tuần và lịch khả dụng của chi nhánh từ backend
+    // Tự động tải lịch tuần, lịch khả dụng và danh mục ca của chi nhánh từ backend
     React.useEffect(() => {
         const branchId = filterOptions.branchId || 1;
         fetchWeeklySchedule(branchId, currentStartDate);
         fetchBranchAvailabilities(branchId);
-    }, [filterOptions.branchId, currentStartDate, fetchWeeklySchedule, fetchBranchAvailabilities]);
+        fetchShiftTemplates(branchId);
+    }, [filterOptions.branchId, currentStartDate, fetchWeeklySchedule, fetchBranchAvailabilities, fetchShiftTemplates]);
 
     // Dialog & Drawer Visibility State
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -171,6 +175,40 @@ export const SchedulePage: React.FC = () => {
     const [copyDialogOpen, setCopyDialogOpen] = useState(false);
     const [publishDialogOpen, setPublishDialogOpen] = useState(false);
     const [unpublishDialogOpen, setUnpublishDialogOpen] = useState(false);
+    const [overrideModalAssignment, setOverrideModalAssignment] = useState<ShiftAssignment | null>(null);
+
+    const handleOpenOverrideModal = (assignment: ShiftAssignment) => {
+        setOverrideModalAssignment(assignment);
+    };
+
+    const handleCloseOverrideModal = () => {
+        setOverrideModalAssignment(null);
+    };
+
+    const handleSaveOverrideReason = async (
+        assignmentId: number,
+        overrideReason: string | null,
+        overrideRule?: string
+    ) => {
+        const ok = await updateAssignmentOverride(assignmentId, overrideReason, overrideRule);
+        if (ok) {
+            addToast({
+                type: 'success',
+                title: overrideReason ? 'Đã lưu giải trình' : 'Đã xóa giải trình',
+                message: overrideReason
+                    ? 'Lý do phân ca đặc cách đã được cập nhật thành công.'
+                    : 'Đã xóa bỏ giải trình đặc cách cho ca làm việc này.',
+            });
+            setOverrideModalAssignment(null);
+        } else {
+            addToast({
+                type: 'error',
+                title: 'Không thể lưu giải trình',
+                message: 'Lịch tuần đang ở trạng thái công bố hoặc không tìm thấy phân ca.',
+            });
+        }
+        return ok;
+    };
 
     const baseMonday = useMemo(() => parseISO(currentStartDate), [currentStartDate]);
     const [monthDate, setMonthDate] = useState<Date>(() => startOfMonth(parseISO(currentStartDate)));
@@ -673,6 +711,7 @@ export const SchedulePage: React.FC = () => {
                         onlyShowConflicts={Boolean(filterOptions.onlyShowConflicts)}
                         onOpenAssignStaff={handleOpenAssignStaff}
                         onRemoveAssignment={handleRemoveAssignment}
+                        onOpenOverrideModal={handleOpenOverrideModal}
                     />
                 ) : (
                     <MonthViewGrid
@@ -716,6 +755,8 @@ export const SchedulePage: React.FC = () => {
                 approvedLeaves={approvedLeaves}
                 holidays={holidays}
                 settings={settings}
+                branchId={filterOptions.branchId}
+                branchName={branches.find((b) => b.id === filterOptions.branchId)?.branchName}
                 canEdit={canEditSchedule}
                 onAssignEmployee={handleAssignEmployee}
                 onRemoveAssignment={handleRemoveAssignment}
@@ -763,6 +804,20 @@ export const SchedulePage: React.FC = () => {
                 onClose={() => setUnpublishDialogOpen(false)}
                 onConfirm={handleConfirmUnpublish}
             />
+
+            {overrideModalAssignment && (
+                <OverrideReasonModal
+                    isOpen={Boolean(overrideModalAssignment)}
+                    onClose={handleCloseOverrideModal}
+                    assignment={overrideModalAssignment}
+                    employee={employees.find((e) => e.id === overrideModalAssignment.employeeId) || null}
+                    template={shiftTemplates.find((t) => t.id === overrideModalAssignment.workShiftId) || null}
+                    conflicts={(conflicts[`${overrideModalAssignment.employeeId}_${overrideModalAssignment.workDate}`] || []).filter(
+                        (c) => !c.workShiftId || Number(c.workShiftId) === Number(overrideModalAssignment.workShiftId)
+                    )}
+                    onSaveReason={handleSaveOverrideReason}
+                />
+            )}
         </div>
     );
 };

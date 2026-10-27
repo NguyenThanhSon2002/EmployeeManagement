@@ -24,9 +24,9 @@ public class WorkShiftController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE')")
-    @Operation(summary = "Lấy danh sách mẫu ca làm việc", description = "Trả về danh sách tất cả các ca làm việc đang hoạt động")
-    public ApiResponse<List<WorkShiftDto>> getAllWorkShifts() {
-        List<WorkShiftDto> shifts = workShiftService.getAllWorkShifts();
+    @Operation(summary = "Lấy danh sách mẫu ca làm việc", description = "Trả về danh sách tất cả các ca làm việc đang hoạt động (tùy chọn lọc theo chi nhánh)")
+    public ApiResponse<List<WorkShiftDto>> getAllWorkShifts(@RequestParam(value = "branchId", required = false) Long branchId) {
+        List<WorkShiftDto> shifts = workShiftService.getAllWorkShifts(branchId);
         return ApiResponse.success(shifts);
     }
 

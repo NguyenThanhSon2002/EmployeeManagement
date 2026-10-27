@@ -16,6 +16,7 @@ interface ShiftRowProps {
   onlyShowConflicts?: boolean;
   onOpenAssignDrawer: (shiftTemplateId: number, workDate: string) => void;
   onRemoveAssignment: (assignmentId: number) => void;
+  onOpenOverrideModal?: (assignment: ShiftAssignment) => void;
 }
 
 export const ShiftRow: React.FC<ShiftRowProps> = ({
@@ -29,6 +30,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
   onlyShowConflicts = false,
   onOpenAssignDrawer,
   onRemoveAssignment,
+  onOpenOverrideModal,
 }) => {
   const { netHours } = calculateShiftDurations(
     template.startTime,
@@ -122,17 +124,19 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
         const dateStr = formatDateIso(day);
         const isToday = dateStr === todayDateStr;
 
-        // Filter assignments matching this template and date, excluding resigned or inactive employees
-        const cellAssignments = allAssignments.filter((a) => {
-          if (a.workShiftId !== template.id || a.workDate !== dateStr || a.status === 'CANCELLED') {
-            return false;
-          }
-          const emp = employees.find((e) => e.id === a.employeeId);
-          if (!emp || emp.employmentStatus === 'RESIGNED' || emp.isActive === false) {
-            return false;
-          }
-          return true;
-        });
+        // Filter assignments matching this template and date, sorted chronologically (id ascending)
+        const cellAssignments = allAssignments
+          .filter((a) => {
+            if (a.workShiftId !== template.id || a.workDate !== dateStr || a.status === 'CANCELLED') {
+              return false;
+            }
+            const emp = employees.find((e) => e.id === a.employeeId);
+            if (!emp || emp.employmentStatus === 'RESIGNED' || emp.isActive === false) {
+              return false;
+            }
+            return true;
+          })
+          .sort((a, b) => (a.id || 0) - (b.id || 0));
 
         return (
           <ShiftGridCell
@@ -150,6 +154,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
               e.stopPropagation();
               onRemoveAssignment(assignmentId);
             }}
+            onOpenOverrideModal={onOpenOverrideModal}
           />
         );
       })}

@@ -21,6 +21,8 @@ import com.company.hrms.modules.shift.domain.WorkShift;
 import com.company.hrms.modules.shift.dto.WorkShiftDto;
 import com.company.hrms.modules.shift.repository.WorkShiftRepository;
 import com.company.hrms.modules.shift.service.WorkShiftService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class ScheduleService {
+
+    private static final Logger log = LoggerFactory.getLogger(ScheduleService.class);
 
     private final ScheduleRepository scheduleRepository;
     private final ShiftAssignmentRepository assignmentRepository;
@@ -315,12 +319,9 @@ public class ScheduleService {
             throw new BusinessException(err.getRuleCode(), err.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
+        String warningRule = null;
         if (validation.getHasWarnings()) {
-            if (request.getOverrideReason() == null || request.getOverrideReason().trim().length() < 5) {
-                ScheduleConflictDto warn = validation.getWarnings().get(0);
-                throw new BusinessException(warn.getRuleCode(),
-                        warn.getMessage() + " Yêu cầu nhập lý do giải trình đặc cách.", HttpStatus.UNPROCESSABLE_ENTITY);
-            }
+            warningRule = validation.getWarnings().get(0).getRuleCode();
         }
 
         LocalDateTime[] times = ConflictDetectionEngine.calculatePlannedTimes(
@@ -344,7 +345,7 @@ public class ScheduleService {
         assignment.setPlannedStartTime(times[0]);
         assignment.setPlannedEndTime(times[1]);
         assignment.setStatus("ASSIGNED");
-        assignment.setOverrideRule(request.getOverrideRule());
+        assignment.setOverrideRule(request.getOverrideRule() != null ? request.getOverrideRule() : warningRule);
         assignment.setOverrideReason(request.getOverrideReason());
 
         ShiftAssignment saved = assignmentRepository.save(assignment);
@@ -614,6 +615,60 @@ public class ScheduleService {
         assignmentRepository.delete(assignment);
         schedule.setVersion(schedule.getVersion() + 1);
         scheduleRepository.save(schedule);
+    }
+
+    @Transactional
+    public ShiftAssignmentDto updateOverrideReason(Long id, UpdateOverrideReasonRequest request, Long currentUserId) {
+        ShiftAssignment assignment = assignmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Phân ca", id));
+
+        Schedule schedule = scheduleRepository.findById(assignment.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", assignment.getScheduleId()));
+
+        assertScheduleNotLocked(schedule);
+
+        // Không block việc cập nhật ghi chú giải trình nếu scheduleVersion có độ lệch nhẹ giữa client và server
+        if (request.getScheduleVersion() != null && !schedule.getVersion().equals(request.getScheduleVersion())) {
+            log.warn("Schedule version mismatch on override update for assignment {}: client={}, server={}",
+                    id, request.getScheduleVersion(), schedule.getVersion());
+        }
+
+        // Kiểm tra quyền hạn quản lý: Quản lý không được sửa ca của cơ sở khác
+        if (currentUserId != null && currentUserId > 1L) {
+            Employee actor = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId).orElse(null);
+            if (actor != null && actor.getPositionId() != null && actor.getPositionId() == 2) { // ROLE_MANAGER
+                if (!schedule.getBranchId().equals(actor.getBranchId())) {
+                    throw new BusinessException("FORBIDDEN", "Quản lý không có quyền cập nhật ca làm việc thuộc cơ sở khác.", HttpStatus.FORBIDDEN);
+                }
+            }
+        }
+
+        String rawReason = request.getOverrideReason();
+        String cleanedReason = (rawReason != null && !rawReason.trim().isEmpty()) ? rawReason.trim() : null;
+        assignment.setOverrideReason(cleanedReason);
+
+        if (request.getOverrideRule() != null) {
+            assignment.setOverrideRule(request.getOverrideRule().trim().isEmpty() ? null : request.getOverrideRule().trim());
+        }
+
+        ShiftAssignment saved = assignmentRepository.save(assignment);
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            historyRepository.save(new ScheduleChangeHistory(
+                    schedule.getId(),
+                    saved.getId(),
+                    "UPDATE_OVERRIDE",
+                    null,
+                    cleanedReason != null ? ("Cập nhật giải trình ca: " + assignment.getSnapshotShiftName()) : ("Xóa giải trình ca: " + assignment.getSnapshotShiftName()),
+                    cleanedReason,
+                    currentUserId != null ? currentUserId : 1L
+            ));
+        }
+
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+
+        return toDto(saved);
     }
 
     @Transactional

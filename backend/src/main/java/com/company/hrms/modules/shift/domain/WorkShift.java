@@ -19,6 +19,9 @@ public class WorkShift {
     @Column(name = "shift_name", nullable = false, length = 100)
     private String shiftName;
 
+    @Column(name = "branch_id")
+    private Long branchId;
+
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
 
@@ -78,6 +81,8 @@ public class WorkShift {
     public void setShiftCode(String shiftCode) { this.shiftCode = shiftCode; }
     public String getShiftName() { return shiftName; }
     public void setShiftName(String shiftName) { this.shiftName = shiftName; }
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
     public LocalTime getStartTime() { return startTime; }
     public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
     public LocalTime getEndTime() { return endTime; }

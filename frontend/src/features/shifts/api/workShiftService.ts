@@ -9,6 +9,8 @@ export function mapDtoToShiftTemplate(dto: any): ShiftTemplate {
     id: dto.id,
     shiftCode: dto.shift_code || dto.shiftCode,
     shiftName: dto.shift_name || dto.shiftName,
+    branchId: dto.branch_id ?? dto.branchId ?? null,
+    branchName: dto.branch_name || dto.branchName || null,
     startTime,
     endTime,
     breakMinutes: dto.break_minutes ?? dto.breakMinutes ?? 0,
@@ -33,6 +35,7 @@ export function mapShiftTemplateToDto(t: Partial<ShiftTemplate>): Record<string,
   if (t.id !== undefined) payload.id = t.id;
   if (t.shiftCode !== undefined) payload.shift_code = t.shiftCode;
   if (t.shiftName !== undefined) payload.shift_name = t.shiftName;
+  if (t.branchId !== undefined) payload.branch_id = t.branchId;
   if (t.startTime !== undefined) payload.start_time = formatTime(t.startTime);
   if (t.endTime !== undefined) payload.end_time = formatTime(t.endTime);
   if (t.breakMinutes !== undefined) payload.break_minutes = t.breakMinutes;
@@ -48,8 +51,9 @@ export function mapShiftTemplateToDto(t: Partial<ShiftTemplate>): Record<string,
 }
 
 export const workShiftService = {
-  async getAllWorkShifts(): Promise<ShiftTemplate[]> {
-    const list = await api.get<any[]>('/work-shifts');
+  async getAllWorkShifts(branchId?: number): Promise<ShiftTemplate[]> {
+    const endpoint = branchId ? `/work-shifts?branchId=${branchId}` : '/work-shifts';
+    const list = await api.get<any[]>(endpoint);
     return (list || []).map(mapDtoToShiftTemplate);
   },
 

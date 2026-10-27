@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ShiftTemplate } from '@/types/domain.types';
-import { Clock, Users, Moon, Pencil, Trash2, Coffee, CalendarCheck, Sun } from 'lucide-react';
+import { Clock, Users, Moon, Pencil, Trash2, Coffee, CalendarCheck, Sun, Globe, MapPin } from 'lucide-react';
 
 interface ShiftTemplateCardProps {
   template: ShiftTemplate;
@@ -63,7 +63,48 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
       <div>
         {/* Card Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            {/* Branch Scope Badge */}
+            {template.branchId ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3.5,
+                  padding: '3px 8px',
+                  borderRadius: 9999,
+                  backgroundColor: '#EFF6FF',
+                  color: '#1D4ED8',
+                  border: '1px solid #BFDBFE',
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}
+                title={`Mẫu ca riêng của ${template.branchName || `Chi nhánh #${template.branchId}`}`}
+              >
+                <MapPin size={11} strokeWidth={2.5} />
+                <span>{template.branchName || `Cơ sở #${template.branchId}`}</span>
+              </span>
+            ) : (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3.5,
+                  padding: '3px 8px',
+                  borderRadius: 9999,
+                  backgroundColor: '#F1F5F9',
+                  color: '#475569',
+                  border: '1px solid #CBD5E1',
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+                title="Mẫu ca chuẩn áp dụng chung toàn bộ các chi nhánh trong hệ thống"
+              >
+                <Globe size={11} />
+                <span>Toàn hệ thống</span>
+              </span>
+            )}
+
             {template.isCrossMidnight ? (
               <span
                 style={{
@@ -79,7 +120,7 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
                   fontWeight: 700,
                 }}
               >
-                <Moon size={11} /> Ca qua đêm (+1 ngày)
+                <Moon size={11} /> Ca đêm
               </span>
             ) : (
               <span
@@ -96,7 +137,7 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
                   fontWeight: 600,
                 }}
               >
-                <Sun size={11} color="#EAB308" /> Ca trong ngày
+                <Sun size={11} color="#EAB308" /> Trong ngày
               </span>
             )}
           </div>

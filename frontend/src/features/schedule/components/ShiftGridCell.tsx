@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ShiftAssignment, ShiftTemplate, Employee, ScheduleConflict } from '@/types/domain.types';
-import { Plus, X, AlertTriangle, Users, CheckCircle2, Lock } from 'lucide-react';
+import { Plus, X, AlertTriangle, Users, CheckCircle2, Lock, FileText } from 'lucide-react';
 import { Tooltip } from '@/shared/components/Tooltip';
 import { UserAvatar } from '@/components/common/UserAvatar';
 
@@ -15,20 +15,22 @@ interface ShiftGridCellProps {
     onlyShowConflicts?: boolean;
     onOpenAssignDrawer: () => void;
     onRemoveAssignment: (assignmentId: number, e: React.MouseEvent) => void;
+    onOpenOverrideModal?: (assignment: ShiftAssignment) => void;
 }
 
 export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
-                                                                           template,
-                                                                           workDate,
-                                                                           assignments = [],
-                                                                           employees = [],
-                                                                           conflictsMap = {},
-                                                                           isToday,
-                                                                           canEdit,
-                                                                           onlyShowConflicts = false,
-                                                                           onOpenAssignDrawer,
-                                                                           onRemoveAssignment,
-                                                                       }) => {
+  template,
+  workDate,
+  assignments = [],
+  employees = [],
+  conflictsMap = {},
+  isToday,
+  canEdit,
+  onlyShowConflicts = false,
+  onOpenAssignDrawer,
+  onRemoveAssignment,
+  onOpenOverrideModal,
+}) => {
     const currentCount = assignments.length;
     const minRequired = template.minStaffing || 1;
     const maxCapacity = template.maxStaffing || minRequired;
@@ -188,13 +190,36 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                     {assignments.map((assignment) => {
                         const emp = employees.find((e) => e.id === assignment.employeeId);
                         const employeeKey = `${assignment.employeeId}_${workDate}`;
-                        const hasConflict = Boolean(conflictsMap[employeeKey]?.length);
+                        const rawConflicts = conflictsMap[employeeKey] ?? [];
+
+                        // Lọc các cảnh báo thuộc về đúng ca làm việc hiện tại
+                        const chipConflicts = rawConflicts.filter((c) => {
+                            // Cảnh báo vượt định biên chỉ áp dụng cho đúng ca/phân ca bị vượt
+                            if (c.ruleCode === 'WARN_STAFFING_CAPACITY') {
+                                if (c.assignmentId && assignment.id) {
+                                    return Number(c.assignmentId) === Number(assignment.id);
+                                }
+                                if (c.workShiftId) {
+                                    return Number(c.workShiftId) === Number(template.id);
+                                }
+                            }
+                            // Các cảnh báo khác nếu có workShiftId chỉ áp dụng cho ca đó
+                            if (c.workShiftId !== undefined && Number(c.workShiftId) !== Number(template.id)) {
+                                return false;
+                            }
+                            return true;
+                        });
+
+                        const hasConflict = chipConflicts.length > 0;
                         const isExternal = Boolean(assignment.isExternal);
 
                         const displayName = emp ? emp.fullName : `NV #${assignment.employeeId}`;
                         const avatarUrl = emp?.avatarUrl;
 
-                        const chipConflicts = conflictsMap[employeeKey] ?? [];
+                        // Chỉ cho phép giải trình nếu ca có cảnh báo HOẶC đã có giải trình trước đó
+                        const isEligibleForOverride = Boolean(hasConflict || assignment.overrideReason);
+                        const canClickToOverride = canEdit && !isExternal && !assignment.readOnly && isEligibleForOverride;
+
                         const tooltipContent = (
                             <div>
                                 <div style={{ fontWeight: 600 }}>
@@ -204,6 +229,12 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                 {isExternal && (
                                     <div style={{ color: '#93C5FD', fontSize: 11, fontWeight: 600, marginTop: 2 }}>
                                         📍 Ca ngoại vi tại {assignment.branchName || 'Cơ sở khác'} (Chỉ đọc)
+                                    </div>
+                                )}
+                                {assignment.overrideReason && (
+                                    <div style={{ color: '#86EFAC', fontSize: 11, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <FileText size={12} />
+                                        <span>Đã giải trình: {assignment.overrideReason}</span>
                                     </div>
                                 )}
                                 {chipConflicts.map((c, i) => (
@@ -218,6 +249,19 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                             <Tooltip key={assignment.id} content={tooltipContent}>
                                 <div
                                     className={`staff-shift-chip ${isExternal ? 'staff-shift-chip-external' : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (canClickToOverride && onOpenOverrideModal) {
+                                            onOpenOverrideModal(assignment);
+                                        }
+                                    }}
+                                    title={
+                                        canClickToOverride
+                                            ? (assignment.overrideReason
+                                                ? 'Bấm để xem hoặc chỉnh sửa giải trình'
+                                                : 'Bấm để giải trình lý do phân ca đặc cách')
+                                            : undefined
+                                    }
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -228,14 +272,16 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                         backgroundColor: isExternal ? '#F8FAFC' : '#FFFFFF',
                                         border: isExternal
                                             ? (hasConflict ? '1px dashed #EF4444' : '1px dashed #CBD5E1')
-                                            : (hasConflict ? '1px solid #F59E0B' : '1px solid #E2E8F0'),
+                                            : (hasConflict ? '1px solid #F59E0B' : (assignment.overrideReason ? '1px solid #93C5FD' : '1px solid #E2E8F0')),
                                         boxShadow: isExternal ? 'none' : '0 1px 2px rgba(15, 23, 42, 0.04)',
                                         opacity: isExternal ? 0.95 : 1,
                                         fontSize: '12px',
+                                        cursor: canClickToOverride ? 'pointer' : 'default',
+                                        transition: 'all 0.15s ease',
                                     }}
                                 >
                                     {/* Employee info */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden', flex: 1, minWidth: 0 }}>
                                         <UserAvatar
                                             name={displayName}
                                             src={avatarUrl}
@@ -264,10 +310,13 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                         <span
                                             style={{
                                                 whiteSpace: 'normal',
-                                                wordBreak: 'break-word',
+                                                wordBreak: 'normal',
+                                                overflowWrap: 'break-word',
                                                 lineHeight: 1.3,
                                                 fontWeight: isExternal ? 500 : 600,
                                                 color: isExternal ? '#475569' : '#0F172A',
+                                                flex: 1,
+                                                minWidth: 0,
                                             }}
                                         >
                                             {displayName}
@@ -276,6 +325,26 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                         {hasConflict && (
                                             <span title="Có cảnh báo xung đột" style={{ display: 'inline-flex', flexShrink: 0 }}>
                                                 <AlertTriangle size={12} color="#D97706" />
+                                            </span>
+                                        )}
+
+                                        {assignment.overrideReason && (
+                                            <span
+                                                title={`Đã giải trình: ${assignment.overrideReason}`}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: '#2563EB',
+                                                    backgroundColor: '#EFF6FF',
+                                                    border: '1px solid #BFDBFE',
+                                                    width: 16,
+                                                    height: 16,
+                                                    borderRadius: '4px',
+                                                    flexShrink: 0,
+                                                }}
+                                            >
+                                                <FileText size={11} />
                                             </span>
                                         )}
                                     </div>
@@ -298,7 +367,10 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                         canEdit && (
                                             <button
                                                 type="button"
-                                                onClick={(e) => onRemoveAssignment(assignment.id, e)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onRemoveAssignment(assignment.id, e);
+                                                }}
                                                 className="staff-chip-remove-btn"
                                                 title={`Gỡ ${displayName} khỏi ca này`}
                                                 style={{

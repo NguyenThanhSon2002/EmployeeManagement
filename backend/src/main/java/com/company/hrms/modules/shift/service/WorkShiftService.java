@@ -2,6 +2,8 @@ package com.company.hrms.modules.shift.service;
 
 import com.company.hrms.common.exception.ResourceConflictException;
 import com.company.hrms.common.exception.ResourceNotFoundException;
+import com.company.hrms.modules.branch.domain.Branch;
+import com.company.hrms.modules.branch.repository.BranchRepository;
 import com.company.hrms.modules.shift.domain.WorkShift;
 import com.company.hrms.modules.shift.dto.WorkShiftDto;
 import com.company.hrms.modules.shift.repository.WorkShiftRepository;
@@ -9,21 +11,39 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class WorkShiftService {
 
     private final WorkShiftRepository workShiftRepository;
+    private final BranchRepository branchRepository;
 
-    public WorkShiftService(WorkShiftRepository workShiftRepository) {
+    public WorkShiftService(WorkShiftRepository workShiftRepository, BranchRepository branchRepository) {
         this.workShiftRepository = workShiftRepository;
+        this.branchRepository = branchRepository;
     }
 
     @Transactional(readOnly = true)
     public List<WorkShiftDto> getAllWorkShifts() {
-        return workShiftRepository.findAllByDeletedAtIsNullOrderByStartTimeAsc().stream()
-                .map(this::toDto)
+        return getAllWorkShifts(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WorkShiftDto> getAllWorkShifts(Long branchId) {
+        List<WorkShift> shifts;
+        if (branchId != null) {
+            shifts = workShiftRepository.findAllActiveByBranchIdOrGlobal(branchId);
+        } else {
+            shifts = workShiftRepository.findAllByDeletedAtIsNullOrderByStartTimeAsc();
+        }
+
+        Map<Long, String> branchNames = branchRepository.findAllByDeletedAtIsNullOrderByBranchNameAsc().stream()
+                .collect(Collectors.toMap(Branch::getId, Branch::getBranchName, (k1, k2) -> k1));
+
+        return shifts.stream()
+                .map(s -> toDto(s, branchNames))
                 .collect(Collectors.toList());
     }
 
@@ -36,8 +56,14 @@ public class WorkShiftService {
 
     @Transactional
     public WorkShiftDto createWorkShift(WorkShiftDto request) {
-        if (workShiftRepository.existsByShiftCodeAndDeletedAtIsNull(request.getShiftCode())) {
-            throw new ResourceConflictException("Mã ca làm việc đã tồn tại: " + request.getShiftCode());
+        Long branchId = request.getBranchId();
+        if (branchId != null && !branchRepository.existsById(branchId)) {
+            throw new ResourceNotFoundException("Chi nhánh", branchId);
+        }
+
+        if (workShiftRepository.existsByShiftCodeAndBranchIdAndDeletedAtIsNull(request.getShiftCode(), branchId)) {
+            String scope = branchId == null ? "toàn hệ thống" : "chi nhánh #" + branchId;
+            throw new ResourceConflictException("Mã ca làm việc đã tồn tại trong " + scope + ": " + request.getShiftCode());
         }
 
         WorkShift entity = new WorkShift();
@@ -52,9 +78,19 @@ public class WorkShiftService {
         WorkShift entity = workShiftRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", id));
 
-        if (!entity.getShiftCode().equalsIgnoreCase(request.getShiftCode()) &&
-                workShiftRepository.existsByShiftCodeAndDeletedAtIsNull(request.getShiftCode())) {
-            throw new ResourceConflictException("Mã ca làm việc đã tồn tại: " + request.getShiftCode());
+        Long targetBranchId = request.getBranchId();
+        if (targetBranchId != null && !branchRepository.existsById(targetBranchId)) {
+            throw new ResourceNotFoundException("Chi nhánh", targetBranchId);
+        }
+
+        boolean codeChanged = !entity.getShiftCode().equalsIgnoreCase(request.getShiftCode());
+        boolean branchChanged = (entity.getBranchId() == null && targetBranchId != null) ||
+                                (entity.getBranchId() != null && !entity.getBranchId().equals(targetBranchId));
+
+        if ((codeChanged || branchChanged) &&
+                workShiftRepository.existsByShiftCodeAndBranchIdAndDeletedAtIsNull(request.getShiftCode(), targetBranchId)) {
+            String scope = targetBranchId == null ? "toàn hệ thống" : "chi nhánh #" + targetBranchId;
+            throw new ResourceConflictException("Mã ca làm việc đã tồn tại trong " + scope + ": " + request.getShiftCode());
         }
 
         mapDtoToEntity(request, entity);
@@ -73,6 +109,7 @@ public class WorkShiftService {
     private void mapDtoToEntity(WorkShiftDto dto, WorkShift entity) {
         entity.setShiftCode(dto.getShiftCode());
         entity.setShiftName(dto.getShiftName());
+        entity.setBranchId(dto.getBranchId());
         entity.setStartTime(dto.getStartTime());
         entity.setEndTime(dto.getEndTime());
         entity.setBreakMinutes(dto.getBreakMinutes() != null ? dto.getBreakMinutes() : 0);
@@ -92,10 +129,27 @@ public class WorkShiftService {
     }
 
     public WorkShiftDto toDto(WorkShift entity) {
+        String branchName = null;
+        if (entity.getBranchId() != null) {
+            branchName = branchRepository.findById(entity.getBranchId())
+                    .map(Branch::getBranchName)
+                    .orElse(null);
+        }
+        return toDto(entity, branchName);
+    }
+
+    public WorkShiftDto toDto(WorkShift entity, Map<Long, String> branchNames) {
+        String branchName = entity.getBranchId() != null ? branchNames.get(entity.getBranchId()) : null;
+        return toDto(entity, branchName);
+    }
+
+    public WorkShiftDto toDto(WorkShift entity, String branchName) {
         WorkShiftDto dto = new WorkShiftDto();
         dto.setId(entity.getId());
         dto.setShiftCode(entity.getShiftCode());
         dto.setShiftName(entity.getShiftName());
+        dto.setBranchId(entity.getBranchId());
+        dto.setBranchName(branchName);
         dto.setStartTime(entity.getStartTime());
         dto.setEndTime(entity.getEndTime());
         dto.setBreakMinutes(entity.getBreakMinutes());

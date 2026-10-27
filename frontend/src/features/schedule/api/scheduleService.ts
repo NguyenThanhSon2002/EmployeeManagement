@@ -109,6 +109,17 @@ export const scheduleService = {
     return api.delete<void>(`/schedules/assignments/${assignmentId}${query}`);
   },
 
+  async updateAssignmentOverride(
+    assignmentId: number,
+    data: {
+      override_reason?: string | null;
+      override_rule?: string | null;
+      schedule_version?: number;
+    }
+  ): Promise<ShiftAssignment> {
+    return api.patch<ShiftAssignment>(`/schedules/assignments/${assignmentId}/override`, data);
+  },
+
   async bulkAssign(data: {
     schedule_id: number;
     employee_ids: number[];
