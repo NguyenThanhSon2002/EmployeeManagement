@@ -704,6 +704,17 @@ export const SchedulePage: React.FC = () => {
                 onClose={() => setBulkDialogOpen(false)}
                 onGenerateAuto={handleGenerateAutoAssign}
                 onApplyAuto={handleApplyAutoAssign}
+                employees={employees.filter((e) => e.branchId === (filterOptions.branchId || 1) && e.positionId !== 1)}
+                shiftTemplates={shiftTemplates}
+                existingAssignments={Object.values(assignments).flat()}
+                approvedLeaves={approvedLeaves}
+                holidays={holidays}
+                settings={settings}
+                scheduleId={scheduleId}
+                isAvailable={(empId, dayOfWeek, shiftId) =>
+                    useAvailabilityStore.getState().isAvailable(empId, dayOfWeek, shiftId)
+                }
+                onToast={addToast}
             />
 
             <CopyWeekDialog

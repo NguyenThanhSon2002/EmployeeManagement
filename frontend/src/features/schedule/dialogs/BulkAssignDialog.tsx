@@ -1,10 +1,22 @@
 import React, {useEffect, useState} from 'react';
 import {addDays, format, getISODay, parseISO} from 'date-fns';
-import type {AutoAssignResult} from '@/utils/auto-assign.utils';
+import {
+    AutoAssignResult,
+    findEligibleUnfilledSlot,
+    pickShiftToRemove,
+    recalculateAutoSummaries
+} from '@/utils/auto-assign.utils';
 import {formatDateIso} from '@/utils/date.utils';
 import {useModalFocusTrap} from '@/hooks/useModalFocusTrap';
-import type {ShiftAssignment} from '@/types/domain.types';
-import {X, Users, Check, Eye, AlertTriangle} from 'lucide-react';
+import type {
+    CompanyHoliday,
+    DemoSettings,
+    Employee,
+    LeaveRequest,
+    ShiftAssignment,
+    ShiftTemplate
+} from '@/types/domain.types';
+import {X, Users, Check, Eye, AlertTriangle, Minus, Plus} from 'lucide-react';
 
 interface BulkAssignDialogProps {
     isOpen: boolean;
@@ -15,6 +27,16 @@ interface BulkAssignDialogProps {
     onGenerateAuto: (fromDate: string, toDate: string, mode: 'REPLACE_ALL' | 'FILL_MISSING') => AutoAssignResult | null;
     /** Lưu các ca đã duyệt từ bản xem trước */
     onApplyAuto: (assignments: ShiftAssignment[], mode: 'REPLACE_ALL' | 'FILL_MISSING', fromDate: string, toDate: string) => void;
+
+    employees: Employee[];
+    shiftTemplates: ShiftTemplate[];
+    existingAssignments: ShiftAssignment[];
+    approvedLeaves: LeaveRequest[];
+    holidays: CompanyHoliday[];
+    settings: DemoSettings;
+    scheduleId: number;
+    isAvailable: (employeeId: number, dayOfWeek: number, shiftTemplateId: number) => boolean;
+    onToast: (toast: { type: 'success' | 'error' | 'warning' | 'info'; title: string; message: string }) => void;
 }
 
 const DAY_SHORT = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -50,12 +72,36 @@ const sectionTitleStyle: React.CSSProperties = {
     marginBottom: 4,
 };
 
+const stepperButtonStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    border: '1px solid var(--color-border)',
+    background: '#FFFFFF',
+    color: 'var(--color-text-main)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    padding: 0,
+};
+
 export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
                                                                       isOpen,
                                                                       currentStartDate,
                                                                       onClose,
                                                                       onGenerateAuto,
                                                                       onApplyAuto,
+                                                                      employees,
+                                                                      shiftTemplates,
+                                                                      existingAssignments,
+                                                                      approvedLeaves,
+                                                                      holidays,
+                                                                      settings,
+                                                                      scheduleId,
+                                                                      isAvailable,
+                                                                      onToast,
                                                                   }) => {
     const modalRef = useModalFocusTrap({isOpen, onClose});
 
@@ -92,6 +138,146 @@ export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
         if (!preview || preview.proposals.length === 0) return;
         onApplyAuto(preview.proposals.map((p) => p.assignment), mode, fromDate, toDate);
         onClose();
+    };
+
+    const effectiveExisting = mode === 'REPLACE_ALL'
+        ? existingAssignments.filter((a) => a.workDate < fromDate || a.workDate > toDate)
+        : existingAssignments;
+
+    const handleDecrementShift = (employeeId: number) => {
+        if (!preview) return;
+
+        const shiftToRemove = pickShiftToRemove(
+            employeeId,
+            preview.proposals,
+            employees,
+            isAvailable,
+            effectiveExisting
+        );
+
+        if (!shiftToRemove) {
+            onToast({
+                type: 'warning',
+                title: 'Không thể giảm',
+                message: 'Nhân viên này chưa có ca nào trong bản xem trước.',
+            });
+            return;
+        }
+
+        // 1. Gỡ ca khỏi proposals
+        const nextProposals = preview.proposals.filter((p) => p.assignment.id !== shiftToRemove.assignment.id);
+
+        // 2. Thêm vào unfilled slots
+        const targetDate = shiftToRemove.assignment.workDate;
+        const targetShiftId = shiftToRemove.assignment.workShiftId;
+        const existingUnfilledIdx = preview.unfilled.findIndex(
+            (u) => u.workDate === targetDate && u.workShiftId === targetShiftId
+        );
+
+        let nextUnfilled = [...preview.unfilled];
+        if (existingUnfilledIdx >= 0) {
+            nextUnfilled[existingUnfilledIdx] = {
+                ...nextUnfilled[existingUnfilledIdx],
+                missing: nextUnfilled[existingUnfilledIdx].missing + 1,
+            };
+        } else {
+            nextUnfilled.push({
+                workDate: targetDate,
+                workShiftId: targetShiftId,
+                shiftName: shiftToRemove.assignment.snapshotShiftName,
+                missing: 1,
+                reason: 'Quản lý chủ động giảm ca (sẵn sàng điều chuyển)',
+            });
+        }
+
+        // Sắp xếp lại unfilled theo ngày và giờ ca
+        nextUnfilled.sort((a, b) => a.workDate.localeCompare(b.workDate) || a.workShiftId - b.workShiftId);
+
+        // 3. Tính lại summaries
+        const nextSummaries = recalculateAutoSummaries(
+            employees,
+            nextProposals,
+            existingAssignments,
+            fromDate,
+            toDate,
+            mode
+        );
+
+        setPreview({
+            proposals: nextProposals,
+            unfilled: nextUnfilled,
+            summaries: nextSummaries,
+        });
+
+        onToast({
+            type: 'info',
+            title: 'Đã giảm 1 ca',
+            message: `Đã giảm ca ${shiftToRemove.assignment.snapshotShiftName} (${formatDayLabel(targetDate)}) của ${shiftToRemove.employeeName}.`,
+        });
+    };
+
+    const handleIncrementShift = (employeeId: number) => {
+        if (!preview) return;
+
+        const candidate = findEligibleUnfilledSlot(
+            employeeId,
+            preview.unfilled,
+            preview.proposals,
+            effectiveExisting,
+            shiftTemplates,
+            isAvailable,
+            approvedLeaves,
+            holidays,
+            settings,
+            employees,
+            scheduleId
+        );
+
+        if (!candidate) {
+            onToast({
+                type: 'warning',
+                title: 'Không có ca trống phù hợp',
+                message: 'Không còn ca trống phù hợp cho nhân viên này. Hãy bấm [-] ở nhân viên khác để nhả ca trước.',
+            });
+            return;
+        }
+
+        const { slot, proposal } = candidate;
+
+        // 1. Bổ sung proposal
+        const nextProposals = [...preview.proposals, proposal];
+
+        // 2. Giảm hoặc xóa slot khỏi unfilled
+        const nextUnfilled = preview.unfilled
+            .map((u) => {
+                if (u.workDate === slot.workDate && u.workShiftId === slot.workShiftId) {
+                    return { ...u, missing: u.missing - 1 };
+                }
+                return u;
+            })
+            .filter((u) => u.missing > 0);
+
+        // 3. Tính lại summaries
+        const nextSummaries = recalculateAutoSummaries(
+            employees,
+            nextProposals,
+            existingAssignments,
+            fromDate,
+            toDate,
+            mode
+        );
+
+        setPreview({
+            proposals: nextProposals,
+            unfilled: nextUnfilled,
+            summaries: nextSummaries,
+        });
+
+        onToast({
+            type: 'success',
+            title: 'Đã thêm ca thành công',
+            message: `Đã gán ca ${proposal.assignment.snapshotShiftName} (${formatDayLabel(slot.workDate)}) cho ${proposal.employeeName}.`,
+        });
     };
 
     const sortedProposals = preview
@@ -331,13 +517,41 @@ export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
                                     <div style={listBoxStyle}>
                                         {preview.summaries.map((s) => (
                                             <div key={s.employeeId} style={rowStyle}>
-                                                <span style={{flex: 1}}>{s.employeeName}</span>
-                                                <span style={{width: 150}}>
-                          +{s.addedShifts} ca (+{s.addedHours}h)
-                        </span>
-                                                <span style={{width: 110, color: 'var(--color-text-muted)'}}>
-                          Tổng {s.totalHours}h
-                        </span>
+                                                <span style={{flex: 1, fontWeight: 500}}>{s.employeeName}</span>
+                                                <div style={{display: 'flex', alignItems: 'center', gap: 6, width: 140}}>
+                                                    <button
+                                                        type="button"
+                                                        style={stepperButtonStyle}
+                                                        onClick={() => handleDecrementShift(s.employeeId)}
+                                                        disabled={s.addedShifts <= 0}
+                                                        title="Giảm 1 ca của nhân viên này"
+                                                        aria-label={`Giảm 1 ca của ${s.employeeName}`}
+                                                    >
+                                                        <Minus size={13}/>
+                                                    </button>
+                                                    <span
+                                                        style={{
+                                                            minWidth: 42,
+                                                            textAlign: 'center',
+                                                            fontWeight: 600,
+                                                            color: 'var(--color-primary)',
+                                                        }}
+                                                    >
+                                                        {s.addedShifts} ca
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        style={stepperButtonStyle}
+                                                        onClick={() => handleIncrementShift(s.employeeId)}
+                                                        title="Tăng 1 ca cho nhân viên này"
+                                                        aria-label={`Tăng 1 ca cho ${s.employeeName}`}
+                                                    >
+                                                        <Plus size={13}/>
+                                                    </button>
+                                                </div>
+                                                <span style={{width: 100, textAlign: 'right', color: 'var(--color-text-muted)'}}>
+                                                    Tổng {s.totalHours}h
+                                                </span>
                                             </div>
                                         ))}
                                     </div>

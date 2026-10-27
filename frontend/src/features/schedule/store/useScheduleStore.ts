@@ -71,22 +71,7 @@ function saveBranchScheduleToStorage(
   }
 }
 
-/** Đếm số người (của chi nhánh đang xem) đang giữ từng ô: khóa `${ca}_${ngày}` */
-function buildShiftStaffCount(
-    assignments: Record<string, ShiftAssignment[]>,
-    employees: Employee[]
-): Map<string, number> {
-  const empIds = new Set(employees.map((e) => e.id));
-  const counts = new Map<string, number>();
-  for (const list of Object.values(assignments)) {
-    for (const a of list) {
-      if (a.status === 'CANCELLED' || !empIds.has(a.employeeId)) continue;
-      const cellKey = `${a.workShiftId}_${a.workDate}`;
-      counts.set(cellKey, (counts.get(cellKey) ?? 0) + 1);
-    }
-  }
-  return counts;
-}
+
 
 export interface AssignShiftPayload {
   assignmentId?: number; // Optional ID for updating an existing shift
@@ -186,7 +171,8 @@ function computeAllConflicts(
     assignments: Record<string, ShiftAssignment[]>,
     employees: Employee[],
     leaves: LeaveRequest[],
-    holidays: CompanyHoliday[]
+    holidays: CompanyHoliday[],
+    shiftTemplates: ShiftTemplate[] = []
 ): Record<string, ScheduleConflict[]> {
   const settings = useSettingsStore.getState().settings;
   const conflictsMap: Record<string, ScheduleConflict[]> = {};
@@ -235,6 +221,46 @@ function computeAllConflicts(
     }
   }
 
+  // Bổ sung kiểm tra định biên tối đa cho từng ô ca:
+  const templates = shiftTemplates || [];
+
+  if (templates.length > 0) {
+    const templateMap = new Map(templates.map((t) => [t.id, t]));
+    const cellGroups = new Map<string, ShiftAssignment[]>();
+
+    for (const a of allAssignmentsList) {
+      if (a.status === 'CANCELLED') continue;
+      const cKey = `${a.workShiftId}_${a.workDate}`;
+      const list = cellGroups.get(cKey) || [];
+      list.push(a);
+      cellGroups.set(cKey, list);
+    }
+
+    for (const [cKey, list] of cellGroups.entries()) {
+      const [shiftIdStr, dateStr] = cKey.split('_');
+      const tmpl = templateMap.get(Number(shiftIdStr));
+      const maxCap = tmpl?.maxStaffing || tmpl?.minStaffing || 1;
+
+      if (tmpl && list.length > maxCap) {
+        // Gán cảnh báo cho các nhân sự từ vị trí vượt định biên
+        for (let i = maxCap; i < list.length; i++) {
+          const extraAssignment = list[i];
+          const k = `${extraAssignment.employeeId}_${dateStr}`;
+          const capacityWarning: ScheduleConflict = {
+            id: `WARN_CAPACITY_${extraAssignment.employeeId}_${dateStr}`,
+            ruleCode: 'WARN_STAFFING_CAPACITY',
+            severity: 'WARNING',
+            employeeId: extraAssignment.employeeId,
+            workDate: dateStr,
+            message: `Ca ${extraAssignment.snapshotShiftName} đã vượt định biên tối đa (${list.length}/${maxCap} NV). Bổ sung nhân sự tăng cường.`,
+            canOverride: true,
+          };
+          conflictsMap[k] = [...(conflictsMap[k] || []), capacityWarning];
+        }
+      }
+    }
+  }
+
   return conflictsMap;
 }
 
@@ -244,7 +270,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       initial.assignments,
       initial.employees,
       initial.approvedLeaves,
-      initial.holidays
+      initial.holidays,
+      initial.shiftTemplates
   );
 
   return {
@@ -470,20 +497,6 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       const key = `${payload.employeeId}_${payload.workDate}`;
       const existingList = state.assignments[key] ? [...state.assignments[key]] : [];
 
-      // Định biên tối đa: không cho thêm người vào ca đã đủ
-      const isNewToThisShift = !existingList.some(
-          (a) => a.workShiftId === template.id && a.status !== 'CANCELLED'
-      );
-      if (isNewToThisShift) {
-        const staffCount = buildShiftStaffCount(state.assignments, state.employees);
-        if ((staffCount.get(`${template.id}_${payload.workDate}`) ?? 0) >= template.maxStaffing) {
-          return {
-            success: false,
-            error: `Ca ${template.shiftName} ngày ${payload.workDate} đã đủ định biên tối đa (${template.maxStaffing} người).`,
-          };
-        }
-      }
-
       const { startMs, endMs } = getShiftAbsoluteTimeRange(
           payload.workDate,
           template.startTime,
@@ -556,7 +569,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           updatedAssignments,
           state.employees,
           state.approvedLeaves,
-          state.holidays
+          state.holidays,
+          state.shiftTemplates
       );
 
       set({
@@ -665,7 +679,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           updatedAssignments,
           state.employees,
           state.approvedLeaves,
-          state.holidays
+          state.holidays,
+          state.shiftTemplates
       );
 
       set({
@@ -724,7 +739,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           updated,
           state.employees,
           state.approvedLeaves,
-          state.holidays
+          state.holidays,
+          state.shiftTemplates
       );
 
       set({ assignments: updated, conflicts: updatedConflicts });
@@ -841,7 +857,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           updatedAssignments,
           state.employees,
           state.approvedLeaves,
-          state.holidays
+          state.holidays,
+          state.shiftTemplates
       );
 
       set({
@@ -909,7 +926,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           updatedAssignments,
           state.employees,
           state.approvedLeaves,
-          state.holidays
+          state.holidays,
+          state.shiftTemplates
       );
 
       // 4. Đồng bộ State
@@ -936,7 +954,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           state.assignments,
           state.employees,
           state.approvedLeaves,
-          state.holidays
+          state.holidays,
+          state.shiftTemplates
       );
       set({ conflicts: updatedConflicts });
     },
@@ -953,7 +972,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           initialReset.assignments,
           initialReset.employees,
           initialReset.approvedLeaves,
-          initialReset.holidays
+          initialReset.holidays,
+          initialReset.shiftTemplates
       );
       set({
         ...initialReset,

@@ -1,23 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { dashboardService, type AttendanceTrendItem } from '@/features/dashboard/api/dashboardService';
+import { isMockEnabled } from '@/config/env.config';
 
-interface DayAttendanceData {
-  dayName: string;
-  onTimePercent: number;
-  latePercent: number;
-  absentPercent: number;
+interface TrendBarChartProps {
+  branchId?: number;
 }
 
-const SAMPLE_7DAYS: DayAttendanceData[] = [
-  { dayName: 'T2', onTimePercent: 88, latePercent: 8, absentPercent: 4 },
-  { dayName: 'T3', onTimePercent: 92, latePercent: 5, absentPercent: 3 },
-  { dayName: 'T4', onTimePercent: 90, latePercent: 6, absentPercent: 4 },
-  { dayName: 'T5', onTimePercent: 85, latePercent: 10, absentPercent: 5 },
-  { dayName: 'T6', onTimePercent: 87, latePercent: 8, absentPercent: 5 },
-  { dayName: 'T7', onTimePercent: 94, latePercent: 4, absentPercent: 2 },
-  { dayName: 'CN', onTimePercent: 96, latePercent: 2, absentPercent: 2 },
+const DEFAULT_DAYS: AttendanceTrendItem[] = [
+  { date: '2026-10-21', day_name: 'T2', on_time_percent: 88, late_percent: 8, absent_percent: 4 },
+  { date: '2026-10-22', day_name: 'T3', on_time_percent: 92, late_percent: 5, absent_percent: 3 },
+  { date: '2026-10-23', day_name: 'T4', on_time_percent: 90, late_percent: 6, absent_percent: 4 },
+  { date: '2026-10-24', day_name: 'T5', on_time_percent: 85, late_percent: 10, absent_percent: 5 },
+  { date: '2026-10-25', day_name: 'T6', on_time_percent: 87, late_percent: 8, absent_percent: 5 },
+  { date: '2026-10-26', day_name: 'T7', on_time_percent: 94, late_percent: 4, absent_percent: 2 },
+  { date: '2026-10-27', day_name: 'CN', on_time_percent: 96, late_percent: 2, absent_percent: 2 },
 ];
 
-export const TrendBarChart: React.FC = () => {
+export const TrendBarChart: React.FC<TrendBarChartProps> = ({ branchId }) => {
+  const [data, setData] = useState<AttendanceTrendItem[]>(DEFAULT_DAYS);
+
+  useEffect(() => {
+    if (isMockEnabled()) return;
+
+    let isMounted = true;
+    dashboardService
+      .getAttendanceTrends(branchId)
+      .then((res) => {
+        if (isMounted && res && res.length > 0) {
+          setData(res);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch attendance trends:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [branchId]);
+
   const chartHeight = 180;
   const chartWidth = 460;
   const barWidth = 36;
@@ -80,19 +101,19 @@ export const TrendBarChart: React.FC = () => {
         })}
 
         {/* Stacked Bars */}
-        {SAMPLE_7DAYS.map((d, index) => {
+        {data.map((d, index) => {
           const x = startX + index * (barWidth + gap);
 
-          const onTimeH = (d.onTimePercent / 100) * chartHeight;
-          const lateH = (d.latePercent / 100) * chartHeight;
-          const absentH = (d.absentPercent / 100) * chartHeight;
+          const onTimeH = (d.on_time_percent / 100) * chartHeight;
+          const lateH = (d.late_percent / 100) * chartHeight;
+          const absentH = (d.absent_percent / 100) * chartHeight;
 
           const onTimeY = chartHeight - onTimeH;
           const lateY = onTimeY - lateH;
           const absentY = lateY - absentH;
 
           return (
-            <g key={d.dayName}>
+            <g key={`${d.date}_${d.day_name}`}>
               {/* On-time bar segment */}
               <rect
                 x={x}
@@ -102,7 +123,7 @@ export const TrendBarChart: React.FC = () => {
                 fill="#52c41a"
                 rx={2}
               >
-                <title>{`${d.dayName}: ${d.onTimePercent}% Đúng giờ`}</title>
+                <title>{`${d.day_name} (${d.date}): ${d.on_time_percent}% Đúng giờ`}</title>
               </rect>
 
               {/* Late bar segment */}
@@ -113,7 +134,7 @@ export const TrendBarChart: React.FC = () => {
                 height={lateH}
                 fill="#faad14"
               >
-                <title>{`${d.dayName}: ${d.latePercent}% Đi muộn`}</title>
+                <title>{`${d.day_name} (${d.date}): ${d.late_percent}% Đi muộn`}</title>
               </rect>
 
               {/* Absent bar segment */}
@@ -125,7 +146,7 @@ export const TrendBarChart: React.FC = () => {
                 fill="#ff4d4f"
                 rx={2}
               >
-                <title>{`${d.dayName}: ${d.absentPercent}% Vắng mặt`}</title>
+                <title>{`${d.day_name} (${d.date}): ${d.absent_percent}% Vắng mặt`}</title>
               </rect>
 
               {/* Day label */}
@@ -137,7 +158,7 @@ export const TrendBarChart: React.FC = () => {
                 fill="var(--color-text-secondary)"
                 textAnchor="middle"
               >
-                {d.dayName}
+                {d.day_name}
               </text>
             </g>
           );

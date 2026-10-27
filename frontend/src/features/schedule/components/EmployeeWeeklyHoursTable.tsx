@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import type { Employee, ShiftAssignment } from '@/types/domain.types';
 import { formatDateIso, getDayOfWeekVi } from '@/utils/date.utils';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { EmploymentStatusBadge } from '@/components/common/EmploymentStatusBadge';
 
 interface EmployeeWeeklyHoursTableProps {
   employees: Employee[];
@@ -248,7 +249,6 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
             ) : (
               rowData.map((row) => {
                 const isOverLimit = row.totalHours > 48.0;
-                const isPartTimeNormal = row.totalHours <= 40.0;
 
                 return (
                   <tr
@@ -415,73 +415,36 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
                       </div>
                     </td>
 
-                    {/* Status Badge */}
-                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                      {row.emp.employmentStatus === 'ON_LEAVE' ? (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: '#D97706',
-                            backgroundColor: '#FEF3C7',
-                            padding: '3px 8px',
-                            borderRadius: 'var(--radius-full)',
-                            border: '1px solid #FDE68A',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 3,
-                          }}
-                          title="Nhân viên đang trong thời gian nghỉ chế độ"
-                        >
-                          <AlertTriangle size={11} /> Nghỉ chế độ
-                        </span>
-                      ) : isOverLimit ? (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: '#DC2626',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            padding: '3px 8px',
-                            borderRadius: 'var(--radius-full)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 3,
-                          }}
-                        >
-                          <AlertTriangle size={11} /> Vượt 48h
-                        </span>
-                      ) : isPartTimeNormal ? (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: '#059669',
-                            backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                            padding: '3px 8px',
-                            borderRadius: 'var(--radius-full)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 3,
-                          }}
-                        >
-                          <CheckCircle2 size={11} /> Part-time
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: '#D97706',
-                            backgroundColor: 'rgba(245, 158, 11, 0.14)',
-                            padding: '3px 8px',
-                            borderRadius: 'var(--radius-full)',
-                          }}
-                        >
-                          Làm nhiều
-                        </span>
-                      )}
-                    </td>
+                      {/* Status Badge: khớp trạng thái hợp đồng ở trang Nhân sự */}
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                          <div
+                              style={{
+                                  display: 'inline-flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: 4,
+                              }}
+                          >
+                              <EmploymentStatusBadge status={row.emp.employmentStatus} />
+                              {isOverLimit && (
+                                  <span
+                                      style={{
+                                          fontSize: 11,
+                                          fontWeight: 600,
+                                          color: '#DC2626',
+                                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                          padding: '3px 8px',
+                                          borderRadius: 'var(--radius-full)',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: 3,
+                                      }}
+                                  >
+                            <AlertTriangle size={11} /> Vượt 48h
+                          </span>
+                              )}
+                          </div>
+                      </td>
                   </tr>
                 );
               })

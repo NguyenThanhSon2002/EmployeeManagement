@@ -21,6 +21,8 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
 
     List<AttendanceRecord> findAllByWorkDateBetween(LocalDate fromDate, LocalDate toDate);
 
+    List<AttendanceRecord> findAllByWorkDate(LocalDate workDate);
+
     @Query("SELECT ar FROM AttendanceRecord ar " +
             "WHERE (:employeeId IS NULL OR ar.employeeId = :employeeId) " +
             "AND (:workDate IS NULL OR ar.workDate = :workDate) " +

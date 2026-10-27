@@ -35,6 +35,8 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
 
     Page<LeaveRequest> findAllByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
 
+    List<LeaveRequest> findAllByStatusOrderByCreatedAtDesc(String status);
+
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.employeeId = :employeeId " +
             "AND (:excludeId IS NULL OR lr.id != :excludeId) " +
             "AND lr.status IN ('SUBMITTED', 'APPROVED') " +
