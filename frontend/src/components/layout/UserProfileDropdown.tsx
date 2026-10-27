@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { Employee, RoleType } from '@/types/domain.types';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { User, Settings, LogOut, ShieldCheck, Briefcase } from 'lucide-react';
 
 interface UserProfileDropdownProps {
@@ -112,20 +113,11 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           alignItems: 'center',
         }}
       >
-        <img
-          src={
-            user.avatarUrl ||
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-          }
-          alt={user.fullName}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 'var(--radius-full, 9999px)',
-            objectFit: 'cover',
-            border: '2px solid #E2E8F0',
-            flexShrink: 0,
-          }}
+        <UserAvatar
+          name={user.fullName}
+          src={user.avatarUrl}
+          size={44}
+          border="2px solid #E2E8F0"
         />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div

@@ -4,6 +4,7 @@ import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import type { LeaveRequest } from '@/types/domain.types';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { X, CheckCircle, XCircle, Calendar } from 'lucide-react';
 
 interface LeaveApprovalModalProps {
@@ -71,10 +72,10 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Employee & Leave info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
-            <img
-              src={emp?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-              alt={emp?.fullName}
-              style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }}
+            <UserAvatar
+              name={emp?.fullName || 'Nhân viên'}
+              src={emp?.avatarUrl}
+              size={44}
             />
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{emp?.fullName}</div>

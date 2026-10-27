@@ -4,6 +4,7 @@ import { useUIStore } from '@/shared/store/useUIStore';
 import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 import { LogIn, LogOut, CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 export const QuickAttendanceCard: React.FC = () => {
   const { currentUser } = useAuthStore();
@@ -65,10 +66,10 @@ export const QuickAttendanceCard: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <img
-          src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-          alt={currentUser.fullName}
-          style={{ width: 44, height: 44, borderRadius: 'var(--radius-full)', objectFit: 'cover' }}
+        <UserAvatar
+          name={currentUser.fullName}
+          src={currentUser.avatarUrl}
+          size={44}
         />
         <div>
           <div style={{ fontWeight: 600, fontSize: 'var(--font-body-md)' }}>{currentUser.fullName}</div>

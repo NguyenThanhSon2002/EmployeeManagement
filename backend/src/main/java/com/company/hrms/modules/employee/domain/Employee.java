@@ -54,6 +54,9 @@ public class Employee extends BaseAuditableEntity {
     @Column(name = "hire_date", nullable = false)
     private LocalDate hireDate;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Column(name = "resignation_date")
     private LocalDate resignationDate;
 
@@ -90,6 +93,8 @@ public class Employee extends BaseAuditableEntity {
     public void setEmploymentType(String employmentType) { this.employmentType = employmentType; }
     public LocalDate getHireDate() { return hireDate; }
     public void setHireDate(LocalDate hireDate) { this.hireDate = hireDate; }
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
     public LocalDate getResignationDate() { return resignationDate; }
     public void setResignationDate(LocalDate resignationDate) { this.resignationDate = resignationDate; }
 }

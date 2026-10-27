@@ -125,7 +125,7 @@ public class ScheduleController {
     }
 
     @PostMapping("/{id}/unpublish")
-    @PreAuthorize("hasRole('DIRECTOR')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN')")
     @Operation(summary = "Hủy công bố lịch", description = "Chuyển trạng thái lịch làm việc về DRAFT")
     public ApiResponse<WeeklyScheduleResponse> unpublishSchedule(
             @PathVariable Long id,

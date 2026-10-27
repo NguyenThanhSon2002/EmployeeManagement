@@ -31,6 +31,7 @@ import {
     Star,
 } from 'lucide-react';
 import {useAvailabilityStore} from '@/features/employees/store/useAvailabilityStore';
+import {UserAvatar} from '@/components/common/UserAvatar';
 
 interface AssignStaffDrawerProps {
     isOpen: boolean;
@@ -687,35 +688,11 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                                                 />
 
                                                 {/* Avatar */}
-                                                {item.emp.avatarUrl ? (
-                                                    <img
-                                                        src={item.emp.avatarUrl}
-                                                        alt={item.emp.fullName}
-                                                        style={{
-                                                            width: 34,
-                                                            height: 34,
-                                                            borderRadius: '50%',
-                                                            objectFit: 'cover'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div
-                                                        style={{
-                                                            width: 34,
-                                                            height: 34,
-                                                            borderRadius: '50%',
-                                                            backgroundColor: 'var(--color-primary-light)',
-                                                            color: 'var(--color-primary)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            fontWeight: 700,
-                                                            fontSize: 13,
-                                                        }}
-                                                    >
-                                                        {item.emp.fullName.charAt(0)}
-                                                    </div>
-                                                )}
+                                                <UserAvatar
+                                                    name={item.emp.fullName}
+                                                    src={item.emp.avatarUrl}
+                                                    size={34}
+                                                />
 
                                                 <div>
                                                     <div style={{

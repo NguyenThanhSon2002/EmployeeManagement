@@ -23,10 +23,14 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
     private final ScheduleService scheduleService;
+    private final com.company.hrms.modules.auth.service.AuthService authService;
 
-    public EmployeeController(EmployeeService employeeService, ScheduleService scheduleService) {
+    public EmployeeController(EmployeeService employeeService,
+                              ScheduleService scheduleService,
+                              com.company.hrms.modules.auth.service.AuthService authService) {
         this.employeeService = employeeService;
         this.scheduleService = scheduleService;
+        this.authService = authService;
     }
 
     @GetMapping
@@ -83,5 +87,24 @@ public class EmployeeController {
             @PathVariable Long id,
             @RequestParam(name = "month", required = false) String month) {
         return ApiResponse.success(scheduleService.getEmployeeMonthlySchedule(id, month));
+    }
+
+    @PostMapping(value = "/{id}/avatar", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE')")
+    @Operation(summary = "Tải lên ảnh đại diện cho nhân viên")
+    public ApiResponse<EmployeeDto> uploadAvatar(
+            @PathVariable Long id,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        return ApiResponse.success(employeeService.uploadAvatar(id, file));
+    }
+
+    @PostMapping("/{id}/reset-password")
+    @PreAuthorize("hasRole('DIRECTOR')")
+    @Operation(summary = "Quản trị viên đặt lại mật khẩu cho nhân viên")
+    public ApiResponse<Void> resetPassword(
+            @PathVariable Long id,
+            @Valid @RequestBody com.company.hrms.modules.auth.dto.ResetPasswordRequest request) {
+        authService.resetEmployeePassword(id, request);
+        return ApiResponse.success(null);
     }
 }

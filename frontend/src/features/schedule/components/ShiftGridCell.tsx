@@ -2,6 +2,7 @@ import React from 'react';
 import type { ShiftAssignment, ShiftTemplate, Employee, ScheduleConflict } from '@/types/domain.types';
 import { Plus, X, AlertTriangle, Users, CheckCircle2, Lock } from 'lucide-react';
 import { Tooltip } from '@/shared/components/Tooltip';
+import { UserAvatar } from '@/components/common/UserAvatar';
 
 interface ShiftGridCellProps {
     template: ShiftTemplate;
@@ -235,38 +236,11 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                 >
                                     {/* Employee info */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-                                        {avatarUrl ? (
-                                            <img
-                                                src={avatarUrl}
-                                                alt={displayName}
-                                                style={{
-                                                    width: 20,
-                                                    height: 20,
-                                                    borderRadius: '50%',
-                                                    objectFit: 'cover',
-                                                    flexShrink: 0,
-                                                }}
-                                            />
-                                        ) : (
-                                            <div
-                                                style={{
-                                                    width: 20,
-                                                    height: 20,
-                                                    borderRadius: '50%',
-                                                    backgroundColor: isExternal ? '#F1F5F9' : '#EFF6FF',
-                                                    color: isExternal ? '#64748B' : '#2563EB',
-                                                    border: isExternal ? '1px solid #E2E8F0' : '1px solid #DBEAFE',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '10px',
-                                                    fontWeight: 700,
-                                                    flexShrink: 0,
-                                                }}
-                                            >
-                                                {displayName.charAt(0)}
-                                            </div>
-                                        )}
+                                        <UserAvatar
+                                            name={displayName}
+                                            src={avatarUrl}
+                                            size={20}
+                                        />
 
                                         {isExternal && (
                                             <span

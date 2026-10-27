@@ -18,6 +18,7 @@ export interface Employee {
   employment_status: string;
   employment_type: string;
   hire_date: string;
+  avatar_url?: string;
   resignation_date?: string;
   is_active: boolean;
   version?: number;
@@ -52,6 +53,16 @@ export const employeeService = {
 
   async updateEmployee(id: number, employee: Partial<Employee>): Promise<Employee> {
     return api.put<Employee>(`/employees/${id}`, employee);
+  },
+
+  async uploadAvatar(id: number, file: File): Promise<Employee> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<Employee>(`/employees/${id}/avatar`, formData);
+  },
+
+  async resetPassword(id: number, newPassword: string): Promise<void> {
+    return api.post<void>(`/employees/${id}/reset-password`, { new_password: newPassword });
   },
 
   async deleteEmployee(id: number): Promise<void> {

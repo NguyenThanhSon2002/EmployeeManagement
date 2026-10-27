@@ -480,6 +480,13 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
 
     assignShift: (payload) => {
       const state = get();
+      if (state.scheduleStatus === 'PUBLISHED') {
+        return {
+          success: false,
+          error: 'Lịch tuần đã công bố chính thức và đang bị khóa. Chỉ Giám đốc hoặc Admin mới có quyền thu hồi về bản nháp để điều chỉnh.',
+        };
+      }
+
       const emp = state.employees.find((e) => Number(e.id) === Number(payload.employeeId));
       const template = state.shiftTemplates.find((t) => Number(t.id) === Number(payload.workShiftId));
 
@@ -545,26 +552,6 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       // Persist to localStorage immediately (offline-first)
       saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments);
 
-      // Record audit history if week is PUBLISHED
-      let updatedHistory = state.changeHistory;
-      if (state.scheduleStatus === 'PUBLISHED') {
-        const historyEntry: ChangeHistoryEntry = {
-          id: Date.now(),
-          scheduleId: state.scheduleId,
-          shiftAssignmentId: newAssignment.id,
-          employeeId: emp.id,
-          employeeName: emp.fullName,
-          workDate: payload.workDate,
-          actionType: existingAssignment ? 'MODIFIED' : 'ADDED',
-          oldValue: existingAssignment ? { ...existingAssignment } : null,
-          newValue: { ...newAssignment },
-          changeReason: payload.changeReason || 'Điều chỉnh phân ca tuần đã công bố',
-          changedByRole: payload.actorRole,
-          changedAt: new Date().toISOString(),
-        };
-        updatedHistory = [historyEntry, ...updatedHistory];
-      }
-
       const updatedConflicts = computeAllConflicts(
           updatedAssignments,
           state.employees,
@@ -576,7 +563,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       set({
         assignments: updatedAssignments,
         conflicts: updatedConflicts,
-        changeHistory: updatedHistory,
+        changeHistory: state.changeHistory,
       });
 
       if (!isMockEnabled()) {
@@ -617,8 +604,13 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       return { success: true };
     },
 
-    deleteAssignment: (assignmentId, changeReason, actorRole = 'ROLE_DIRECTOR') => {
+    deleteAssignment: (assignmentId, _changeReason, _actorRole = 'ROLE_DIRECTOR') => {
       const state = get();
+      if (state.scheduleStatus === 'PUBLISHED') {
+        console.warn('Cannot delete shift assignment on a PUBLISHED schedule without reverting to DRAFT.');
+        return;
+      }
+
       let targetKey: string | null = null;
       let targetAssignment: ShiftAssignment | null = null;
 
@@ -645,26 +637,6 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         });
       }
 
-      let updatedHistory = state.changeHistory;
-      if (state.scheduleStatus === 'PUBLISHED') {
-        const emp = state.employees.find((e) => e.id === targetAssignment!.employeeId);
-        const historyEntry: ChangeHistoryEntry = {
-          id: Date.now(),
-          scheduleId: state.scheduleId,
-          shiftAssignmentId: targetAssignment.id,
-          employeeId: targetAssignment.employeeId,
-          employeeName: emp ? emp.fullName : 'Nhân viên',
-          workDate: targetAssignment.workDate,
-          actionType: 'DELETED',
-          oldValue: { ...targetAssignment },
-          newValue: null,
-          changeReason: changeReason || 'Xóa phân ca làm việc',
-          changedByRole: actorRole,
-          changedAt: new Date().toISOString(),
-        };
-        updatedHistory = [historyEntry, ...updatedHistory];
-      }
-
       const updatedAssignments = { ...state.assignments };
       const filteredList = (updatedAssignments[targetKey] || []).filter((a) => a.id !== assignmentId);
       if (filteredList.length > 0) {
@@ -686,7 +658,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       set({
         assignments: updatedAssignments,
         conflicts: updatedConflicts,
-        changeHistory: updatedHistory,
+        changeHistory: state.changeHistory,
       });
     },
 

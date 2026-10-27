@@ -72,3 +72,9 @@ springdoc:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
+
+# Application & Upload Configuration
+app:
+  upload:
+    dir: uploads
+
