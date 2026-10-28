@@ -299,6 +299,10 @@ public class ScheduleService {
         WorkShift shift = workShiftRepository.findByIdAndDeletedAtIsNull(request.getWorkShiftId())
                 .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", request.getWorkShiftId()));
 
+        if (shift.getBranchId() != null && !shift.getBranchId().equals(schedule.getBranchId())) {
+            throw new BusinessException("BRANCH_SHIFT_MISMATCH", "Mẫu ca làm việc (" + shift.getShiftName() + ") không thuộc chi nhánh của lịch làm việc.", HttpStatus.BAD_REQUEST);
+        }
+
         Employee targetEmp = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", request.getEmployeeId()));
         if (targetEmp.getPositionId() != null && targetEmp.getPositionId() == 1L) {
@@ -381,6 +385,10 @@ public class ScheduleService {
 
         WorkShift shift = workShiftRepository.findByIdAndDeletedAtIsNull(request.getWorkShiftId())
                 .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", request.getWorkShiftId()));
+
+        if (shift.getBranchId() != null && !shift.getBranchId().equals(schedule.getBranchId())) {
+            throw new BusinessException("BRANCH_SHIFT_MISMATCH", "Mẫu ca làm việc (" + shift.getShiftName() + ") không thuộc chi nhánh của lịch làm việc.", HttpStatus.BAD_REQUEST);
+        }
 
         ConflictValidationResult validation = conflictEngine.validateBulk(
                 request.getEmployeeIds(),
@@ -505,6 +513,10 @@ public class ScheduleService {
                 shift = workShiftRepository.findByIdAndDeletedAtIsNull(item.getWorkShiftId())
                         .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", item.getWorkShiftId()));
                 shiftMap.put(shift.getId(), shift);
+            }
+
+            if (shift.getBranchId() != null && !shift.getBranchId().equals(schedule.getBranchId())) {
+                throw new BusinessException("BRANCH_SHIFT_MISMATCH", "Mẫu ca làm việc (" + shift.getShiftName() + ") không thuộc chi nhánh của lịch làm việc.", HttpStatus.BAD_REQUEST);
             }
 
             String key = item.getEmployeeId() + "_" + item.getWorkShiftId() + "_" + item.getWorkDate();

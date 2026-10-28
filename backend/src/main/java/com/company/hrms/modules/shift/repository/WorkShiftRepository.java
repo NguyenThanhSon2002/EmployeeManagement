@@ -18,12 +18,10 @@ public interface WorkShiftRepository extends JpaRepository<WorkShift, Long> {
 
     List<WorkShift> findAllByDeletedAtIsNullOrderByStartTimeAsc();
 
-    @Query("SELECT w FROM WorkShift w WHERE w.deletedAt IS NULL AND (w.branchId IS NULL OR w.branchId = :branchId) ORDER BY w.startTime ASC")
-    List<WorkShift> findAllActiveByBranchIdOrGlobal(@Param("branchId") Long branchId);
+    List<WorkShift> findAllByBranchIdAndDeletedAtIsNullOrderByStartTimeAsc(Long branchId);
 
     @Query("SELECT CASE WHEN COUNT(w) > 0 THEN true ELSE false END FROM WorkShift w " +
-           "WHERE w.shiftCode = :shiftCode AND w.deletedAt IS NULL " +
-           "AND ((:branchId IS NULL AND w.branchId IS NULL) OR w.branchId = :branchId)")
+           "WHERE w.shiftCode = :shiftCode AND w.deletedAt IS NULL AND w.branchId = :branchId")
     boolean existsByShiftCodeAndBranchIdAndDeletedAtIsNull(
             @Param("shiftCode") String shiftCode,
             @Param("branchId") Long branchId);

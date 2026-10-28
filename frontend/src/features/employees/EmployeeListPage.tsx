@@ -14,6 +14,7 @@ import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, 
 import { useAvailabilityStore } from './store/useAvailabilityStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { BranchSelect } from '@/components/common/BranchSelect';
 
 const toArray = (res: any): any[] => {
   if (Array.isArray(res)) return res;
@@ -429,41 +430,21 @@ export const EmployeeListPage: React.FC = () => {
             </div>
 
             {/* Branch Filter */}
-            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-              <select
-                  className="input-base"
-                  value={!isDirector ? userBranchId : selectedBranchId}
-                  disabled={!isDirector}
-                  onChange={(e) => {
-                    if (!isDirector) return;
-                    setSelectedBranchId(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  style={{
-                    height: 36,
-                    fontSize: '12.5px',
-                    minWidth: 220,
-                    fontWeight: 500,
-                    backgroundColor: !isDirector ? '#F1F5F9' : '#FFFFFF',
-                    color: !isDirector ? '#475569' : 'inherit',
-                    cursor: !isDirector ? 'not-allowed' : 'pointer',
-                    borderColor: 'var(--color-border-subtle, #E2E8F0)',
-                    paddingRight: 12,
-                  }}
-                  title={
-                    !isDirector
-                        ? 'Bạn chỉ có quyền xem nhân sự thuộc chi nhánh làm việc của mình.'
-                        : 'Lọc nhân viên theo chi nhánh'
-                  }
-              >
-                {isDirector && <option value={0}>Tất cả chi nhánh</option>}
-                {branchesList.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.branchName}
-                    </option>
-                ))}
-              </select>
-            </div>
+            <BranchSelect
+              branches={branchesList}
+              selectedBranchId={!isDirector ? userBranchId : selectedBranchId}
+              disabled={!isDirector}
+              disabledTooltip="Bạn chỉ có quyền xem nhân sự thuộc chi nhánh làm việc của mình"
+              allowAll={isDirector}
+              allLabel="Tất cả chi nhánh"
+              allSubLabel="Xem nhân sự toàn bộ cơ sở"
+              onChange={(id) => {
+                if (!isDirector) return;
+                setSelectedBranchId(id);
+                setCurrentPage(1);
+              }}
+              minWidth={220}
+            />
           </div>
 
           <div

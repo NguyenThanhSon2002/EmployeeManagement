@@ -53,6 +53,7 @@ export const SchedulePage: React.FC = () => {
         fetchWeeklySchedule,
         fetchShiftTemplates,
         resetCurrentWeekSchedule,
+        isFetchingSchedule,
     } = useScheduleStore();
 
     const {currentRole, currentUser} = useAuthStore();
@@ -683,6 +684,7 @@ export const SchedulePage: React.FC = () => {
                 branches={branches}
                 selectedBranchId={filterOptions.branchId || (branches[0]?.id || 1)}
                 branchLocked={Boolean(lockedBranchId)}
+                isBranchLoading={isFetchingSchedule}
                 onBranchChange={(branchId) => setFilters({branchId})}
                 totalEmployees={employees.filter((e) => e.isActive && e.employmentStatus !== 'RESIGNED' && e.positionId !== 1).length}
                 filteredCount={filteredEmployees.length}
@@ -696,8 +698,12 @@ export const SchedulePage: React.FC = () => {
 
             {/* 4. Matrix View */}
             <div
-                key={`${viewMode}-${viewMode === 'WEEK' ? currentStartDate : format(monthDate, 'yyyy-MM')}`}
+                key={`${viewMode}-${filterOptions.branchId}-${viewMode === 'WEEK' ? currentStartDate : format(monthDate, 'yyyy-MM')}`}
                 className="schedule-view-animated"
+                style={{
+                    transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    opacity: isFetchingSchedule ? 0.72 : 1,
+                }}
             >
                 {viewMode === 'WEEK' ? (
                     <WeeklyGrid

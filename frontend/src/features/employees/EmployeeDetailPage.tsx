@@ -1409,6 +1409,7 @@ export const EmployeeDetailPage: React.FC = () => {
           employeeId={employee.id}
           employeeName={employee.fullName}
           canEdit={true}
+          branchId={employee.branchId}
         />
       )}
 

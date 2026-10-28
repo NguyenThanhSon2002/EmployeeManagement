@@ -40,9 +40,45 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   const weekDays = getWeekDays(baseMonday);
   const todayDateStr = formatDateIso(new Date());
 
-  const activeTemplates = shiftTemplates.filter((t) => t.isActive);
+  const activeTemplates = React.useMemo(() => {
+    return shiftTemplates.filter((t) => t.isActive);
+  }, [shiftTemplates]);
 
-  if (activeTemplates.length === 0) {
+  // Phòng ngự: Tự động gom các phân công ca ngoại lệ/lệch ID để hiển thị hàng ca tương ứng, không để ca bị ẩn
+  const fallbackTemplates = React.useMemo(() => {
+    const existingIds = new Set(activeTemplates.map((t) => Number(t.id)));
+    const missing: ShiftTemplate[] = [];
+
+    for (const list of Object.values(assignmentsMap)) {
+      for (const a of list) {
+        if (a.status !== 'CANCELLED' && a.workShiftId && !existingIds.has(Number(a.workShiftId))) {
+          existingIds.add(Number(a.workShiftId));
+          missing.push({
+            id: Number(a.workShiftId),
+            shiftCode: `EXTRA_${a.workShiftId}`,
+            shiftName: a.snapshotShiftName ? `${a.snapshotShiftName} (Ngoại lệ)` : `Ca khác (#${a.workShiftId})`,
+            startTime: a.snapshotStartTime || '08:00',
+            endTime: a.snapshotEndTime || '17:00',
+            breakMinutes: a.snapshotBreakMinutes ?? 0,
+            isCrossMidnight: a.snapshotCrossMidnight ?? false,
+            colorCode: a.snapshotColorCode || '#64748B',
+            textColor: '#FFFFFF',
+            minStaffing: 0,
+            maxStaffing: 99,
+            applicableDays: '1,2,3,4,5,6,7',
+            isActive: true,
+          });
+        }
+      }
+    }
+    return missing;
+  }, [assignmentsMap, activeTemplates]);
+
+  const displayTemplates = React.useMemo(() => {
+    return [...activeTemplates, ...fallbackTemplates];
+  }, [activeTemplates, fallbackTemplates]);
+
+  if (displayTemplates.length === 0) {
     return (
       <div
         className="card"
@@ -67,7 +103,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
     <div
       role="grid"
       aria-label="Bảng phân ca làm việc theo mẫu ca tuần"
-      aria-rowcount={activeTemplates.length + 1}
+      aria-rowcount={displayTemplates.length + 1}
       aria-colcount={8}
       className="schedule-grid-container"
     >
@@ -80,7 +116,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
       />
 
       {/* Shift Rows */}
-      {activeTemplates.map((template) => (
+      {displayTemplates.map((template) => (
         <ShiftRow
           key={template.id}
           template={template}
