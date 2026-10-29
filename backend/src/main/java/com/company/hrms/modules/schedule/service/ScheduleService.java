@@ -104,7 +104,9 @@ public class ScheduleService {
                 .filter(e -> e.getPositionId() == null || e.getPositionId() != 1L)
                 .toList();
 
-        List<ShiftAssignment> thisScheduleAssignments = assignmentRepository.findAllByScheduleId(schedule.getId());
+        List<ShiftAssignment> thisScheduleAssignments = assignmentRepository.findAllByScheduleId(schedule.getId()).stream()
+                .filter(sa -> sa.getWorkDate() != null && !sa.getWorkDate().isBefore(monday) && !sa.getWorkDate().isAfter(sunday))
+                .toList();
         
         // Dọn dẹp ca cũ của Giám đốc (nếu có lỡ gán trước đây)
         List<ShiftAssignment> directorAssignments = new ArrayList<>();

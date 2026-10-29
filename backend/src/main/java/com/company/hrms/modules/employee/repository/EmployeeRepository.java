@@ -24,6 +24,11 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     boolean existsByEmailAndDeletedAtIsNull(String email);
 
+    boolean existsByPhoneNumberAndDeletedAtIsNull(String phoneNumber);
+
+    @Query("SELECT e.employeeCode FROM Employee e WHERE e.employeeCode LIKE 'EMP-%'")
+    List<String> findAllEmpCodes();
+
     List<Employee> findAllByBranchIdAndDeletedAtIsNull(Long branchId);
 
     List<Employee> findAllByDeletedAtIsNull();

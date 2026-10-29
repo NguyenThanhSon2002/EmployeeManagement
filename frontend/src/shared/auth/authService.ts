@@ -50,6 +50,28 @@ export const authService = {
     });
   },
 
+  async getPublicBranches(): Promise<Array<{ id: number; branchCode: string; branchName: string; address?: string }>> {
+    return api.get<Array<{ id: number; branchCode: string; branchName: string; address?: string }>>('/auth/branches');
+  },
+
+  async register(data: {
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    branchId: number;
+    notes?: string;
+  }): Promise<{
+    employeeCode: string;
+    fullName: string;
+    email: string;
+    branchId: number;
+    branchName: string;
+    defaultPassword: string;
+    message: string;
+  }> {
+    return api.post('/auth/register', data);
+  },
+
   logout(): void {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');

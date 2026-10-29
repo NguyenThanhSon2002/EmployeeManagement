@@ -24,7 +24,7 @@ public class EmployeeAvailabilityController {
     }
 
     @GetMapping("/{employeeId}/availability")
-    @PreAuthorize("hasAnyRole('ROLE_DIRECTOR', 'ROLE_MANAGER', 'ROLE_EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE')")
     public ResponseEntity<ApiResponse<EmployeeAvailabilityDto>> getEmployeeAvailability(
             @PathVariable Long employeeId) {
         EmployeeAvailabilityDto data = availabilityService.getEmployeeAvailability(employeeId);
@@ -32,7 +32,7 @@ public class EmployeeAvailabilityController {
     }
 
     @GetMapping("/availability")
-    @PreAuthorize("hasAnyRole('ROLE_DIRECTOR', 'ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     public ResponseEntity<ApiResponse<Map<Long, Map<Integer, List<Long>>>>> getBranchAvailabilities(
             @RequestParam("branch_id") Long branchId) {
         Map<Long, Map<Integer, List<Long>>> data = availabilityService.getBranchAvailabilities(branchId);
@@ -40,7 +40,7 @@ public class EmployeeAvailabilityController {
     }
 
     @GetMapping("/preferred-shifts")
-    @PreAuthorize("hasAnyRole('ROLE_DIRECTOR', 'ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     public ResponseEntity<ApiResponse<Map<Long, List<Long>>>> getBranchPreferredShifts(
             @RequestParam("branch_id") Long branchId) {
         Map<Long, List<Long>> data = availabilityService.getBranchPreferredShifts(branchId);
@@ -48,11 +48,12 @@ public class EmployeeAvailabilityController {
     }
 
     @PutMapping("/{employeeId}/availability")
-    @PreAuthorize("hasAnyRole('ROLE_DIRECTOR', 'ROLE_MANAGER', 'ROLE_EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE')")
     public ResponseEntity<ApiResponse<String>> saveAvailability(
             @PathVariable Long employeeId,
+            @RequestParam(value = "branch_id", required = false) Long branchId,
             @Valid @RequestBody SaveAvailabilityRequest request) {
-        availabilityService.saveAvailability(employeeId, request);
+        availabilityService.saveAvailability(employeeId, branchId, request);
         return ResponseEntity.ok(ApiResponse.success("Lưu lịch đăng ký ca thành công", null));
     }
 }

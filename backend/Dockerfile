@@ -1,33 +1,29 @@
-# Multi-stage Dockerfile for Spring Boot 3.3.4 (Java 21 LTS)
-
-# Stage 1: Build JAR using Maven
+# Stage 1: Build
 FROM maven:3.9.8-eclipse-temurin-21-alpine AS builder
 WORKDIR /app
 
-# Cache Maven dependencies
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
-# Build application
 COPY src ./src
 RUN mvn clean package -DskipTests -B
 
-# Stage 2: Minimal Production JRE Runtime
+# Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Create non-root system user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+ENV TZ=Asia/Ho_Chi_Minh
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && mkdir -p /app/uploads \
+    && chown -R appuser:appgroup /app
 USER appuser
 
-# Copy jar artifact
-COPY --from=builder /app/target/hrms-backend-1.0.0.jar app.jar
+COPY --from=builder --chown=appuser:appgroup /app/target/*.jar app.jar
 
-# Expose HTTP port
 EXPOSE 8080
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/v3/api-docs || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
 
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70", "-Duser.timezone=Asia/Ho_Chi_Minh", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]

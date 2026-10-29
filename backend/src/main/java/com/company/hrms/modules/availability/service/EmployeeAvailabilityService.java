@@ -91,8 +91,18 @@ public class EmployeeAvailabilityService {
 
     @Transactional
     public void saveAvailability(Long employeeId, SaveAvailabilityRequest request) {
-        availabilityRepository.deleteAllByEmployeeId(employeeId);
-        preferredShiftRepository.deleteAllByEmployeeId(employeeId);
+        saveAvailability(employeeId, null, request);
+    }
+
+    @Transactional
+    public void saveAvailability(Long employeeId, Long branchId, SaveAvailabilityRequest request) {
+        if (branchId != null) {
+            availabilityRepository.deleteAllByEmployeeIdAndBranchId(employeeId, branchId);
+            preferredShiftRepository.deleteAllByEmployeeIdAndBranchId(employeeId, branchId);
+        } else {
+            availabilityRepository.deleteAllByEmployeeId(employeeId);
+            preferredShiftRepository.deleteAllByEmployeeId(employeeId);
+        }
 
         if (request.getAvailabilities() != null && !request.getAvailabilities().isEmpty()) {
             List<EmployeeAvailability> entities = new ArrayList<>();

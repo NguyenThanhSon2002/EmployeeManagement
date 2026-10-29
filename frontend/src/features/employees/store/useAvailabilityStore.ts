@@ -49,7 +49,8 @@ interface AvailabilityState {
   saveAvailability: (
     employeeId: number,
     record?: Record<number, number[]>,
-    preferredShiftIds?: number[]
+    preferredShiftIds?: number[],
+    branchId?: number
   ) => Promise<boolean>;
 
   /** Xóa toàn bộ lịch rảnh của nhân viên trên Backend */
@@ -263,7 +264,8 @@ export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
   saveAvailability: async (
     employeeId: number,
     record?: Record<number, number[]>,
-    preferredShiftIds?: number[]
+    preferredShiftIds?: number[],
+    branchId?: number
   ) => {
     const empIdNum = Number(employeeId);
     const dataToSave = record || get().getAvailability(empIdNum);
@@ -273,7 +275,10 @@ export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
         : get().getPreferredShiftIds(empIdNum);
 
     try {
-      await api.put(`/employees/${empIdNum}/availability`, {
+      const url = branchId
+        ? `/employees/${empIdNum}/availability?branch_id=${branchId}`
+        : `/employees/${empIdNum}/availability`;
+      await api.put(url, {
         employee_id: empIdNum,
         availabilities: dataToSave,
         preferred_shift_ids: prefToSave,
