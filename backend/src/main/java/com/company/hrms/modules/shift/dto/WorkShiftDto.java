@@ -18,6 +18,7 @@ public class WorkShiftDto {
     @JsonProperty("shift_name")
     private String shiftName;
 
+    @NotNull(message = "Chi nhánh áp dụng không được để trống")
     @JsonProperty("branch_id")
     private Long branchId;
 

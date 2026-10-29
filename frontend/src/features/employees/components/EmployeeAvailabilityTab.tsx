@@ -18,6 +18,7 @@ interface EmployeeAvailabilityTabProps {
     employeeId: number;
     employeeName: string;
     canEdit?: boolean;
+    branchId?: number;
 }
 
 const DAYS_OF_WEEK = [
@@ -82,6 +83,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                                                                     employeeId,
                                                                                     employeeName,
                                                                                     canEdit = true,
+                                                                                    branchId,
                                                                                 }) => {
     const { addToast } = useUIStore();
     const {
@@ -103,10 +105,8 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        if (!shiftTemplates || shiftTemplates.length === 0) {
-            fetchShiftTemplates();
-        }
-    }, [shiftTemplates?.length, fetchShiftTemplates]);
+        fetchShiftTemplates(branchId);
+    }, [branchId, fetchShiftTemplates]);
 
     // Tự động tải dữ liệu khả dụng từ backend khi mở tab nhân viên
     useEffect(() => {

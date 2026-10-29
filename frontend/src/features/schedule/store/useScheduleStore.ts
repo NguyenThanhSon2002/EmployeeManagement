@@ -106,6 +106,7 @@ interface ScheduleState {
   shiftTemplates: ShiftTemplate[];
   approvedLeaves: LeaveRequest[];
   holidays: CompanyHoliday[];
+  isFetchingSchedule: boolean;
 
   // Actions
   fetchWeeklySchedule: (branchId: number, startDate: string) => Promise<void>;
@@ -171,6 +172,7 @@ function initializeStateFromSeed(branchId: number = 1) {
     shiftTemplates: [] as ShiftTemplate[],
     approvedLeaves: [] as LeaveRequest[],
     holidays: [] as CompanyHoliday[],
+    isFetchingSchedule: false,
   };
 }
 
@@ -301,6 +303,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
     conflicts: initialConflicts,
 
     fetchWeeklySchedule: async (branchId: number, startDate: string) => {
+      set({ isFetchingSchedule: true });
+
       // 1. Immediately load cached data from localStorage so there's 0ms blank state
       const localCache = loadBranchScheduleFromStorage(branchId, startDate);
       if (Object.keys(localCache).length > 0) {
@@ -322,14 +326,17 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           homeBranchId: e.branchId,
           homeBranchName: e.branchId === 1 ? 'Chi nhánh Cầu Giấy' : (e.branchId === 2 ? 'Chi nhánh Đống Đa' : 'Chi nhánh Hoàn Kiếm'),
         }));
-        set({ employees: combinedEmployees });
+        set({ employees: combinedEmployees, isFetchingSchedule: false });
         get().recomputeAllConflicts();
         return;
       }
 
       try {
         const data = await scheduleService.getWeeklySchedule(branchId, startDate);
-        if (!data) return;
+        if (!data) {
+          set({ isFetchingSchedule: false });
+          return;
+        }
 
         const currentMon = parseISO(startDate);
         const currentSun = addDays(currentMon, 6);
@@ -416,29 +423,6 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           }
         }
 
-        // Merge any unsynced or locally pending assignments from localCache that aren't in backend yet
-        if (Object.keys(localCache).length > 0) {
-          for (const [key, list] of Object.entries(localCache)) {
-            for (const localItem of list) {
-              if (localItem.workDate >= monStr && localItem.workDate <= sunStr) {
-                const alreadyInBackend = (thisWeekOnlyAssignments[key] || []).some(
-                  (b) => b.id === localItem.id ||
-                         (b.employeeId === localItem.employeeId && b.workDate === localItem.workDate && b.workShiftId === localItem.workShiftId)
-                );
-                if (!alreadyInBackend) {
-                  const existingList = mergedAssignments[key] ? [...mergedAssignments[key]] : [];
-                  existingList.push(localItem);
-                  mergedAssignments[key] = existingList;
-
-                  const weekList = thisWeekOnlyAssignments[key] ? [...thisWeekOnlyAssignments[key]] : [];
-                  weekList.push(localItem);
-                  thisWeekOnlyAssignments[key] = weekList;
-                }
-              }
-            }
-          }
-        }
-
         saveBranchScheduleToStorage(branchId, thisWeekOnlyAssignments, startDate);
 
         const templates: ShiftTemplate[] = (data.shift_templates || []).map((t: any) => ({
@@ -469,11 +453,13 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           employees: backendEmployees.length > 0 ? backendEmployees : fallbackEmployees,
           shiftTemplates: templates.length > 0 ? templates : get().shiftTemplates,
           assignments: mergedAssignments,
+          isFetchingSchedule: false,
         });
 
         get().recomputeAllConflicts();
       } catch (err) {
         console.warn('Could not fetch weekly schedule from API, using fallback:', err);
+        set({ isFetchingSchedule: false });
       }
     },
 
@@ -503,18 +489,37 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         const updatedFilters = { ...state.filterOptions, ...newFilters };
         let updatedAssignments = state.assignments;
         let updatedEmployees = state.employees;
+
         if (branchChanged && newFilters.branchId) {
+          const currentMon = parseISO(state.currentStartDate);
+          const currentSun = addDays(currentMon, 6);
+          const monStr = state.currentStartDate;
+          const sunStr = format(currentSun, 'yyyy-MM-dd');
+
+          // Giữ lại phân ca các tuần khác, làm sạch tuần hiện tại của chi nhánh cũ để không bị nhấp nháy chồng lấn
+          const nonCurrentWeekAssignments: Record<string, ShiftAssignment[]> = {};
+          for (const [key, list] of Object.entries(state.assignments)) {
+            const filtered = list.filter((a) => a.workDate < monStr || a.workDate > sunStr);
+            if (filtered.length > 0) {
+              nonCurrentWeekAssignments[key] = filtered;
+            }
+          }
+
+          // Nạp cache của chi nhánh mới được chọn
           const branchCache = loadBranchScheduleFromStorage(newFilters.branchId, state.currentStartDate);
-          updatedAssignments = { ...updatedAssignments, ...branchCache };
-          // Nhân sự phải khớp chi nhánh mới ngay, tránh còn sót danh sách chi nhánh cũ
+          updatedAssignments = { ...nonCurrentWeekAssignments, ...branchCache };
+
+          // Nhân sự chuyển ngay sang danh sách của chi nhánh mới
           updatedEmployees = useDirectoryStore
               .getState()
               .employees.filter((e) => e.branchId === newFilters.branchId);
         }
+
         return {
           filterOptions: updatedFilters,
           assignments: updatedAssignments,
           employees: updatedEmployees,
+          isFetchingSchedule: branchChanged ? true : state.isFetchingSchedule,
         };
       });
 

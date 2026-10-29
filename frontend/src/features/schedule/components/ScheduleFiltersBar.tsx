@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import type {Branch, ShiftTemplate} from '@/types/domain.types';
-import {Search, AlertTriangle, X, Lock} from 'lucide-react';
+import {Search, AlertTriangle, X} from 'lucide-react';
+import {BranchSelect} from '@/components/common/BranchSelect';
 
 interface ScheduleFiltersBarProps {
     searchTerm: string;
@@ -10,6 +11,7 @@ interface ScheduleFiltersBarProps {
     branches: Branch[];
     selectedBranchId: number;
     branchLocked?: boolean;
+    isBranchLoading?: boolean;
     onBranchChange: (branchId: number) => void;
     totalEmployees: number;
     filteredCount: number;
@@ -27,6 +29,7 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
                                                                           branches,
                                                                           selectedBranchId,
                                                                           branchLocked = false,
+                                                                          isBranchLoading = false,
                                                                           onBranchChange,
                                                                           totalEmployees,
                                                                           filteredCount,
@@ -141,52 +144,16 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
                     </select>
                 </div>
 
-                {/* Branch Filter Dropdown */}
-                <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                    <select
-                        className="input-base"
-                        value={selectedBranchId}
-                        disabled={branchLocked}
-                        onChange={(e) => onBranchChange(Number(e.target.value))}
-                        title={branchLocked ? 'Chỉ Giám đốc mới được xem chi nhánh khác' : undefined}
-                        style={{
-                            height: 34,
-                            fontSize: '12.5px',
-                            minWidth: 180,
-                            fontWeight: 500,
-                            cursor: branchLocked ? 'not-allowed' : 'pointer',
-                            borderRadius: '8px',
-                            border: '1px solid #E2E8F0',
-                            backgroundColor: branchLocked ? '#F1F5F9' : '#F8FAFC',
-                            color: '#1E293B',
-                        }}
-                    >
-                        {branches.length === 0 && <option value="">Đang tải chi nhánh...</option>}
-                        {branches.map((b) => (
-                            <option key={b.id} value={b.id}>
-                                {b.branchName}
-                            </option>
-                        ))}
-                    </select>
-                    {branchLocked && (
-                        <span
-                            style={{
-                                fontSize: '11px',
-                                color: '#64748B',
-                                backgroundColor: '#F1F5F9',
-                                border: '1px solid #E2E8F0',
-                                padding: '2px 7px',
-                                borderRadius: '6px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                fontWeight: 500,
-                            }}
-                        >
-                          <Lock size={11} color="#64748B" /> Khóa
-                        </span>
-                    )}
-                </div>
+                {/* Branch Filter Component */}
+                <BranchSelect
+                    branches={branches}
+                    selectedBranchId={selectedBranchId}
+                    onChange={onBranchChange}
+                    disabled={branchLocked}
+                    disabledTooltip="Chỉ Giám đốc mới có quyền xem và chuyển đổi giữa các chi nhánh khác"
+                    isLoading={isBranchLoading}
+                    minWidth={200}
+                />
 
                 {/* Conflicts Toggle Pill */}
                 <label

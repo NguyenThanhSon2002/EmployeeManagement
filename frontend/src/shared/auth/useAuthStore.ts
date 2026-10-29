@@ -233,7 +233,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (!isMockEnabled()) {
         const res = await authService.login({ username, password });
         const roles = res.user.roles || [];
-        userRole = (roles.includes('ROLE_DIRECTOR')
+        userRole = (roles.includes('ROLE_DIRECTOR') || roles.includes('ROLE_ADMIN')
           ? 'ROLE_DIRECTOR'
           : roles.includes('ROLE_MANAGER')
             ? 'ROLE_MANAGER'
@@ -352,7 +352,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       try {
         const user = await authService.getCurrentUser();
         const roles = user.roles || [];
-        const userRole = (roles.includes('ROLE_DIRECTOR')
+        const userRole = (roles.includes('ROLE_DIRECTOR') || roles.includes('ROLE_ADMIN')
           ? 'ROLE_DIRECTOR'
           : roles.includes('ROLE_MANAGER')
             ? 'ROLE_MANAGER'

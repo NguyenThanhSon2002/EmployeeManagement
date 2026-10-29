@@ -34,7 +34,7 @@ public class WorkShiftService {
     public List<WorkShiftDto> getAllWorkShifts(Long branchId) {
         List<WorkShift> shifts;
         if (branchId != null) {
-            shifts = workShiftRepository.findAllActiveByBranchIdOrGlobal(branchId);
+            shifts = workShiftRepository.findAllByBranchIdAndDeletedAtIsNullOrderByStartTimeAsc(branchId);
         } else {
             shifts = workShiftRepository.findAllByDeletedAtIsNullOrderByStartTimeAsc();
         }
@@ -57,13 +57,12 @@ public class WorkShiftService {
     @Transactional
     public WorkShiftDto createWorkShift(WorkShiftDto request) {
         Long branchId = request.getBranchId();
-        if (branchId != null && !branchRepository.existsById(branchId)) {
+        if (branchId == null || !branchRepository.existsById(branchId)) {
             throw new ResourceNotFoundException("Chi nhánh", branchId);
         }
 
         if (workShiftRepository.existsByShiftCodeAndBranchIdAndDeletedAtIsNull(request.getShiftCode(), branchId)) {
-            String scope = branchId == null ? "toàn hệ thống" : "chi nhánh #" + branchId;
-            throw new ResourceConflictException("Mã ca làm việc đã tồn tại trong " + scope + ": " + request.getShiftCode());
+            throw new ResourceConflictException("Mã ca làm việc đã tồn tại trong chi nhánh #" + branchId + ": " + request.getShiftCode());
         }
 
         WorkShift entity = new WorkShift();
@@ -79,18 +78,16 @@ public class WorkShiftService {
                 .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", id));
 
         Long targetBranchId = request.getBranchId();
-        if (targetBranchId != null && !branchRepository.existsById(targetBranchId)) {
+        if (targetBranchId == null || !branchRepository.existsById(targetBranchId)) {
             throw new ResourceNotFoundException("Chi nhánh", targetBranchId);
         }
 
         boolean codeChanged = !entity.getShiftCode().equalsIgnoreCase(request.getShiftCode());
-        boolean branchChanged = (entity.getBranchId() == null && targetBranchId != null) ||
-                                (entity.getBranchId() != null && !entity.getBranchId().equals(targetBranchId));
+        boolean branchChanged = entity.getBranchId() == null || !entity.getBranchId().equals(targetBranchId);
 
         if ((codeChanged || branchChanged) &&
                 workShiftRepository.existsByShiftCodeAndBranchIdAndDeletedAtIsNull(request.getShiftCode(), targetBranchId)) {
-            String scope = targetBranchId == null ? "toàn hệ thống" : "chi nhánh #" + targetBranchId;
-            throw new ResourceConflictException("Mã ca làm việc đã tồn tại trong " + scope + ": " + request.getShiftCode());
+            throw new ResourceConflictException("Mã ca làm việc đã tồn tại trong chi nhánh #" + targetBranchId + ": " + request.getShiftCode());
         }
 
         mapDtoToEntity(request, entity);

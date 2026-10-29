@@ -13,13 +13,13 @@ public class WorkShift {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "shift_code", nullable = false, unique = true, length = 50)
+    @Column(name = "shift_code", nullable = false, length = 50)
     private String shiftCode;
 
     @Column(name = "shift_name", nullable = false, length = 100)
     private String shiftName;
 
-    @Column(name = "branch_id")
+    @Column(name = "branch_id", nullable = false)
     private Long branchId;
 
     @Column(name = "start_time", nullable = false)

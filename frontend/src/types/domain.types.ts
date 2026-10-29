@@ -82,7 +82,7 @@ export interface ShiftTemplate {
   id: number;
   shiftCode: string;
   shiftName: string;
-  branchId?: number | null;
+  branchId?: number;
   branchName?: string | null;
   startTime: string; // HH:mm or HH:mm:ss
   endTime: string;   // HH:mm or HH:mm:ss

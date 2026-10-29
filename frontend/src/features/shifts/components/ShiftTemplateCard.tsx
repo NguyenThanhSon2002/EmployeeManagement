@@ -1,10 +1,11 @@
 import React from 'react';
 import type { ShiftTemplate } from '@/types/domain.types';
-import { Clock, Users, Moon, Pencil, Trash2, Coffee, CalendarCheck, Sun, Globe, MapPin } from 'lucide-react';
+import { Clock, Users, Moon, Pencil, Trash2, Coffee, CalendarCheck, Sun, MapPin, Copy } from 'lucide-react';
 
 interface ShiftTemplateCardProps {
   template: ShiftTemplate;
   onEdit?: (template: ShiftTemplate) => void;
+  onDuplicate?: (template: ShiftTemplate) => void;
   onDelete?: (id: number) => void;
   readOnly?: boolean;
 }
@@ -36,6 +37,7 @@ const calculateNetHours = (start: string, end: string, breakMins: number) => {
 export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
   template,
   onEdit,
+  onDuplicate,
   onDelete,
   readOnly = false,
 }) => {
@@ -64,46 +66,25 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
         {/* Card Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            {/* Branch Scope Badge */}
-            {template.branchId ? (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 3.5,
-                  padding: '3px 8px',
-                  borderRadius: 9999,
-                  backgroundColor: '#EFF6FF',
-                  color: '#1D4ED8',
-                  border: '1px solid #BFDBFE',
-                  fontSize: 11,
-                  fontWeight: 700,
-                }}
-                title={`Mẫu ca riêng của ${template.branchName || `Chi nhánh #${template.branchId}`}`}
-              >
-                <MapPin size={11} strokeWidth={2.5} />
-                <span>{template.branchName || `Cơ sở #${template.branchId}`}</span>
-              </span>
-            ) : (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 3.5,
-                  padding: '3px 8px',
-                  borderRadius: 9999,
-                  backgroundColor: '#F1F5F9',
-                  color: '#475569',
-                  border: '1px solid #CBD5E1',
-                  fontSize: 11,
-                  fontWeight: 600,
-                }}
-                title="Mẫu ca chuẩn áp dụng chung toàn bộ các chi nhánh trong hệ thống"
-              >
-                <Globe size={11} />
-                <span>Toàn hệ thống</span>
-              </span>
-            )}
+            {/* Branch Badge */}
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3.5,
+                padding: '3px 8px',
+                borderRadius: 9999,
+                backgroundColor: '#EFF6FF',
+                color: '#1D4ED8',
+                border: '1px solid #BFDBFE',
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+              title={`Mẫu ca của ${template.branchName || (template.branchId ? `Chi nhánh #${template.branchId}` : 'Chi nhánh')}`}
+            >
+              <MapPin size={11} strokeWidth={2.5} />
+              <span>{template.branchName || (template.branchId ? `Cơ sở #${template.branchId}` : 'Cơ sở')}</span>
+            </span>
 
             {template.isCrossMidnight ? (
               <span
@@ -282,6 +263,37 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
             }}
           >
             <Pencil size={14} /> Chỉnh sửa
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDuplicate?.(template)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              height: 34,
+              padding: '0 12px',
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: 8,
+              backgroundColor: '#F8FAFC',
+              color: '#4F46E5',
+              border: '1px solid #E2E8F0',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#EEF2FF';
+              e.currentTarget.style.borderColor = '#C7D2FE';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#F8FAFC';
+              e.currentTarget.style.borderColor = '#E2E8F0';
+            }}
+            title="Sao chép mẫu ca này để tạo ca mới hoặc áp dụng cho chi nhánh khác"
+          >
+            <Copy size={14} /> Sao chép
           </button>
 
           <button

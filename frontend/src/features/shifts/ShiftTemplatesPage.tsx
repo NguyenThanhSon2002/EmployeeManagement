@@ -7,6 +7,7 @@ import type { ShiftTemplate } from '@/types/domain.types';
 import { ShiftTemplateCard } from './components/ShiftTemplateCard';
 import { ShiftTemplateFormModal } from './components/ShiftTemplateFormModal';
 import { PageHeader } from '@/components/common/PageHeader';
+import { BranchSelect } from '@/components/common/BranchSelect';
 import {
   Plus,
   Layers,
@@ -14,7 +15,6 @@ import {
   Moon,
   Users,
   CalendarCheck,
-  Building2,
 } from 'lucide-react';
 
 export const ShiftTemplatesPage: React.FC = () => {
@@ -33,6 +33,7 @@ export const ShiftTemplatesPage: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ShiftTemplate | null>(null);
+  const [isCopyMode, setIsCopyMode] = useState(false);
 
   useEffect(() => {
     fetchDirectory();
@@ -52,6 +53,7 @@ export const ShiftTemplatesPage: React.FC = () => {
       return;
     }
     setEditingTemplate(null);
+    setIsCopyMode(false);
     setIsModalOpen(true);
   };
 
@@ -65,6 +67,21 @@ export const ShiftTemplatesPage: React.FC = () => {
       return;
     }
     setEditingTemplate(template);
+    setIsCopyMode(false);
+    setIsModalOpen(true);
+  };
+
+  const handleDuplicate = (template: ShiftTemplate) => {
+    if (!canManageShifts) {
+      addToast({
+        type: 'error',
+        title: 'Từ chối quyền hạn',
+        message: 'Tài khoản nhân viên chỉ có quyền xem danh mục mẫu ca.',
+      });
+      return;
+    }
+    setEditingTemplate(template);
+    setIsCopyMode(true);
     setIsModalOpen(true);
   };
 
@@ -150,47 +167,18 @@ export const ShiftTemplatesPage: React.FC = () => {
         subtitle="Quản lý chuẩn hóa khung giờ ca làm việc, định biên nhân sự tối thiểu/tối đa và màu sắc nhận diện trực quan."
         action={
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            {/* Dropdown Lọc Theo Chi Nhánh */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E2E8F0',
-                borderRadius: 8,
-                padding: '4px 10px',
-                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-              }}
-            >
-              <Building2 size={16} color="#64748B" />
-              <select
-                aria-label="Lọc mẫu ca theo chi nhánh"
-                value={selectedBranchId ?? ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedBranchId(val ? Number(val) : undefined);
-                }}
-                disabled={!isDirector && Boolean(currentUser?.branchId)}
-                style={{
-                  border: 'none',
-                  outline: 'none',
-                  backgroundColor: 'transparent',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#1E293B',
-                  cursor: !isDirector && Boolean(currentUser?.branchId) ? 'not-allowed' : 'pointer',
-                  paddingRight: 6,
-                }}
-              >
-                {isDirector && <option value="">🌐 Tất cả chi nhánh (Chuỗi)</option>}
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    📍 {b.branchName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Component Lọc Theo Chi Nhánh Chuẩn UI/UX */}
+            <BranchSelect
+              branches={branches}
+              selectedBranchId={selectedBranchId ?? 0}
+              onChange={(id) => setSelectedBranchId(id === 0 ? undefined : id)}
+              disabled={!isDirector && Boolean(currentUser?.branchId)}
+              disabledTooltip="Bạn chỉ có quyền xem mẫu ca thuộc chi nhánh làm việc của mình"
+              allowAll={isDirector}
+              allLabel="Tất cả chi nhánh (Chuỗi)"
+              allSubLabel="Xem danh mục ca toàn bộ hệ thống"
+              minWidth={220}
+            />
 
             {canManageShifts && (
               <button
@@ -410,6 +398,7 @@ export const ShiftTemplatesPage: React.FC = () => {
               template={template}
               readOnly={!canManageShifts}
               onEdit={handleEdit}
+              onDuplicate={handleDuplicate}
               onDelete={handleDelete}
             />
           ))}
@@ -422,7 +411,8 @@ export const ShiftTemplatesPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
         initialData={editingTemplate}
-        defaultBranchId={selectedBranchId}
+        defaultBranchId={selectedBranchId || branches[0]?.id}
+        isCopy={isCopyMode}
       />
     </div>
   );
