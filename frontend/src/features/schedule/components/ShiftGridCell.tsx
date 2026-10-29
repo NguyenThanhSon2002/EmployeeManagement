@@ -3,6 +3,8 @@ import type { ShiftAssignment, ShiftTemplate, Employee, ScheduleConflict } from 
 import { Plus, X, AlertTriangle, Users, CheckCircle2, Lock, FileText, ArrowLeftRight } from 'lucide-react';
 import { Tooltip } from '@/shared/components/Tooltip';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useScheduleStore } from '../store/useScheduleStore';
 
 interface ShiftGridCellProps {
     template: ShiftTemplate;
@@ -33,6 +35,13 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
   onOpenOverrideModal,
   onOpenSwapModal,
 }) => {
+    const { currentRole, currentUser } = useAuthStore();
+    const scheduleStatus = useScheduleStore((s) => s.scheduleStatus);
+    const isDirectorOrAdmin = currentRole === 'ROLE_DIRECTOR';
+    const isManager = currentRole === 'ROLE_MANAGER';
+    const isManagerOrAdmin = isDirectorOrAdmin || isManager;
+    const isPublished = scheduleStatus === 'PUBLISHED';
+
     const currentCount = assignments.length;
     const minRequired = template.minStaffing || 1;
     const maxCapacity = template.maxStaffing || minRequired;
@@ -372,31 +381,41 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
 
                                     {/* Action button */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-                                        {onOpenSwapModal && !isExternal && (
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onOpenSwapModal(assignment);
-                                                }}
-                                                className="staff-chip-swap-btn"
-                                                title={`Đề xuất nhường ca này cho đồng nghiệp`}
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    padding: 2,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: '#6366F1',
-                                                    borderRadius: 3,
-                                                    transition: 'color 0.15s ease',
-                                                }}
-                                            >
-                                                <ArrowLeftRight size={12} />
-                                            </button>
-                                        )}
+                                        {(() => {
+                                            const isOwner = Number(assignment.employeeId) === Number(currentUser?.id);
+                                            const canRequestSwap = Boolean(
+                                                onOpenSwapModal &&
+                                                !isExternal &&
+                                                !assignment.readOnly &&
+                                                (isManagerOrAdmin || (isPublished && isOwner))
+                                            );
+                                            if (!canRequestSwap) return null;
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onOpenSwapModal?.(assignment);
+                                                    }}
+                                                    className="staff-chip-swap-btn"
+                                                    title={`Đề xuất nhường ca này cho đồng nghiệp`}
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        padding: 2,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#6366F1',
+                                                        borderRadius: 3,
+                                                        transition: 'color 0.15s ease',
+                                                    }}
+                                                >
+                                                    <ArrowLeftRight size={12} />
+                                                </button>
+                                            );
+                                        })()}
                                         {isExternal || assignment.readOnly ? (
                                             <span
                                                 title={`Ca làm việc tại ${assignment.branchName || 'chi nhánh khác'} (Chỉ đọc)`}

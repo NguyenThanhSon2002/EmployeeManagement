@@ -22,8 +22,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -87,6 +89,37 @@ public class ShiftSwapService {
             targetConflicts.addAll(bResult.getWarnings());
         }
 
+        LocalDateTime shiftStart = LocalDateTime.of(
+                reqAssign.getWorkDate(),
+                reqAssign.getSnapshotStartTime() != null ? reqAssign.getSnapshotStartTime() : LocalTime.of(8, 0)
+        );
+        LocalDateTime now = LocalDateTime.now();
+
+        if (shiftStart.isBefore(now)) {
+            targetConflicts.add(new ScheduleConflictDto(
+                    "PAST_SHIFT",
+                    "WARNING",
+                    reqAssign.getEmployeeId(),
+                    reqAssign.getSnapshotShiftName(),
+                    reqAssign.getWorkDate(),
+                    reqAssign.getWorkShiftId(),
+                    "Đổi ca hồi tố (ca làm việc đã diễn ra trong quá khứ). Quản lý sẽ thẩm định và đối soát chấm công."
+            ));
+        } else {
+            long hoursUntilShift = Duration.between(now, shiftStart).toHours();
+            if (hoursUntilShift < 24) {
+                targetConflicts.add(new ScheduleConflictDto(
+                        "WARN_SHORT_NOTICE_SWAP",
+                        "WARNING",
+                        reqAssign.getEmployeeId(),
+                        reqAssign.getSnapshotShiftName(),
+                        reqAssign.getWorkDate(),
+                        reqAssign.getWorkShiftId(),
+                        "Đổi ca sát giờ (còn " + hoursUntilShift + " giờ trước khi vào ca). Yêu cầu không tuân thủ quy định thời hạn báo trước."
+                ));
+            }
+        }
+
         boolean hasError = targetConflicts.stream().anyMatch(c -> "ERROR".equalsIgnoreCase(c.getSeverity()) || "MANDATORY".equalsIgnoreCase(c.getSeverity()));
         boolean hasWarning = !targetConflicts.isEmpty();
 
@@ -97,9 +130,17 @@ public class ShiftSwapService {
         response.setTargetConflicts(targetConflicts);
 
         if (hasError) {
-            response.setMessage("Không thể nhường ca: Đồng nghiệp vi phạm quy định làm việc (nghỉ ngơi tối thiểu hoặc vượt trần giờ làm).");
+            response.setMessage("Không thể nhường ca: Đồng nghiệp vi phạm quy định làm việc (nghỉ ngơi tối thiểu hoặc trùng ca).");
         } else if (hasWarning) {
-            response.setMessage("Có cảnh báo nhẹ về quy định làm việc nhưng vẫn có thể gửi đề xuất để Quản lý xem xét.");
+            boolean isPast = targetConflicts.stream().anyMatch(c -> "PAST_SHIFT".equals(c.getRuleCode()));
+            boolean isShortNotice = targetConflicts.stream().anyMatch(c -> "WARN_SHORT_NOTICE_SWAP".equals(c.getRuleCode()));
+            if (isPast) {
+                response.setMessage("Cảnh báo đổi ca hồi tố: Ca làm việc đã diễn ra trong quá khứ, Quản lý sẽ thẩm định và đối soát chấm công.");
+            } else if (isShortNotice) {
+                response.setMessage("Cảnh báo đổi ca sát giờ: Yêu cầu gửi cách giờ vào ca chưa đầy 24h, Quản lý sẽ thẩm định lý do khẩn cấp.");
+            } else {
+                response.setMessage("Có cảnh báo nhẹ về quy định làm việc nhưng vẫn có thể gửi đề xuất để Quản lý xem xét.");
+            }
         } else {
             response.setMessage("Ca làm việc hoàn toàn hợp lệ, đồng nghiệp có thể nhận ca.");
         }
@@ -133,6 +174,14 @@ public class ShiftSwapService {
                 }
             } else {
                 throw new BusinessException("FORBIDDEN_SWAP", "Bạn chỉ được phép đề xuất nhường ca làm việc của chính mình.", HttpStatus.FORBIDDEN);
+            }
+        }
+
+        // Kiểm tra trạng thái công bố lịch tuần:
+        // Nhân viên chỉ được phép đề xuất khi lịch đã PUBLISHED
+        if (!isDirectorOrAdmin && !isManager) {
+            if (!"PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+                throw new BusinessException("SCHEDULE_NOT_PUBLISHED", "Nhân viên chỉ được phép gửi đề xuất đổi/nhường ca khi lịch làm việc tuần đã được công bố chính thức.", HttpStatus.BAD_REQUEST);
             }
         }
 
