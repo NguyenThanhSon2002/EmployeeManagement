@@ -157,7 +157,7 @@ export interface EmployeeMonthlySchedule {
 export type ConflictSeverity = 'MANDATORY' | 'WARNING';
 
 /** Rule codes for scheduling business rules */
-export type ConflictRuleCode = 'BR-001' | 'BR-002' | 'BR-003' | 'BR-004' | 'BR-005' | 'BR-006' | 'BR-007' | 'BR-DAILY-LIMIT' | 'BR-TRAVEL-BUFFER' | 'WARN_STAFFING_CAPACITY';
+export type ConflictRuleCode = 'BR-001' | 'BR-002' | 'BR-003' | 'BR-004' | 'BR-005' | 'BR-006' | 'BR-007' | 'BR-DAILY-LIMIT' | 'BR-TRAVEL-BUFFER' | 'WARN_STAFFING_CAPACITY' | 'WARN_SHORT_NOTICE_SWAP' | 'PAST_SHIFT';
 
 /** Scheduling Conflict Object */
 export interface ScheduleConflict {

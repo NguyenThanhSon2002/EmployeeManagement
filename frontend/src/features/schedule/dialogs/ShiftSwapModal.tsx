@@ -123,6 +123,22 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
       return;
     }
 
+    const isTimeNotice = simulationResult?.targetConflicts.some(
+      (c) =>
+        c.ruleCode === 'WARN_SHORT_NOTICE_SWAP' ||
+        (c as any).conflictType === 'WARN_SHORT_NOTICE_SWAP' ||
+        c.ruleCode === 'PAST_SHIFT' ||
+        (c as any).conflictType === 'PAST_SHIFT'
+    );
+    if (isTimeNotice && reason.trim().length < 6) {
+      addToast({
+        type: 'warning',
+        title: 'Lý do đổi ca',
+        message: 'Đổi ca sát giờ (< 24h) hoặc đổi ca hồi tố bắt buộc phải ghi rõ lý do để Quản lý thẩm định.',
+      });
+      return;
+    }
+
     if (simulationResult?.hasError) {
       addToast({
         type: 'error',
@@ -404,11 +420,18 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                   <div style={{ fontSize: 12, color: '#92400E', marginTop: 4 }}>
                     {simulationResult.message}
                   </div>
-                  {simulationResult.targetConflicts.map((c, idx) => (
-                    <div key={idx} style={{ fontSize: 11.5, color: '#B45309', marginTop: 3 }}>
-                      • <strong>Đồng nghiệp:</strong> {c.message}
-                    </div>
-                  ))}
+                  {simulationResult.targetConflicts.map((c, idx) => {
+                    const isTimeNotice =
+                      c.ruleCode === 'WARN_SHORT_NOTICE_SWAP' ||
+                      (c as any).conflictType === 'WARN_SHORT_NOTICE_SWAP' ||
+                      c.ruleCode === 'PAST_SHIFT' ||
+                      (c as any).conflictType === 'PAST_SHIFT';
+                    return (
+                      <div key={idx} style={{ fontSize: 11.5, color: '#B45309', marginTop: 3, fontWeight: isTimeNotice ? 600 : 400 }}>
+                        {isTimeNotice ? '⚠️ Lưu ý thời gian: ' : '• Đồng nghiệp: '}{c.message}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#15803D', fontSize: 12.5, fontWeight: 600 }}>

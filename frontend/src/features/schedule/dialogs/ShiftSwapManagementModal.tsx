@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { format } from 'date-fns';
 import type { ShiftSwapItem } from '../types/swap.types';
 import { shiftSwapService } from '../api/shiftSwapService';
 import { useModalFocusTrap } from '@/hooks/useModalFocusTrap';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
+import { useScheduleStore } from '../store/useScheduleStore';
 import {
   ArrowLeftRight,
   ArrowRight,
@@ -11,6 +13,7 @@ import {
   Check,
   CheckCheck,
   Filter,
+  Calendar,
   Loader2,
   Trash2,
   ShieldCheck,
@@ -38,6 +41,13 @@ export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> =
   const { currentRole, currentUser } = useAuthStore();
   const isManagerOrDirector = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_MANAGER';
   const currentEmpId = currentUser?.id || 1;
+  const currentStartDate = useScheduleStore((s) => s.currentStartDate);
+  const defaultMonth = useMemo(() => {
+    return currentStartDate ? currentStartDate.substring(0, 7) : format(new Date(), 'yyyy-MM');
+  }, [currentStartDate]);
+
+  // Bộ lọc theo tháng (định dạng YYYY-MM hoặc 'ALL')
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => defaultMonth);
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'INBOX' | 'SENT' | 'MANAGER'>(() =>
@@ -74,26 +84,39 @@ export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> =
     }
   }, [isOpen, activeTab, branchId]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedMonth((prev) => prev || defaultMonth);
+    }
+  }, [isOpen, defaultMonth]);
+
   if (!isOpen) return null;
 
-  // Lọc theo Tab người dùng
+  // Lọc theo Tab người dùng & Tháng
   const displayItems = items.filter((item) => {
     if (activeTab === 'INBOX') {
-      return item.targetId === currentEmpId;
+      if (item.targetId !== currentEmpId) return false;
+    } else if (activeTab === 'SENT') {
+      if (item.requesterId !== currentEmpId) return false;
+    } else {
+      // Tab MANAGER: Áp dụng managerSubFilter
+      if (managerSubFilter === 'PENDING') {
+        if (item.status !== 'PENDING_PEER' && item.status !== 'PEER_ACCEPTED') return false;
+      } else if (managerSubFilter === 'APPROVED') {
+        if (item.status !== 'APPROVED') return false;
+      } else if (managerSubFilter === 'REJECTED') {
+        if (item.status !== 'REJECTED' && item.status !== 'PEER_REJECTED' && item.status !== 'CANCELLED') return false;
+      }
     }
-    if (activeTab === 'SENT') {
-      return item.requesterId === currentEmpId;
+
+    // Lọc theo tháng
+    if (selectedMonth && selectedMonth !== 'ALL') {
+      const itemMonth = item.requesterWorkDate
+        ? item.requesterWorkDate.substring(0, 7)
+        : (item.createdAt ? item.createdAt.substring(0, 7) : '');
+      if (itemMonth !== selectedMonth) return false;
     }
-    // Tab MANAGER: Áp dụng managerSubFilter
-    if (managerSubFilter === 'PENDING') {
-      return item.status === 'PENDING_PEER' || item.status === 'PEER_ACCEPTED';
-    }
-    if (managerSubFilter === 'APPROVED') {
-      return item.status === 'APPROVED';
-    }
-    if (managerSubFilter === 'REJECTED') {
-      return item.status === 'REJECTED' || item.status === 'PEER_REJECTED' || item.status === 'CANCELLED';
-    }
+
     return true; // ALL
   });
 
@@ -378,53 +401,123 @@ export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> =
           </button>
         </div>
 
-        {/* Sub-filter cho tab Quản lý */}
-        {activeTab === 'MANAGER' && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 20px',
-              backgroundColor: '#F1F5F9',
-              borderBottom: '1px solid #E2E8F0',
-              flexWrap: 'wrap',
-            }}
-          >
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: 4, marginRight: 4 }}>
-              <Filter size={13} /> Lọc trạng thái:
+        {/* Sub-filter cho trạng thái & tháng */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            padding: '8px 20px',
+            backgroundColor: '#F1F5F9',
+            borderBottom: '1px solid #E2E8F0',
+            flexWrap: 'wrap',
+          }}
+        >
+          {activeTab === 'MANAGER' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: 4, marginRight: 4 }}>
+                <Filter size={13} /> Lọc trạng thái:
+              </span>
+              {[
+                { id: 'ALL', label: 'Tất cả' },
+                { id: 'PENDING', label: 'Chờ xử lý' },
+                { id: 'APPROVED', label: 'Đã phê duyệt' },
+                { id: 'REJECTED', label: 'Đã từ chối / Hủy' },
+              ].map((f) => {
+                const isActive = managerSubFilter === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setManagerSubFilter(f.id as any)}
+                    style={{
+                      padding: '3px 9px',
+                      borderRadius: 6,
+                      border: '1px solid',
+                      fontSize: 11.5,
+                      fontWeight: isActive ? 700 : 500,
+                      backgroundColor: isActive ? '#2563EB' : '#FFFFFF',
+                      borderColor: isActive ? '#1D4ED8' : '#CBD5E1',
+                      color: isActive ? '#FFFFFF' : '#475569',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#475569' }}>
+              <Filter size={13} />
+              <span>{activeTab === 'INBOX' ? 'Yêu cầu đồng nghiệp gửi đến bạn' : 'Yêu cầu nhường ca bạn đã gửi'}</span>
+            </div>
+          )}
+
+          {/* Ô lọc theo tháng */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Calendar size={13} color="#475569" /> Lọc theo tháng:
             </span>
-            {[
-              { id: 'ALL', label: 'Tất cả' },
-              { id: 'PENDING', label: 'Chờ xử lý' },
-              { id: 'APPROVED', label: 'Đã phê duyệt' },
-              { id: 'REJECTED', label: 'Đã từ chối / Hủy' },
-            ].map((f) => {
-              const isActive = managerSubFilter === f.id;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setManagerSubFilter(f.id as any)}
-                  style={{
-                    padding: '3px 9px',
-                    borderRadius: 6,
-                    border: '1px solid',
-                    fontSize: 11.5,
-                    fontWeight: isActive ? 700 : 500,
-                    backgroundColor: isActive ? '#2563EB' : '#FFFFFF',
-                    borderColor: isActive ? '#1D4ED8' : '#CBD5E1',
-                    color: isActive ? '#FFFFFF' : '#475569',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {f.label}
-                </button>
-              );
-            })}
+            <input
+              type="month"
+              value={selectedMonth === 'ALL' ? '' : selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value || 'ALL')}
+              style={{
+                height: 28,
+                padding: '2px 8px',
+                fontSize: 12,
+                fontWeight: 600,
+                borderRadius: 6,
+                border: '1px solid #CBD5E1',
+                backgroundColor: '#FFFFFF',
+                color: '#1E293B',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+              title="Chọn tháng để lọc danh sách ca làm việc"
+            />
+            {selectedMonth && selectedMonth !== 'ALL' ? (
+              <button
+                type="button"
+                onClick={() => setSelectedMonth('ALL')}
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  border: '1px solid #CBD5E1',
+                  fontSize: 11.5,
+                  fontWeight: 500,
+                  backgroundColor: '#FFFFFF',
+                  color: '#64748B',
+                  cursor: 'pointer',
+                }}
+                title="Xem toàn bộ yêu cầu của tất cả các tháng"
+              >
+                Tất cả tháng
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSelectedMonth(defaultMonth)}
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  border: '1px solid #93C5FD',
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  backgroundColor: '#EFF6FF',
+                  color: '#2563EB',
+                  cursor: 'pointer',
+                }}
+                title="Quay lại lọc theo tháng của lịch hiện tại"
+              >
+                Tháng này
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Body Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', minHeight: 320, backgroundColor: '#F8FAFC' }}>
@@ -446,7 +539,30 @@ export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> =
               }}
             >
               <ArrowLeftRight size={36} color="#CBD5E1" />
-              <span style={{ fontSize: 13.5, fontWeight: 500 }}>Không có yêu cầu nhường ca nào trong mục này.</span>
+              <span style={{ fontSize: 13.5, fontWeight: 500 }}>
+                {selectedMonth && selectedMonth !== 'ALL'
+                  ? `Không có yêu cầu nhường ca nào trong tháng ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}.`
+                  : 'Không có yêu cầu nhường ca nào trong mục này.'}
+              </span>
+              {selectedMonth && selectedMonth !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedMonth('ALL')}
+                  style={{
+                    marginTop: 4,
+                    padding: '4px 12px',
+                    borderRadius: 6,
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: '#2563EB',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Xem tất cả các tháng
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -477,6 +593,28 @@ export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> =
                         <span style={{ fontSize: 12, fontWeight: 600, color: '#475569' }}>
                           🎁 Nhường ca 1 chiều
                         </span>
+                        {(() => {
+                          if (!item.requesterWorkDate || !item.requesterStartTime) return null;
+                          const shiftStart = new Date(`${item.requesterWorkDate}T${item.requesterStartTime}`).getTime();
+                          const createdTime = item.createdAt ? new Date(item.createdAt).getTime() : Date.now();
+                          const hoursUntil = (shiftStart - createdTime) / (1000 * 60 * 60);
+                          if (hoursUntil < 24) {
+                            return (
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: '#B45309',
+                                backgroundColor: '#FEF3C7',
+                                border: '1px solid #FCD34D',
+                                padding: '1px 8px',
+                                borderRadius: 12
+                              }}>
+                                ⚠️ Sát giờ ({Math.max(0, Math.round(hoursUntil))}h)
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                       <div>{getStatusBadge(item.status)}</div>
                     </div>

@@ -62,4 +62,30 @@ public class ShiftSwapServiceTest {
         assertNotNull(response.getRequesterConflicts());
         assertNotNull(response.getTargetConflicts());
     }
+
+    @Test
+    @DisplayName("createSwapRequest rejects employee requests when schedule is not PUBLISHED")
+    void testCreateSwapRequestDraftScheduleBlockedByEmployee() {
+        LocalDate targetDate = LocalDate.of(2026, 10, 27);
+        Employee emp153 = employeeRepository.findByEmployeeCodeAndDeletedAtIsNull("EMP-153").orElse(null);
+        assertNotNull(emp153);
+
+        ShiftAssignment matchingAssignment = shiftAssignmentRepository.findAll().stream()
+                .filter(a -> targetDate.equals(a.getWorkDate()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(matchingAssignment);
+
+        com.company.hrms.modules.swap.dto.CreateSwapRequest req = new com.company.hrms.modules.swap.dto.CreateSwapRequest();
+        req.setRequesterAssignmentId(matchingAssignment.getId());
+        req.setTargetEmployeeId(emp153.getId());
+        req.setReason("Lý do cá nhân");
+
+        // Khi caller là nhân viên thường (!isDirectorOrAdmin && !isManager) và schedule đang là DRAFT
+        com.company.hrms.common.exception.BusinessException ex = assertThrows(
+                com.company.hrms.common.exception.BusinessException.class,
+                () -> shiftSwapService.createSwapRequest(req, matchingAssignment.getEmployeeId(), false, false)
+        );
+        assertTrue(ex.getMessage().contains("chưa được công bố") || "SCHEDULE_NOT_PUBLISHED".equals(ex.getErrorCode()));
+    }
 }
