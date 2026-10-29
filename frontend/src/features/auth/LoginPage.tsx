@@ -12,7 +12,10 @@ import {
   Loader2,
   CalendarCheck2,
   AlertCircle,
+  UserPlus,
 } from 'lucide-react';
+import { ForgotPasswordModal } from './components/ForgotPasswordModal';
+import { RegisterAccountModal } from './components/RegisterAccountModal';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +28,8 @@ export const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -168,6 +173,53 @@ export const LoginPage: React.FC = () => {
         .btn-pwd-toggle:focus-visible {
           outline: 2px solid var(--color-primary, #2563EB);
           border-radius: 4px;
+        }
+
+        .btn-forgot-password {
+          background: none;
+          border: none;
+          padding: 4px 0;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--color-primary, #2563EB);
+          cursor: pointer;
+          transition: all 0.15s ease;
+          border-radius: 4px;
+        }
+
+        .btn-forgot-password:hover:not(:disabled) {
+          color: #1D4ED8;
+          text-decoration: underline;
+        }
+
+        .btn-forgot-password:focus-visible {
+          outline: 2px solid var(--color-primary, #2563EB);
+          outline-offset: 2px;
+        }
+
+        .btn-register-link {
+          background: none;
+          border: none;
+          padding: 4px 6px;
+          font-size: 13.5px;
+          font-weight: 700;
+          color: var(--color-primary, #2563EB);
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          transition: all 0.15s ease;
+          border-radius: 6px;
+        }
+
+        .btn-register-link:hover:not(:disabled) {
+          color: #1D4ED8;
+          background-color: #EFF6FF;
+        }
+
+        .btn-register-link:focus-visible {
+          outline: 2px solid var(--color-primary, #2563EB);
+          outline-offset: 2px;
         }
 
         @keyframes spin {
@@ -352,8 +404,8 @@ export const LoginPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Remember Me Checkbox */}
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          {/* Remember Me Checkbox & Forgot Password Link */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <label
               style={{
                 display: 'inline-flex',
@@ -380,6 +432,15 @@ export const LoginPage: React.FC = () => {
               />
               Duy trì đăng nhập
             </label>
+
+            <button
+              type="button"
+              onClick={() => setIsForgotPasswordOpen(true)}
+              disabled={isSubmitting || isLoading}
+              className="btn-forgot-password"
+            >
+              Quên mật khẩu?
+            </button>
           </div>
 
           {/* Submit Button */}
@@ -400,26 +461,52 @@ export const LoginPage: React.FC = () => {
             )}
           </button>
 
-          {/* Default Password Hint */}
+          {/* Register Account Section */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 6,
-              fontSize: '12px',
-              color: 'var(--color-text-muted, #64748B)',
+              fontSize: '13.5px',
+              color: 'var(--color-text-secondary, #64748B)',
               textAlign: 'center',
-              lineHeight: 1.4,
-              paddingTop: 4,
+              paddingTop: 10,
+              borderTop: '1px solid var(--color-border-subtle, #F1F5F9)',
+              marginTop: 6,
             }}
           >
-            <span>
-              💡 Mật khẩu mặc định: Mã nhân viên viết thường + <strong>@123</strong> (Ví dụ: <code style={{ backgroundColor: 'var(--color-bg-subtle, #F1F5F9)', padding: '1px 5px', borderRadius: 4, fontFamily: 'monospace', color: 'var(--color-text-primary, #0F172A)' }}>emp001@123</code>)
-            </span>
+            <span>Chưa có tài khoản?</span>
+            <button
+              type="button"
+              onClick={() => setIsRegisterOpen(true)}
+              disabled={isSubmitting || isLoading}
+              className="btn-register-link"
+            >
+              <UserPlus size={15} />
+              Tạo tài khoản mới
+            </button>
           </div>
         </form>
       </div>
+
+      {/* Modals */}
+      <ForgotPasswordModal
+        isOpen={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
+      />
+
+      <RegisterAccountModal
+        isOpen={isRegisterOpen}
+        onClose={() => setIsRegisterOpen(false)}
+        onSuccessLogin={(code, defPass) => {
+          setUsername(code);
+          if (defPass) {
+            setPassword(defPass);
+          }
+          setIsRegisterOpen(false);
+        }}
+      />
     </div>
   );
 };

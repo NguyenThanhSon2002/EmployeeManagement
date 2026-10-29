@@ -339,9 +339,9 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
 
                                         <span
                                             style={{
-                                                whiteSpace: 'normal',
-                                                wordBreak: 'normal',
-                                                overflowWrap: 'break-word',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
                                                 lineHeight: 1.3,
                                                 fontWeight: isExternal ? 500 : 600,
                                                 color: isExternal ? '#475569' : '#0F172A',

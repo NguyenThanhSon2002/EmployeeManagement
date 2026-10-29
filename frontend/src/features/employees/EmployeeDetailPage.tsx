@@ -201,6 +201,47 @@ export const EmployeeDetailPage: React.FC = () => {
   const branch = employee ? (branchesList.length > 0 ? branchesList : branches).find((b) => b.id === employee.branchId) : undefined;
   const position = employee ? positions.find((p) => p.id === employee.positionId) : undefined;
 
+  const assignedBranches = useMemo(() => {
+    if (!employee) return [];
+    const list: { id: number; branchName: string; isPrimary: boolean }[] = [];
+    const allBranches = branchesList.length > 0 ? branchesList : branches;
+
+    if (employee.branchId) {
+      const b = allBranches.find((item) => item.id === employee.branchId);
+      list.push({
+        id: employee.branchId,
+        branchName: b?.branchName || `Chi nhánh #${employee.branchId}`,
+        isPrimary: true,
+      });
+    }
+
+    if (employee.secondaryBranches && employee.secondaryBranches.length > 0) {
+      employee.secondaryBranches.forEach((sb) => {
+        if (sb.branchId && !list.some((item) => item.id === sb.branchId)) {
+          const b = allBranches.find((item) => item.id === sb.branchId);
+          list.push({
+            id: sb.branchId,
+            branchName: sb.branchName || b?.branchName || `Chi nhánh #${sb.branchId}`,
+            isPrimary: false,
+          });
+        }
+      });
+    } else if (employee.secondaryBranchIds && employee.secondaryBranchIds.length > 0) {
+      employee.secondaryBranchIds.forEach((bId) => {
+        if (bId && !list.some((item) => item.id === bId)) {
+          const b = allBranches.find((item) => item.id === bId);
+          list.push({
+            id: bId,
+            branchName: b?.branchName || `Chi nhánh #${bId}`,
+            isPrimary: false,
+          });
+        }
+      });
+    }
+
+    return list;
+  }, [employee, branchesList, branches]);
+
   // Monthly Schedule Filter & State
   const currentMonthStr = useMemo(() => format(new Date(), 'yyyy-MM'), []);
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
@@ -1410,6 +1451,7 @@ export const EmployeeDetailPage: React.FC = () => {
           employeeName={employee.fullName}
           canEdit={true}
           branchId={employee.branchId}
+          assignedBranches={assignedBranches}
         />
       )}
 

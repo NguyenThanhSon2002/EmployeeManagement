@@ -12,13 +12,21 @@ import {
     Clock,
     Loader2,
     Star,
+    Building2,
 } from 'lucide-react';
+
+export interface AssignedBranchOption {
+    id: number;
+    branchName: string;
+    isPrimary?: boolean;
+}
 
 interface EmployeeAvailabilityTabProps {
     employeeId: number;
     employeeName: string;
     canEdit?: boolean;
     branchId?: number;
+    assignedBranches?: AssignedBranchOption[];
 }
 
 const DAYS_OF_WEEK = [
@@ -84,6 +92,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                                                                     employeeName,
                                                                                     canEdit = true,
                                                                                     branchId,
+                                                                                    assignedBranches = [],
                                                                                 }) => {
     const { addToast } = useUIStore();
     const {
@@ -93,6 +102,14 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
         fetchEmployeeAvailability,
     } = useAvailabilityStore();
     const { shiftTemplates, fetchShiftTemplates } = useScheduleStore();
+
+    const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(branchId);
+
+    useEffect(() => {
+        if (branchId) {
+            setSelectedBranchId(branchId);
+        }
+    }, [branchId]);
 
     const [localGrid, setLocalGrid] = useState<Record<number, number[]>>(() =>
         getAvailability(employeeId)
@@ -105,8 +122,8 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        fetchShiftTemplates(branchId);
-    }, [branchId, fetchShiftTemplates]);
+        fetchShiftTemplates(selectedBranchId);
+    }, [selectedBranchId, fetchShiftTemplates]);
 
     // Tự động tải dữ liệu khả dụng từ backend khi mở tab nhân viên
     useEffect(() => {
@@ -138,6 +155,10 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
         const list = shiftTemplates && shiftTemplates.length > 0 ? shiftTemplates : DEFAULT_FALLBACK_TEMPLATES;
         return list.filter((t) => t.isActive);
     }, [shiftTemplates]);
+
+    const activeTemplateIds = useMemo(() => {
+        return new Set(activeTemplates.map((t) => t.id));
+    }, [activeTemplates]);
 
     // Toggle single cell
     const handleToggleCell = (shiftId: number, dayOfWeek: number) => {
@@ -218,7 +239,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
         if (!canEdit || isSaving) return;
         setIsSaving(true);
         try {
-            const success = await saveAvailability(employeeId, localGrid, localPreferredShifts);
+            const success = await saveAvailability(employeeId, localGrid, localPreferredShifts, selectedBranchId);
             if (success) {
                 setIsDirty(false);
                 addToast({
@@ -238,14 +259,24 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
         }
     };
 
-    // Count total available slots
+    // Count total available slots ONLY for the active templates of the selected branch
     const totalSlots = useMemo(() => {
         let count = 0;
         for (let d = 1; d <= 7; d++) {
-            count += (localGrid[d] || []).length;
+            const slots = localGrid[d] || [];
+            for (const shiftId of slots) {
+                if (activeTemplateIds.has(shiftId)) {
+                    count++;
+                }
+            }
         }
         return count;
-    }, [localGrid]);
+    }, [localGrid, activeTemplateIds]);
+
+    // Count preferred shifts for the active templates of the selected branch
+    const preferredSlotsCount = useMemo(() => {
+        return localPreferredShifts.filter((id) => activeTemplateIds.has(id)).length;
+    }, [localPreferredShifts, activeTemplateIds]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -294,7 +325,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                             >
                                 {isLoading ? 'Đang nạp dữ liệu...' : `${totalSlots} ca khả dụng/tuần`}
                             </span>
-                            {localPreferredShifts.length > 0 && (
+                            {preferredSlotsCount > 0 && (
                                 <span
                                     className="badge"
                                     style={{
@@ -309,7 +340,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                     }}
                                 >
                                     <Star size={11} fill="#B45309" color="#B45309" />
-                                    {localPreferredShifts.length} ca ưu tiên
+                                    {preferredSlotsCount} ca ưu tiên
                                 </span>
                             )}
                         </div>
@@ -327,54 +358,108 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                     </div>
                 </div>
 
-                {/* Action Buttons */}
-                {canEdit && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                            type="button"
-                            className="btn btn-default"
-                            onClick={handleClearAll}
-                            disabled={isSaving || isLoading}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, height: 36 }}
-                            title="Xóa trắng toàn bộ lịch rảnh"
-                        >
-                            <Trash2 size={15} color="#DC2626" /> Xóa toàn bộ
-                        </button>
-
-                        {isDirty && (
-                            <button
-                                type="button"
-                                className="btn btn-default"
-                                onClick={handleReset}
-                                disabled={isSaving || isLoading}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, height: 36 }}
-                                title="Khôi phục trạng thái ban đầu"
-                            >
-                                <RotateCcw size={15} /> Hoàn tác
-                            </button>
-                        )}
-
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={handleSave}
-                            disabled={!isDirty || isSaving || isLoading}
+                {/* Branch Filter & Action Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    {/* Branch Filter Dropdown */}
+                    {assignedBranches && assignedBranches.length > 0 && (
+                        <div
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: 6,
-                                fontSize: 13,
-                                height: 36,
-                                fontWeight: 600,
-                                opacity: isDirty && !isSaving ? 1 : 0.6,
-                                cursor: isDirty && !isSaving ? 'pointer' : 'not-allowed',
+                                padding: '4px 8px',
+                                backgroundColor: 'var(--color-bg-subtle, #F8FAFC)',
+                                border: '1px solid var(--color-border, #E2E8F0)',
+                                borderRadius: 6,
                             }}
                         >
-                            {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                            {isSaving ? 'Đang lưu...' : 'Lưu lịch khả dụng'}
-                        </button>
-                    </div>
-                )}
+                            <Building2 size={16} color="var(--color-primary, #2563EB)" />
+                            <label
+                                htmlFor="availability-branch-select"
+                                style={{
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: 'var(--color-text-secondary, #64748B)',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                Chi nhánh:
+                            </label>
+                            <select
+                                id="availability-branch-select"
+                                value={selectedBranchId || ''}
+                                onChange={(e) => setSelectedBranchId(Number(e.target.value))}
+                                style={{
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    padding: '4px 8px',
+                                    borderRadius: 4,
+                                    border: '1px solid var(--color-border, #CBD5E1)',
+                                    backgroundColor: 'var(--color-bg-surface, #FFFFFF)',
+                                    color: 'var(--color-text-main, #1F2937)',
+                                    cursor: 'pointer',
+                                    outline: 'none',
+                                    height: 30,
+                                }}
+                            >
+                                {assignedBranches.map((b) => (
+                                    <option key={b.id} value={b.id}>
+                                        {b.branchName} {b.isPrimary ? '(Chính)' : '(Kiêm nhiệm)'}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    {canEdit && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <button
+                                type="button"
+                                className="btn btn-default"
+                                onClick={handleClearAll}
+                                disabled={isSaving || isLoading}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, height: 36 }}
+                                title="Xóa trắng toàn bộ lịch rảnh"
+                            >
+                                <Trash2 size={15} color="#DC2626" /> Xóa toàn bộ
+                            </button>
+
+                            {isDirty && (
+                                <button
+                                    type="button"
+                                    className="btn btn-default"
+                                    onClick={handleReset}
+                                    disabled={isSaving || isLoading}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, height: 36 }}
+                                    title="Khôi phục trạng thái ban đầu"
+                                >
+                                    <RotateCcw size={15} /> Hoàn tác
+                                </button>
+                            )}
+
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={handleSave}
+                                disabled={!isDirty || isSaving || isLoading}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    fontSize: 13,
+                                    height: 36,
+                                    fontWeight: 600,
+                                    opacity: isDirty && !isSaving ? 1 : 0.6,
+                                    cursor: isDirty && !isSaving ? 'pointer' : 'not-allowed',
+                                }}
+                            >
+                                {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                                {isSaving ? 'Đang lưu...' : 'Lưu lịch khả dụng'}
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Availability Matrix Table */}
