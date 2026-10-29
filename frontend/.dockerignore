@@ -1,0 +1,7 @@
+@"
+node_modules
+dist
+.git
+*.md
+"@ | Set-Content frontend\.dockerignore
+Get-Content frontend\.dockerignore
