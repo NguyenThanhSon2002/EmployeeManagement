@@ -423,29 +423,6 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           }
         }
 
-        // Merge any unsynced or locally pending assignments from localCache that aren't in backend yet
-        if (Object.keys(localCache).length > 0) {
-          for (const [key, list] of Object.entries(localCache)) {
-            for (const localItem of list) {
-              if (localItem.workDate >= monStr && localItem.workDate <= sunStr) {
-                const alreadyInBackend = (thisWeekOnlyAssignments[key] || []).some(
-                  (b) => b.id === localItem.id ||
-                         (b.employeeId === localItem.employeeId && b.workDate === localItem.workDate && b.workShiftId === localItem.workShiftId)
-                );
-                if (!alreadyInBackend) {
-                  const existingList = mergedAssignments[key] ? [...mergedAssignments[key]] : [];
-                  existingList.push(localItem);
-                  mergedAssignments[key] = existingList;
-
-                  const weekList = thisWeekOnlyAssignments[key] ? [...thisWeekOnlyAssignments[key]] : [];
-                  weekList.push(localItem);
-                  thisWeekOnlyAssignments[key] = weekList;
-                }
-              }
-            }
-          }
-        }
-
         saveBranchScheduleToStorage(branchId, thisWeekOnlyAssignments, startDate);
 
         const templates: ShiftTemplate[] = (data.shift_templates || []).map((t: any) => ({

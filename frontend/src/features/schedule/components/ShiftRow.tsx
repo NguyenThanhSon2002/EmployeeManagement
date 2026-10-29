@@ -17,6 +17,7 @@ interface ShiftRowProps {
   onOpenAssignDrawer: (shiftTemplateId: number, workDate: string) => void;
   onRemoveAssignment: (assignmentId: number) => void;
   onOpenOverrideModal?: (assignment: ShiftAssignment) => void;
+  onOpenSwapModal?: (assignment: ShiftAssignment) => void;
 }
 
 export const ShiftRow: React.FC<ShiftRowProps> = ({
@@ -31,6 +32,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
   onOpenAssignDrawer,
   onRemoveAssignment,
   onOpenOverrideModal,
+  onOpenSwapModal,
 }) => {
   const { netHours } = calculateShiftDurations(
     template.startTime,
@@ -155,6 +157,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
               onRemoveAssignment(assignmentId);
             }}
             onOpenOverrideModal={onOpenOverrideModal}
+            onOpenSwapModal={onOpenSwapModal}
           />
         );
       })}

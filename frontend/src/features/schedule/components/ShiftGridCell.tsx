@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ShiftAssignment, ShiftTemplate, Employee, ScheduleConflict } from '@/types/domain.types';
-import { Plus, X, AlertTriangle, Users, CheckCircle2, Lock, FileText } from 'lucide-react';
+import { Plus, X, AlertTriangle, Users, CheckCircle2, Lock, FileText, ArrowLeftRight } from 'lucide-react';
 import { Tooltip } from '@/shared/components/Tooltip';
 import { UserAvatar } from '@/components/common/UserAvatar';
 
@@ -16,6 +16,7 @@ interface ShiftGridCellProps {
     onOpenAssignDrawer: () => void;
     onRemoveAssignment: (assignmentId: number, e: React.MouseEvent) => void;
     onOpenOverrideModal?: (assignment: ShiftAssignment) => void;
+    onOpenSwapModal?: (assignment: ShiftAssignment) => void;
 }
 
 export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
@@ -30,6 +31,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
   onOpenAssignDrawer,
   onRemoveAssignment,
   onOpenOverrideModal,
+  onOpenSwapModal,
 }) => {
     const currentCount = assignments.length;
     const minRequired = template.minStaffing || 1;
@@ -369,29 +371,16 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                     </div>
 
                                     {/* Action button */}
-                                    {isExternal || assignment.readOnly ? (
-                                        <span
-                                            title={`Ca làm việc tại ${assignment.branchName || 'chi nhánh khác'} (Chỉ đọc)`}
-                                            style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                color: '#94A3B8',
-                                                padding: 2,
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            <Lock size={12} />
-                                        </span>
-                                    ) : (
-                                        canEdit && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                                        {onOpenSwapModal && !isExternal && (
                                             <button
                                                 type="button"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    onRemoveAssignment(assignment.id, e);
+                                                    onOpenSwapModal(assignment);
                                                 }}
-                                                className="staff-chip-remove-btn"
-                                                title={`Gỡ ${displayName} khỏi ca này`}
+                                                className="staff-chip-swap-btn"
+                                                title={`Đề xuất nhường ca này cho đồng nghiệp`}
                                                 style={{
                                                     background: 'none',
                                                     border: 'none',
@@ -400,16 +389,54 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    color: 'var(--color-text-muted)',
+                                                    color: '#6366F1',
                                                     borderRadius: 3,
                                                     transition: 'color 0.15s ease',
-                                                    flexShrink: 0,
                                                 }}
                                             >
-                                                <X size={12} />
+                                                <ArrowLeftRight size={12} />
                                             </button>
-                                        )
-                                    )}
+                                        )}
+                                        {isExternal || assignment.readOnly ? (
+                                            <span
+                                                title={`Ca làm việc tại ${assignment.branchName || 'chi nhánh khác'} (Chỉ đọc)`}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    color: '#94A3B8',
+                                                    padding: 2,
+                                                }}
+                                            >
+                                                <Lock size={12} />
+                                            </span>
+                                        ) : (
+                                            canEdit && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onRemoveAssignment(assignment.id, e);
+                                                    }}
+                                                    className="staff-chip-remove-btn"
+                                                    title={`Gỡ ${displayName} khỏi ca này`}
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        padding: 2,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: 'var(--color-text-muted)',
+                                                        borderRadius: 3,
+                                                        transition: 'color 0.15s ease',
+                                                    }}
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
                                 </div>
                             </Tooltip>
                         );

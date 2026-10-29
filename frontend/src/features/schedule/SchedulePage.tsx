@@ -1,4 +1,4 @@
-import React, {useState, useMemo, useEffect} from 'react';
+import React, {useState, useMemo, useEffect, useCallback} from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {addDays, format, parseISO, startOfMonth, addMonths} from 'date-fns';
 import {getWeekDays, getCurrentMonday} from '@/utils/date.utils';
@@ -19,9 +19,11 @@ import {CopyWeekDialog} from './dialogs/CopyWeekDialog';
 import {PublishConfirmDialog} from './dialogs/PublishConfirmDialog';
 import {UnpublishConfirmDialog} from './dialogs/UnpublishConfirmDialog';
 import {OverrideReasonModal} from './dialogs/OverrideReasonModal';
+import {ShiftSwapModal} from './dialogs/ShiftSwapModal';
+import {ShiftSwapManagementModal} from './dialogs/ShiftSwapManagementModal';
 import {buildWeeklyRosterCsv, downloadCsvFile} from '@/utils/csv-exporter.utils';
 import {calculateShiftDurations} from '@/utils/schedule-calc.utils';
-import type {ShiftAssignment} from '@/types/domain.types';
+import type {ShiftAssignment, ShiftTemplate} from '@/types/domain.types';
 import './schedule.css';
 import {autoAssignShifts} from '@/utils/auto-assign.utils';
 import {useAvailabilityStore} from '@/features/employees/store/useAvailabilityStore';
@@ -178,6 +180,25 @@ export const SchedulePage: React.FC = () => {
     const [unpublishDialogOpen, setUnpublishDialogOpen] = useState(false);
     const [overrideModalAssignment, setOverrideModalAssignment] = useState<ShiftAssignment | null>(null);
 
+    // Shift Swap State
+    const [swapModalOpen, setSwapModalOpen] = useState(false);
+    const [swapSourceAssignment, setSwapSourceAssignment] = useState<ShiftAssignment | null>(null);
+    const [swapManagementOpen, setSwapManagementOpen] = useState(false);
+
+    const handleOpenSwapModal = useCallback((assignment: ShiftAssignment) => {
+        setSwapSourceAssignment(assignment);
+        setSwapModalOpen(true);
+    }, []);
+
+    const handleCloseSwapModal = useCallback(() => {
+        setSwapModalOpen(false);
+        setSwapSourceAssignment(null);
+    }, []);
+
+    const handleCloseSwapManagement = useCallback(() => {
+        setSwapManagementOpen(false);
+    }, []);
+
     const handleOpenOverrideModal = (assignment: ShiftAssignment) => {
         setOverrideModalAssignment(assignment);
     };
@@ -275,6 +296,38 @@ export const SchedulePage: React.FC = () => {
             setWeek(format(monday, 'yyyy-MM-dd'));
         }
     };
+
+    // Danh sách toàn bộ nhân sự của chi nhánh hiện tại (không bị lọc bởi filter thanh công cụ)
+    const branchEmployees = useMemo(() => {
+        const curBranchId = filterOptions.branchId || 1;
+        const directoryEmployees = useDirectoryStore.getState().employees;
+
+        // Nếu employees trong scheduleStore đã có từ backend getWeeklySchedule,
+        // danh sách này đã bao gồm cả nhân viên cơ sở gốc và nhân viên đa cơ sở/kiêm nhiệm.
+        if (employees.length > 0) {
+            return employees.filter((emp) => {
+                if (emp.employmentStatus === 'RESIGNED' || emp.isActive === false) return false;
+                if (emp.positionId === 1) return false; // Không xếp ca cho Giám đốc
+                return true;
+            });
+        }
+
+        // Fallback từ danh bạ tổng
+        return directoryEmployees.filter((emp) => {
+            if (emp.employmentStatus === 'RESIGNED' || emp.isActive === false) return false;
+            if (emp.positionId === 1) return false;
+            const matchesBranch =
+                !curBranchId ||
+                emp.branchId === curBranchId ||
+                (emp as any).secondaryBranchIds?.includes(curBranchId) ||
+                emp.hasMultiBranch;
+            return matchesBranch;
+        });
+    }, [employees, filterOptions.branchId]);
+
+    const allAssignmentsFlat = useMemo(() => {
+        return Object.values(assignments).flat();
+    }, [assignments]);
 
     // Employees for Weekly Matrix (Never emptied out by conflict filter to prevent false 'Chưa phân ca')
     const gridEmployees = useMemo(() => {
@@ -416,9 +469,33 @@ export const SchedulePage: React.FC = () => {
         setSelectedShiftCell(null);
     };
 
-    const activeShiftTemplate = selectedShiftCell
-        ? shiftTemplates.find((t) => t.id === selectedShiftCell.shiftTemplateId) || null
-        : null;
+    const activeShiftTemplate = useMemo(() => {
+        if (!selectedShiftCell) return null;
+        const targetId = Number(selectedShiftCell.shiftTemplateId);
+        const found = shiftTemplates.find((t) => Number(t.id) === targetId);
+        if (found) return found;
+
+        // Fallback: Tìm trong assignments nếu là ca ngoại lệ/ca khác
+        const orphanAssignment = allAssignmentsFlat.find((a) => Number(a.workShiftId) === targetId);
+        if (orphanAssignment) {
+            return {
+                id: targetId,
+                shiftCode: `EXTRA_${targetId}`,
+                shiftName: orphanAssignment.snapshotShiftName || `Ca khác (#${targetId})`,
+                startTime: orphanAssignment.snapshotStartTime || '08:00',
+                endTime: orphanAssignment.snapshotEndTime || '17:00',
+                breakMinutes: orphanAssignment.snapshotBreakMinutes || 0,
+                isCrossMidnight: orphanAssignment.snapshotCrossMidnight || false,
+                colorCode: orphanAssignment.snapshotColorCode || '#2563EB',
+                textColor: '#FFFFFF',
+                minStaffing: 1,
+                maxStaffing: 99,
+                applicableDays: '1,2,3,4,5,6,7',
+                isActive: true,
+            } as ShiftTemplate;
+        }
+        return null;
+    }, [selectedShiftCell, shiftTemplates, allAssignmentsFlat]);
 
     const handleAssignEmployee = (payload: {
         employeeId: number;
@@ -661,6 +738,7 @@ export const SchedulePage: React.FC = () => {
                 onOpenBulkAssign={() => setBulkDialogOpen(true)}
                 onResetSchedule={handleResetSchedule}
                 onExportCsv={handleExportCsv}
+                onOpenSwapManagement={() => setSwapManagementOpen(true)}
             />
 
             {/* 2. Executive Summary Metrics Cards */}
@@ -718,6 +796,7 @@ export const SchedulePage: React.FC = () => {
                         onOpenAssignStaff={handleOpenAssignStaff}
                         onRemoveAssignment={handleRemoveAssignment}
                         onOpenOverrideModal={handleOpenOverrideModal}
+                        onOpenSwapModal={handleOpenSwapModal}
                     />
                 ) : (
                     <MonthViewGrid
@@ -756,8 +835,8 @@ export const SchedulePage: React.FC = () => {
                 onClose={handleCloseAssignStaff}
                 shiftTemplate={activeShiftTemplate}
                 workDate={selectedShiftCell?.workDate || ''}
-                employees={filteredEmployees}
-                allAssignments={Object.values(assignments).flat()}
+                employees={branchEmployees}
+                allAssignments={allAssignmentsFlat}
                 approvedLeaves={approvedLeaves}
                 holidays={holidays}
                 settings={settings}
@@ -774,7 +853,7 @@ export const SchedulePage: React.FC = () => {
                 onClose={() => setBulkDialogOpen(false)}
                 onGenerateAuto={handleGenerateAutoAssign}
                 onApplyAuto={handleApplyAutoAssign}
-                employees={employees.filter((e) => e.branchId === (filterOptions.branchId || 1) && e.positionId !== 1)}
+                employees={branchEmployees}
                 shiftTemplates={shiftTemplates}
                 existingAssignments={Object.values(assignments).flat()}
                 approvedLeaves={approvedLeaves}
@@ -824,6 +903,36 @@ export const SchedulePage: React.FC = () => {
                     onSaveReason={handleSaveOverrideReason}
                 />
             )}
+
+            {/* Shift Swap Modal (Tạo đơn đổi ca / nhường ca) */}
+            <ShiftSwapModal
+                isOpen={swapModalOpen}
+                onClose={handleCloseSwapModal}
+                sourceAssignment={swapSourceAssignment}
+                employees={branchEmployees}
+                allAssignments={allAssignmentsFlat}
+                currentUserId={currentUser?.id || 1}
+                onSuccess={() => {
+                    addToast({
+                        type: 'success',
+                        title: 'Đã gửi yêu cầu',
+                        message: 'Đơn xin đổi/nhường ca đã được gửi thành công.',
+                    });
+                    handleCloseSwapModal();
+                    setSwapManagementOpen(true);
+                }}
+            />
+
+            {/* Shift Swap Management Modal (Hộp thư duyệt và phản hồi đổi ca) */}
+            <ShiftSwapManagementModal
+                isOpen={swapManagementOpen}
+                onClose={handleCloseSwapManagement}
+                branchId={filterOptions.branchId || 1}
+                onScheduleUpdated={() => {
+                    const branchId = filterOptions.branchId || 1;
+                    fetchWeeklySchedule(branchId, currentStartDate);
+                }}
+            />
         </div>
     );
 };

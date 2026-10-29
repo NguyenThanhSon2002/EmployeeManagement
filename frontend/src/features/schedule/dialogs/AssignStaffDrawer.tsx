@@ -385,7 +385,11 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                 display: 'flex',
                 justifyContent: 'flex-end',
             }}
-            onClick={onClose}
+            onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                    onClose();
+                }
+            }}
         >
             <div
                 style={{

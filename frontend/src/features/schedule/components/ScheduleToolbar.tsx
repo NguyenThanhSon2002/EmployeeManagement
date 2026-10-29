@@ -12,6 +12,7 @@ import {
     Download,
     Sparkles,
     RotateCcw,
+    ArrowLeftRight,
 } from 'lucide-react';
 import { DatePickerPopover } from './DatePickerPopover';
 import { Tooltip } from '@/shared/components/Tooltip';
@@ -36,6 +37,7 @@ interface ScheduleToolbarProps {
     onOpenBulkAssign: () => void;
     onResetSchedule?: () => void;
     onExportCsv: () => void;
+    onOpenSwapManagement?: () => void;
 }
 
 export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
@@ -58,6 +60,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                                                                     onOpenBulkAssign,
                                                                     onResetSchedule,
                                                                     onExportCsv,
+                                                                    onOpenSwapManagement,
                                                                 }) => {
     const [isPickerOpen, setIsPickerOpen] = React.useState(false);
     const sunday = offsetWeeks(baseMonday, 0);
@@ -320,6 +323,30 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                         <Download size={14} color="#64748B" />
                         Xuất CSV
                     </button>
+
+                    {/* Shift Handover Management */}
+                    {onOpenSwapManagement && (
+                        <button
+                            type="button"
+                            className="btn btn-default"
+                            onClick={onOpenSwapManagement}
+                            title="Quản lý yêu cầu đổi / nhường ca"
+                            style={{
+                                height: 34,
+                                padding: '0 12px',
+                                fontSize: '12.5px',
+                                borderRadius: '8px',
+                                gap: 6,
+                                color: '#4F46E5',
+                                borderColor: '#C7D2FE',
+                                backgroundColor: '#EEF2FF',
+                                fontWeight: 600,
+                            }}
+                        >
+                            <ArrowLeftRight size={14} color="#4F46E5" />
+                            Đổi / nhường ca
+                        </button>
+                    )}
 
                     {/* Manager/Admin Actions */}
                     {!isEmployeeRole && (
