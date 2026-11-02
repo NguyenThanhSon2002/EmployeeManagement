@@ -6,6 +6,8 @@ import com.company.hrms.modules.availability.dto.EmployeeAvailabilityDto;
 import com.company.hrms.modules.availability.dto.SaveAvailabilityRequest;
 import com.company.hrms.modules.availability.repository.EmployeeAvailabilityRepository;
 import com.company.hrms.modules.availability.repository.EmployeePreferredShiftRepository;
+import com.company.hrms.modules.shift.domain.WorkShift;
+import com.company.hrms.modules.shift.repository.WorkShiftRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,18 +15,23 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class EmployeeAvailabilityService {
 
     private final EmployeeAvailabilityRepository availabilityRepository;
     private final EmployeePreferredShiftRepository preferredShiftRepository;
+    private final WorkShiftRepository workShiftRepository;
 
     public EmployeeAvailabilityService(
             EmployeeAvailabilityRepository availabilityRepository,
-            EmployeePreferredShiftRepository preferredShiftRepository) {
+            EmployeePreferredShiftRepository preferredShiftRepository,
+            WorkShiftRepository workShiftRepository) {
         this.availabilityRepository = availabilityRepository;
         this.preferredShiftRepository = preferredShiftRepository;
+        this.workShiftRepository = workShiftRepository;
     }
 
     @Transactional(readOnly = true)
@@ -96,9 +103,15 @@ public class EmployeeAvailabilityService {
 
     @Transactional
     public void saveAvailability(Long employeeId, Long branchId, SaveAvailabilityRequest request) {
+        Set<Long> allowedShiftIds = null;
         if (branchId != null) {
             availabilityRepository.deleteAllByEmployeeIdAndBranchId(employeeId, branchId);
             preferredShiftRepository.deleteAllByEmployeeIdAndBranchId(employeeId, branchId);
+            allowedShiftIds = workShiftRepository.findAllByBranchIdAndDeletedAtIsNullOrderByStartTimeAsc(branchId)
+                    .stream()
+                    .filter(ws -> Boolean.TRUE.equals(ws.getIsActive()))
+                    .map(WorkShift::getId)
+                    .collect(Collectors.toSet());
         } else {
             availabilityRepository.deleteAllByEmployeeId(employeeId);
             preferredShiftRepository.deleteAllByEmployeeId(employeeId);
@@ -115,6 +128,9 @@ public class EmployeeAvailabilityService {
                 }
 
                 for (Long shiftId : shiftIds) {
+                    if (allowedShiftIds != null && !allowedShiftIds.contains(shiftId)) {
+                        continue;
+                    }
                     entities.add(new EmployeeAvailability(employeeId, shiftId, dayOfWeek.byteValue(), true));
                 }
             }
@@ -124,7 +140,7 @@ public class EmployeeAvailabilityService {
         if (request.getPreferredShiftIds() != null && !request.getPreferredShiftIds().isEmpty()) {
             List<EmployeePreferredShift> prefEntities = new ArrayList<>();
             for (Long shiftId : request.getPreferredShiftIds()) {
-                if (shiftId != null) {
+                if (shiftId != null && (allowedShiftIds == null || allowedShiftIds.contains(shiftId))) {
                     prefEntities.add(EmployeePreferredShift.builder()
                             .employeeId(employeeId)
                             .workShiftId(shiftId)

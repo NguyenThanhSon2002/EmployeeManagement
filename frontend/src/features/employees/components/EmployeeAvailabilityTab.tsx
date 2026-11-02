@@ -239,8 +239,17 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
         if (!canEdit || isSaving) return;
         setIsSaving(true);
         try {
-            const success = await saveAvailability(employeeId, localGrid, localPreferredShifts, selectedBranchId);
+            // Chỉ gửi các ca thuộc mẫu ca hoạt động của chi nhánh đang chọn
+            const filteredGrid: Record<number, number[]> = {};
+            for (let d = 1; d <= 7; d++) {
+                filteredGrid[d] = (localGrid[d] || []).filter((id) => activeTemplateIds.has(id));
+            }
+            const filteredPreferred = localPreferredShifts.filter((id) => activeTemplateIds.has(id));
+
+            const success = await saveAvailability(employeeId, filteredGrid, filteredPreferred, selectedBranchId);
             if (success) {
+                setLocalGrid(filteredGrid);
+                setLocalPreferredShifts(filteredPreferred);
                 setIsDirty(false);
                 addToast({
                     type: 'success',

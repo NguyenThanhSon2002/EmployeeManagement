@@ -13,7 +13,22 @@ import java.util.List;
 @Repository
 public interface EmployeeAvailabilityRepository extends JpaRepository<EmployeeAvailability, Long> {
 
-    List<EmployeeAvailability> findAllByEmployeeId(Long employeeId);
+    @Query("""
+        SELECT ea FROM EmployeeAvailability ea
+        JOIN Employee e ON ea.employeeId = e.id
+        JOIN WorkShift ws ON ea.workShiftId = ws.id
+        WHERE ea.employeeId = :employeeId
+          AND ws.isActive = true
+          AND ws.deletedAt IS NULL
+          AND (
+              ws.branchId = e.branchId
+              OR EXISTS (
+                  SELECT 1 FROM EmployeeSecondaryBranch esb 
+                  WHERE esb.employeeId = e.id AND esb.branchId = ws.branchId
+              )
+          )
+    """)
+    List<EmployeeAvailability> findAllByEmployeeId(@Param("employeeId") Long employeeId);
 
     @Query("""
         SELECT ea FROM EmployeeAvailability ea
@@ -40,7 +55,17 @@ public interface EmployeeAvailabilityRepository extends JpaRepository<EmployeeAv
     @Query("""
         SELECT ea FROM EmployeeAvailability ea
         JOIN Employee e ON ea.employeeId = e.id
-        WHERE e.branchId = :branchId
+        JOIN WorkShift ws ON ea.workShiftId = ws.id
+        WHERE ws.branchId = :branchId
+          AND ws.isActive = true
+          AND ws.deletedAt IS NULL
+          AND (
+              e.branchId = :branchId
+              OR EXISTS (
+                  SELECT 1 FROM EmployeeSecondaryBranch esb 
+                  WHERE esb.employeeId = e.id AND esb.branchId = :branchId
+              )
+          )
           AND e.isActive = true
           AND e.deletedAt IS NULL
           AND e.employmentStatus != 'RESIGNED'
