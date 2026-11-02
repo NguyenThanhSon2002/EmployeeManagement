@@ -343,6 +343,19 @@ public class EmployeeService {
     }
 
     @Transactional
+    public EmployeeDto deleteAvatar(Long id) {
+        Employee employee = employeeRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", id));
+
+        if (employee.getAvatarUrl() != null) {
+            fileStorageService.deleteAvatarFile(employee.getAvatarUrl());
+            employee.setAvatarUrl(null);
+            employee = employeeRepository.save(employee);
+        }
+        return toDto(employee);
+    }
+
+    @Transactional
     public void deleteEmployee(Long id) {
         Employee employee = employeeRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", id));

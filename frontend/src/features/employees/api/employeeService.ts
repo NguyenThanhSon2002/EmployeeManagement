@@ -61,6 +61,10 @@ export const employeeService = {
     return api.post<Employee>(`/employees/${id}/avatar`, formData);
   },
 
+  async deleteAvatar(id: number): Promise<Employee> {
+    return api.delete<Employee>(`/employees/${id}/avatar`);
+  },
+
   async resetPassword(id: number, newPassword: string): Promise<void> {
     return api.post<void>(`/employees/${id}/reset-password`, { new_password: newPassword });
   },

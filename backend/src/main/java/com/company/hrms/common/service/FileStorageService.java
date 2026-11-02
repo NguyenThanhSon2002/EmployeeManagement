@@ -78,4 +78,20 @@ public class FileStorageService {
             throw new BusinessException("INTERNAL_ERROR", "Không thể lưu tập tin tải lên: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    public void deleteAvatarFile(String avatarUrl) {
+        if (!StringUtils.hasText(avatarUrl)) {
+            return;
+        }
+        try {
+            String filename = avatarUrl.substring(avatarUrl.lastIndexOf('/') + 1);
+            Path targetFile = Paths.get(baseUploadDir, "avatars", filename).toAbsolutePath().normalize();
+            boolean deleted = Files.deleteIfExists(targetFile);
+            if (deleted) {
+                log.info("[FileStorageService] Đã xóa tập tin ảnh đại diện vật lý: {}", targetFile);
+            }
+        } catch (Exception e) {
+            log.warn("[FileStorageService] Không thể xóa tập tin ảnh đại diện vật lý {}: {}", avatarUrl, e.getMessage());
+        }
+    }
 }

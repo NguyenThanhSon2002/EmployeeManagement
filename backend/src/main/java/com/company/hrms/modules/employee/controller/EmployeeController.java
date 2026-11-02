@@ -98,6 +98,13 @@ public class EmployeeController {
         return ApiResponse.success(employeeService.uploadAvatar(id, file));
     }
 
+    @DeleteMapping("/{id}/avatar")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER', 'EMPLOYEE')")
+    @Operation(summary = "Xóa ảnh đại diện của nhân viên")
+    public ApiResponse<EmployeeDto> deleteAvatar(@PathVariable Long id) {
+        return ApiResponse.success(employeeService.deleteAvatar(id));
+    }
+
     @PostMapping("/{id}/reset-password")
     @PreAuthorize("hasRole('DIRECTOR')")
     @Operation(summary = "Quản trị viên đặt lại mật khẩu cho nhân viên")

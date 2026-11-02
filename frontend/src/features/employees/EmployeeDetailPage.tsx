@@ -78,6 +78,7 @@ export const EmployeeDetailPage: React.FC = () => {
   // Change Password & Avatar Upload States
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { assignments, approvedLeaves } = useScheduleStore();
@@ -527,6 +528,49 @@ export const EmployeeDetailPage: React.FC = () => {
     }
   };
 
+  const handleDeleteAvatar = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!employee || !employee.avatarUrl || isDeletingAvatar) return;
+
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa ảnh đại diện của ${employee.fullName} không?`)) {
+      return;
+    }
+
+    setIsDeletingAvatar(true);
+    try {
+      if (!isMockEnabled()) {
+        await employeeService.deleteAvatar(employee.id);
+      }
+
+      setEmployee((prev) => (prev ? { ...prev, avatarUrl: '' } : null));
+
+      if (currentUser && currentUser.id === employee.id) {
+        setUser({ ...currentUser, avatarUrl: '' });
+      }
+
+      useDirectoryStore.getState().upsertEmployeeInDirectory({ ...employee, avatarUrl: '' });
+
+      addToast({
+        type: 'success',
+        title: 'Đã xóa ảnh đại diện',
+        message: 'Ảnh đại diện đã được gỡ bỏ và trở về biểu tượng chữ cái mặc định.',
+      });
+    } catch (err: any) {
+      console.error('Lỗi khi xóa ảnh đại diện:', err);
+      const msg = err?.message || err?.error?.message || 'Không thể xóa ảnh đại diện trên máy chủ';
+      addToast({
+        type: 'error',
+        title: 'Xóa ảnh thất bại',
+        message: msg,
+      });
+    } finally {
+      setIsDeletingAvatar(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {/* Back button */}
@@ -569,65 +613,114 @@ export const EmployeeDetailPage: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          {/* Avatar with Camera upload overlay */}
-          <div
-            style={{
-              position: 'relative',
-              width: 68,
-              height: 68,
-              borderRadius: 'var(--radius-full)',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-            onClick={() => fileInputRef.current?.click()}
-            title="Nhấp để thay đổi ảnh đại diện"
-          >
-            <UserAvatar
-              name={employee.fullName}
-              src={employee.avatarUrl}
-              size={68}
-              border="3px solid var(--color-border)"
-            />
-            {/* Hover overlay */}
+          {/* Avatar with Camera upload overlay & Delete button */}
+          <div style={{ position: 'relative', width: 68, height: 68, flexShrink: 0 }}>
             <div
               style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundColor: 'rgba(15, 23, 42, 0.45)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-                opacity: isUploadingAvatar ? 1 : 0,
-                transition: 'opacity 0.2s ease',
+                position: 'relative',
+                width: 68,
+                height: 68,
+                borderRadius: 'var(--radius-full)',
+                overflow: 'hidden',
+                cursor: 'pointer',
               }}
-              onMouseEnter={(e) => {
-                if (!isUploadingAvatar) e.currentTarget.style.opacity = '1';
-              }}
-              onMouseLeave={(e) => {
-                if (!isUploadingAvatar) e.currentTarget.style.opacity = '0';
-              }}
+              onClick={() => fileInputRef.current?.click()}
+              title="Nhấp để thay đổi ảnh đại diện"
             >
-              {isUploadingAvatar ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                <>
-                  <Camera size={18} />
-                  <span style={{ fontSize: 9, fontWeight: 600, marginTop: 2 }}>Đổi ảnh</span>
-                </>
-              )}
+              <UserAvatar
+                name={employee.fullName}
+                src={employee.avatarUrl}
+                size={68}
+                border="3px solid var(--color-border)"
+              />
+              {/* Hover overlay */}
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                  opacity: isUploadingAvatar || isDeletingAvatar ? 1 : 0,
+                  transition: 'opacity 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isUploadingAvatar && !isDeletingAvatar) e.currentTarget.style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isUploadingAvatar && !isDeletingAvatar) e.currentTarget.style.opacity = '0';
+                }}
+              >
+                {isUploadingAvatar || isDeletingAvatar ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <>
+                    <Camera size={18} />
+                    <span style={{ fontSize: 9, fontWeight: 600, marginTop: 2 }}>Đổi ảnh</span>
+                  </>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                style={{ display: 'none' }}
+                onChange={handleAvatarFileSelected}
+                disabled={isUploadingAvatar || isDeletingAvatar}
+              />
             </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png, image/jpeg, image/webp"
-              style={{ display: 'none' }}
-              onChange={handleAvatarFileSelected}
-              disabled={isUploadingAvatar}
-            />
+            {/* Nút xóa ảnh đại diện nếu đang có ảnh */}
+            {Boolean(employee.avatarUrl && employee.avatarUrl.trim()) && (
+              <button
+                type="button"
+                onClick={handleDeleteAvatar}
+                disabled={isDeletingAvatar || isUploadingAvatar}
+                style={{
+                  position: 'absolute',
+                  top: -4,
+                  right: -4,
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  border: '2px solid #FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: isDeletingAvatar ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                  transition: 'all 0.15s ease',
+                  zIndex: 10,
+                  padding: 0,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isDeletingAvatar) {
+                    e.currentTarget.style.transform = 'scale(1.15)';
+                    e.currentTarget.style.backgroundColor = '#DC2626';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isDeletingAvatar) {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.backgroundColor = '#EF4444';
+                  }
+                }}
+                title="Xóa ảnh đại diện này"
+                aria-label="Xóa ảnh đại diện"
+              >
+                {isDeletingAvatar ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Trash2 size={12} strokeWidth={2.5} />
+                )}
+              </button>
+            )}
           </div>
 
           <div>
