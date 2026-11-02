@@ -21,8 +21,8 @@ import {UnpublishConfirmDialog} from './dialogs/UnpublishConfirmDialog';
 import {OverrideReasonModal} from './dialogs/OverrideReasonModal';
 import {ShiftSwapModal} from './dialogs/ShiftSwapModal';
 import {ShiftSwapManagementModal} from './dialogs/ShiftSwapManagementModal';
-import {buildWeeklyRosterCsv, downloadCsvFile} from '@/utils/csv-exporter.utils';
-import {calculateShiftDurations} from '@/utils/schedule-calc.utils';
+import {downloadCsvFile, buildWeeklyRosterCsv} from '@/utils/csv-exporter.utils';
+import {sumWeeklyScheduledHours} from '@/utils/schedule-calc.utils';
 import type {ShiftAssignment, ShiftTemplate} from '@/types/domain.types';
 import './schedule.css';
 import {autoAssignShifts} from '@/utils/auto-assign.utils';
@@ -329,6 +329,16 @@ export const SchedulePage: React.FC = () => {
         return Object.values(assignments).flat();
     }, [assignments]);
 
+    // Shift Templates filtered by shiftCodeFilter
+    const filteredShiftTemplates = useMemo(() => {
+        if (!filterOptions.shiftCodeFilter) {
+            return shiftTemplates;
+        }
+        return shiftTemplates.filter(
+            (t) => t.shiftCode.toLowerCase() === filterOptions.shiftCodeFilter?.toLowerCase()
+        );
+    }, [shiftTemplates, filterOptions.shiftCodeFilter]);
+
     // Employees for Weekly Matrix (Never emptied out by conflict filter to prevent false 'Chưa phân ca')
     const gridEmployees = useMemo(() => {
         return employees.filter((emp) => {
@@ -379,10 +389,16 @@ export const SchedulePage: React.FC = () => {
             }
 
             if (filterOptions.shiftCodeFilter) {
+                const filterLower = filterOptions.shiftCodeFilter.toLowerCase();
                 const hasMatchingShift = allAssignmentsList.some((a) => {
-                    if (a.employeeId !== emp.id || a.status === 'CANCELLED') return false;
-                    const template = shiftTemplates.find((t) => t.id === a.workShiftId);
-                    return template?.shiftCode === filterOptions.shiftCodeFilter;
+                    const aDate = String(a.workDate).split('T')[0];
+                    if (aDate < currentStartDate || aDate > sundayStr) return false;
+                    if (Number(a.employeeId) !== Number(emp.id) || a.status === 'CANCELLED') return false;
+                    const template = shiftTemplates.find((t) => Number(t.id) === Number(a.workShiftId));
+                    const matchCode = template && template.shiftCode.toLowerCase() === filterLower;
+                    const matchName = template && template.shiftName.toLowerCase() === filterLower;
+                    const matchSnapshot = a.snapshotShiftName && a.snapshotShiftName.toLowerCase() === filterLower;
+                    return matchCode || matchName || matchSnapshot;
                 });
                 if (!hasMatchingShift) return false;
             }
@@ -414,23 +430,27 @@ export const SchedulePage: React.FC = () => {
 
         const dailyStaffCountMap: Record<string, number> = {};
         const allAssignmentsList: ShiftAssignment[] = Object.values(assignments).flat();
+        const validAssignmentsByEmp: Record<string, ShiftAssignment[]> = {};
 
         for (const a of allAssignmentsList) {
-            if (a.workDate >= currentStartDate && a.workDate <= sundayStr && a.status !== 'CANCELLED') {
-                const emp = employees.find((e) => e.id === a.employeeId);
+            const aDate = String(a.workDate).split('T')[0];
+            if (aDate >= currentStartDate && aDate <= sundayStr && a.status !== 'CANCELLED') {
+                const emp = employees.find((e) => Number(e.id) === Number(a.employeeId));
                 if (!emp || emp.employmentStatus === 'RESIGNED' || emp.isActive === false) {
                     continue;
                 }
                 shiftsCount++;
-                const {netHours} = calculateShiftDurations(
-                    a.snapshotStartTime,
-                    a.snapshotEndTime,
-                    a.snapshotBreakMinutes,
-                    a.snapshotCrossMidnight
-                );
-                hoursCount += netHours;
-                dailyStaffCountMap[a.workDate] = (dailyStaffCountMap[a.workDate] || 0) + 1;
+                const empKey = String(a.employeeId);
+                if (!validAssignmentsByEmp[empKey]) {
+                    validAssignmentsByEmp[empKey] = [];
+                }
+                validAssignmentsByEmp[empKey].push(a);
+                dailyStaffCountMap[aDate] = (dailyStaffCountMap[aDate] || 0) + 1;
             }
+        }
+
+        for (const empShifts of Object.values(validAssignmentsByEmp)) {
+            hoursCount += sumWeeklyScheduledHours(empShifts);
         }
 
         let understaffed = 0;
@@ -786,7 +806,7 @@ export const SchedulePage: React.FC = () => {
                 {viewMode === 'WEEK' ? (
                     <WeeklyGrid
                         baseMonday={baseMonday}
-                        shiftTemplates={shiftTemplates}
+                        shiftTemplates={filteredShiftTemplates}
                         employees={gridEmployees}
                         assignmentsMap={assignments}
                         conflictsMap={conflicts}
@@ -804,6 +824,8 @@ export const SchedulePage: React.FC = () => {
                         employees={filteredEmployees}
                         assignmentsMap={assignments}
                         holidays={holidays}
+                        shiftCodeFilter={filterOptions.shiftCodeFilter || ''}
+                        shiftTemplates={shiftTemplates}
                         onPrevMonth={handlePrevMonth}
                         onNextMonth={handleNextMonth}
                         onCurrentMonth={handleCurrentMonth}
@@ -826,6 +848,8 @@ export const SchedulePage: React.FC = () => {
                     weekDays={getWeekDays(baseMonday)}
                     assignmentsMap={assignments}
                     searchTerm={filterOptions.searchTerm || ''}
+                    shiftCodeFilter={filterOptions.shiftCodeFilter || ''}
+                    shiftTemplates={shiftTemplates}
                 />
             )}
 

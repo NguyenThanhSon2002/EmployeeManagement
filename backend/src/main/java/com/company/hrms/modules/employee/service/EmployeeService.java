@@ -595,7 +595,7 @@ public class EmployeeService {
                 sa.setSnapshotEndTime(matchedWs.getEndTime());
                 sa.setSnapshotBreakMinutes(matchedWs.getBreakMinutes() != null ? matchedWs.getBreakMinutes() : 0);
                 sa.setSnapshotCrossMidnight(Boolean.TRUE.equals(matchedWs.getIsCrossMidnight()));
-                sa.setSnapshotColorCode(matchedWs.getColorCode() != null ? matchedWs.getColorCode() : "#1677FF");
+                sa.setSnapshotColorCode(matchedWs.getColorCode());
 
                 LocalDateTime plannedStart = LocalDateTime.of(workDate, matchedWs.getStartTime());
                 LocalDateTime plannedEnd = Boolean.TRUE.equals(matchedWs.getIsCrossMidnight())

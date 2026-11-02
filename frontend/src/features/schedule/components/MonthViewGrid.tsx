@@ -10,7 +10,7 @@ import {
   isSameDay,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { ShiftAssignment, Employee, CompanyHoliday } from '@/types/domain.types';
+import type { ShiftAssignment, Employee, CompanyHoliday, ShiftTemplate } from '@/types/domain.types';
 import { formatDateIso } from '@/utils/date.utils';
 
 interface MonthViewGridProps {
@@ -18,6 +18,8 @@ interface MonthViewGridProps {
   employees: Employee[];
   assignmentsMap: Record<string, ShiftAssignment[]>;
   holidays: CompanyHoliday[];
+  shiftCodeFilter?: string;
+  shiftTemplates?: ShiftTemplate[];
   onSelectDay: (dateStr: string) => void;
   onPrevMonth?: () => void;
   onNextMonth?: () => void;
@@ -29,6 +31,8 @@ export const MonthViewGrid: React.FC<MonthViewGridProps> = ({
   employees,
   assignmentsMap,
   holidays,
+  shiftCodeFilter = '',
+  shiftTemplates = [],
   onSelectDay,
   onPrevMonth,
   onNextMonth,
@@ -192,9 +196,20 @@ export const MonthViewGrid: React.FC<MonthViewGridProps> = ({
 
           // Count active shifts on this date
           const allList: ShiftAssignment[] = Object.values(assignmentsMap).flat();
-          const dayAssignments = allList.filter(
-            (a) => a.workDate === dateStr && a.status !== 'CANCELLED'
-          );
+          const dayAssignments = allList.filter((a) => {
+            if (String(a.workDate).split('T')[0] !== dateStr || a.status === 'CANCELLED') return false;
+            if (shiftCodeFilter) {
+              const filterLower = shiftCodeFilter.toLowerCase();
+              const tmpl = shiftTemplates.find((t) => Number(t.id) === Number(a.workShiftId));
+              const matchCode = tmpl && tmpl.shiftCode.toLowerCase() === filterLower;
+              const matchName = tmpl && tmpl.shiftName.toLowerCase() === filterLower;
+              const matchSnapshot = a.snapshotShiftName && a.snapshotShiftName.toLowerCase() === filterLower;
+              if (!matchCode && !matchName && !matchSnapshot) {
+                return false;
+              }
+            }
+            return true;
+          });
 
           return (
             <div

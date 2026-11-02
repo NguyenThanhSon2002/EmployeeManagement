@@ -7,7 +7,7 @@ import type {
   CompanyHoliday,
   DemoSettings,
 } from '@/types/domain.types';
-import { calculateShiftDurations, sumWeeklyScheduledHours } from './schedule-calc.utils';
+import { calculateShiftDurations, sumWeeklyScheduledHours, calculateDeduplicatedNetHours, type TimeInterval } from './schedule-calc.utils';
 
 /**
  * Quy tắc nghỉ tối thiểu giữa các ca (BR-006) chỉ áp dụng khi nhân viên làm từ ngần này giờ/ngày trở lên.
@@ -82,8 +82,18 @@ export function assignmentToTimeRange(assignment: ShiftAssignment): ShiftTimeRan
  */
 export function checkShiftOverlap(
   newShift: ShiftTimeRange,
-  existingShifts: ShiftAssignment[]
-): { hasOverlap: boolean; conflictingShift: ShiftAssignment | null; message: string | null } {
+  existingShifts: ShiftAssignment[],
+  targetBranchId?: number
+): {
+  hasOverlap: boolean;
+  conflictingShift: ShiftAssignment | null;
+  message: string | null;
+  isHandover?: boolean;
+  handoverShift?: ShiftAssignment | null;
+  overlapMinutes?: number;
+} {
+  let handoverInfo: { isHandover: boolean; handoverShift: ShiftAssignment; overlapMinutes: number } | null = null;
+
   for (const shift of existingShifts) {
     if (shift.status === 'CANCELLED') continue;
     if (newShift.id !== undefined && shift.id === newShift.id) continue;
@@ -94,16 +104,46 @@ export function checkShiftOverlap(
 
     // Strict inequality: touching at edge (e.g. 14:00:00 to 14:00:00) does not overlap
     if (overlapStart < overlapEnd) {
+      // Check if this overlap is a valid Handover (Ca gối đầu bàn giao ca):
+      // 1. Same branch
+      const sameBranch = !targetBranchId || !shift.branchId || Number(shift.branchId) === Number(targetBranchId);
+
+      // 2. Sequential order: Start1 < Start2 < End1 < End2
+      const isSequential =
+        (existingRange.startMs < newShift.startMs && existingRange.endMs < newShift.endMs) ||
+        (newShift.startMs < existingRange.startMs && newShift.endMs < existingRange.endMs);
+
+      // 3. Overlap <= 60 minutes
+      const overlapMinutes = Math.round((overlapEnd - overlapStart) / (1000 * 60));
+
+      if (sameBranch && isSequential && overlapMinutes > 0 && overlapMinutes <= 60) {
+        // Valid handover overlap -> do not treat as mandatory overlap error
+        handoverInfo = { isHandover: true, handoverShift: shift, overlapMinutes };
+        continue;
+      }
+
       const branchSuffix = shift.branchName ? ` tại ${shift.branchName}` : '';
       return {
         hasOverlap: true,
         conflictingShift: shift,
         message: `Trùng khung giờ với ca ${shift.snapshotShiftName} (${shift.snapshotStartTime} - ${shift.snapshotEndTime}${branchSuffix})`,
+        isHandover: false,
       };
     }
   }
 
-  return { hasOverlap: false, conflictingShift: null, message: null };
+  if (handoverInfo) {
+    return {
+      hasOverlap: false,
+      conflictingShift: null,
+      message: null,
+      isHandover: true,
+      handoverShift: handoverInfo.handoverShift,
+      overlapMinutes: handoverInfo.overlapMinutes,
+    };
+  }
+
+  return { hasOverlap: false, conflictingShift: null, message: null, isHandover: false };
 }
 
 /**
@@ -237,39 +277,37 @@ export function calculateEmployeeDailyHours(
   candidateShift?: ShiftTimeRange,
   candidateNetHours?: number
 ): number {
-  let totalMinutes = 0;
+  const intervals: TimeInterval[] = [];
 
-  // Cộng ca ứng viên nếu ca đó thuộc đúng ngày targetDate
+  // 1. Candidate shift if belonging to targetDate
   if (candidateShift && candidateShift.workDate === targetDate) {
+    let breakMin = 0;
     if (candidateNetHours !== undefined) {
-      totalMinutes += Math.round(candidateNetHours * 60);
-    } else {
-      const { netHours } = calculateShiftDurations(
-        candidateShift.startTime,
-        candidateShift.endTime,
-        0,
-        candidateShift.isCrossMidnight
-      );
-      totalMinutes += Math.round(netHours * 60);
+      const grossMin = Math.round((candidateShift.endMs - candidateShift.startMs) / (1000 * 60));
+      breakMin = Math.max(0, grossMin - Math.round(candidateNetHours * 60));
     }
+    intervals.push({
+      startMs: candidateShift.startMs,
+      endMs: candidateShift.endMs,
+      breakMinutes: breakMin,
+    });
   }
 
-  // Cộng các ca đã phân công khác của nhân viên trong ngày đó
+  // 2. Existing assignments on targetDate
   for (const s of employeeShifts) {
     if (s.status === 'CANCELLED') continue;
     if (candidateShift?.id !== undefined && s.id === candidateShift.id) continue;
     if (s.workDate !== targetDate) continue;
 
-    const { netHours } = calculateShiftDurations(
-      s.snapshotStartTime,
-      s.snapshotEndTime,
-      s.snapshotBreakMinutes,
-      s.snapshotCrossMidnight
-    );
-    totalMinutes += Math.round(netHours * 60);
+    const timeRange = assignmentToTimeRange(s);
+    intervals.push({
+      startMs: timeRange.startMs,
+      endMs: timeRange.endMs,
+      breakMinutes: s.snapshotBreakMinutes || 0,
+    });
   }
 
-  return Math.round((totalMinutes / 60) * 10) / 10;
+  return calculateDeduplicatedNetHours(intervals);
 }
 
 /**
@@ -413,7 +451,7 @@ export function validateAllShiftConflicts(params: {
   }
 
   // BR-001: Overlap
-  const overlapCheck = checkShiftOverlap(newShiftRange, existingShifts);
+  const overlapCheck = checkShiftOverlap(newShiftRange, existingShifts, targetBranchId);
   if (overlapCheck.hasOverlap) {
     conflicts.push({
       id: `BR-001_${employee.id}_${newShiftRange.workDate}`,

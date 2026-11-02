@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import type { Employee, ShiftAssignment } from '@/types/domain.types';
+import type { Employee, ShiftAssignment, ShiftTemplate } from '@/types/domain.types';
 import { formatDateIso, getDayOfWeekVi } from '@/utils/date.utils';
-import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
+import { sumWeeklyScheduledHours } from '@/utils/schedule-calc.utils';
 import { AlertTriangle } from 'lucide-react';
 import { EmploymentStatusBadge } from '@/components/common/EmploymentStatusBadge';
 import { UserAvatar } from '@/components/common/UserAvatar';
@@ -11,6 +11,8 @@ interface EmployeeWeeklyHoursTableProps {
   weekDays: Date[];
   assignmentsMap: Record<string, ShiftAssignment[]>;
   searchTerm?: string;
+  shiftCodeFilter?: string;
+  shiftTemplates?: ShiftTemplate[];
 }
 
 export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> = ({
@@ -18,6 +20,8 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
   weekDays,
   assignmentsMap,
   searchTerm = '',
+  shiftCodeFilter = '',
+  shiftTemplates = [],
 }) => {
   // Flatten assignments
   const allAssignments = useMemo(() => {
@@ -49,20 +53,25 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
 
       const dailyData = weekDays.map((day) => {
         const dateStr = formatDateIso(day);
-        const dayShifts = allAssignments.filter(
-          (a) => a.employeeId === emp.id && a.workDate === dateStr && a.status !== 'CANCELLED'
-        );
+        const dayShifts = allAssignments.filter((a) => {
+          if (Number(a.employeeId) !== Number(emp.id)) return false;
+          if (String(a.workDate).split('T')[0] !== dateStr) return false;
+          if (a.status === 'CANCELLED') return false;
 
-        let dayHours = 0;
-        for (const s of dayShifts) {
-          const { netHours } = calculateShiftDurations(
-            s.snapshotStartTime,
-            s.snapshotEndTime,
-            s.snapshotBreakMinutes,
-            s.snapshotCrossMidnight
-          );
-          dayHours += netHours;
-        }
+          if (shiftCodeFilter) {
+            const filterLower = shiftCodeFilter.toLowerCase();
+            const tmpl = shiftTemplates.find((t) => Number(t.id) === Number(a.workShiftId));
+            const matchCode = tmpl && tmpl.shiftCode.toLowerCase() === filterLower;
+            const matchName = tmpl && tmpl.shiftName.toLowerCase() === filterLower;
+            const matchSnapshot = a.snapshotShiftName && a.snapshotShiftName.toLowerCase() === filterLower;
+            if (!matchCode && !matchName && !matchSnapshot) {
+              return false;
+            }
+          }
+          return true;
+        });
+
+        const dayHours = sumWeeklyScheduledHours(dayShifts);
 
         empTotalHours += dayHours;
         empTotalShifts += dayShifts.length;
@@ -79,7 +88,7 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
 
       // Multi-branch calculation: check if employee has shifts in other branches or flag
       const hasExternalShifts = allAssignments.some(
-        (a) => a.employeeId === emp.id && a.isExternal && a.status !== 'CANCELLED'
+        (a) => Number(a.employeeId) === Number(emp.id) && a.isExternal && a.status !== 'CANCELLED'
       );
       const isMultiBranch = Boolean(emp.hasMultiBranch || hasExternalShifts);
       const branchHours = Math.round(empTotalHours * 10) / 10;
@@ -102,12 +111,7 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
       totalWeekHoursAllEmployees: Math.round(grandTotalHours * 10) / 10,
       totalShiftsAllEmployees: grandTotalShifts,
     };
-  }, [filteredEmployees, weekDays, allAssignments]);
-
-  const avgHoursPerEmp =
-    filteredEmployees.length > 0
-      ? (totalWeekHoursAllEmployees / filteredEmployees.length).toFixed(1)
-      : '0.0';
+  }, [filteredEmployees, weekDays, allAssignments, shiftCodeFilter, shiftTemplates]);
 
   return (
     <div
@@ -187,9 +191,6 @@ export const EmployeeWeeklyHoursTable: React.FC<EmployeeWeeklyHoursTableProps> =
             <strong style={{ color: '#1D4ED8', fontSize: '13px', fontWeight: 700 }}>
               {totalWeekHoursAllEmployees}h
             </strong>
-            <span style={{ fontSize: '11px', color: '#64748B', marginLeft: 4 }}>
-              (TB: {avgHoursPerEmp}h/người)
-            </span>
           </div>
         </div>
       </div>

@@ -13,9 +13,9 @@ export interface LeaveBalance {
   id: number;
   employee_id: number;
   leave_type_id: number;
+  leave_type_name?: string;
   year: number;
-  allocated_days: number;
-  carried_over_days: number;
+  total_allocated: number;
   used_days: number;
   pending_days: number;
   remaining_days: number;
@@ -72,5 +72,9 @@ export const leaveService = {
       action,
       rejection_reason: rejectionReason,
     });
+  },
+
+  async cancelLeaveRequest(id: number): Promise<LeaveRequest> {
+    return api.put<LeaveRequest>(`/leaves/requests/${id}/cancel`, {});
   },
 };

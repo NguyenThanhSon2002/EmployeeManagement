@@ -15,8 +15,8 @@ export function mapDtoToShiftTemplate(dto: any): ShiftTemplate {
     endTime,
     breakMinutes: dto.break_minutes ?? dto.breakMinutes ?? 0,
     isCrossMidnight: Boolean(dto.is_cross_midnight ?? dto.isCrossMidnight),
-    colorCode: dto.color_code || dto.colorCode || '#1677FF',
-    textColor: dto.text_color || dto.textColor || '#FFFFFF',
+    colorCode: dto.color_code ?? dto.colorCode ?? null,
+    textColor: dto.text_color ?? dto.textColor ?? null,
     minStaffing: dto.min_staffing ?? dto.minStaffing ?? 1,
     maxStaffing: dto.max_staffing ?? dto.maxStaffing ?? 10,
     applicableDays: dto.applicable_days || dto.applicableDays || '1,2,3,4,5,6,7',
@@ -40,8 +40,14 @@ export function mapShiftTemplateToDto(t: Partial<ShiftTemplate>): Record<string,
   if (t.endTime !== undefined) payload.end_time = formatTime(t.endTime);
   if (t.breakMinutes !== undefined) payload.break_minutes = t.breakMinutes;
   if (t.isCrossMidnight !== undefined) payload.is_cross_midnight = t.isCrossMidnight;
-  if (t.colorCode !== undefined) payload.color_code = t.colorCode;
-  if (t.textColor !== undefined) payload.text_color = t.textColor;
+  if (t.colorCode !== undefined) {
+    payload.color_code = t.colorCode || null;
+    payload.colorCode = t.colorCode || null;
+  }
+  if (t.textColor !== undefined) {
+    payload.text_color = t.textColor || null;
+    payload.textColor = t.textColor || null;
+  }
   if (t.minStaffing !== undefined) payload.min_staffing = t.minStaffing;
   if (t.maxStaffing !== undefined) payload.max_staffing = t.maxStaffing;
   if (t.applicableDays !== undefined) payload.applicable_days = t.applicableDays;

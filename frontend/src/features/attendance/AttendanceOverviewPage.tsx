@@ -24,12 +24,14 @@ export const AttendanceOverviewPage: React.FC = () => {
     setSelectedDate,
     setBranchFilter,
     fetchRecords,
+    fetchCorrections,
   } = useAttendanceStore();
   const { employees, branches } = useDirectoryStore();
 
   React.useEffect(() => {
     fetchRecords?.(selectedDate, branchFilter || undefined);
-  }, [fetchRecords, selectedDate, branchFilter]);
+    fetchCorrections?.('PENDING', branchFilter || undefined);
+  }, [fetchRecords, fetchCorrections, selectedDate, branchFilter]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);

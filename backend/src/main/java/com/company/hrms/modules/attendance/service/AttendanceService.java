@@ -12,12 +12,16 @@ import com.company.hrms.modules.schedule.repository.ShiftAssignmentRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import com.company.hrms.modules.employee.domain.Employee;
+import com.company.hrms.modules.employee.repository.EmployeeRepository;
+import com.company.hrms.security.service.UserPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AttendanceService {
@@ -26,16 +30,19 @@ public class AttendanceService {
     private final AttendanceCorrectionRepository correctionRepository;
     private final ShiftAssignmentRepository assignmentRepository;
     private final AttendanceCalculationService calculationService;
+    private final EmployeeRepository employeeRepository;
 
     public AttendanceService(
             AttendanceRecordRepository recordRepository,
             AttendanceCorrectionRepository correctionRepository,
             ShiftAssignmentRepository assignmentRepository,
-            AttendanceCalculationService calculationService) {
+            AttendanceCalculationService calculationService,
+            EmployeeRepository employeeRepository) {
         this.recordRepository = recordRepository;
         this.correctionRepository = correctionRepository;
         this.assignmentRepository = assignmentRepository;
         this.calculationService = calculationService;
+        this.employeeRepository = employeeRepository;
     }
 
     @Transactional
@@ -153,6 +160,65 @@ public class AttendanceService {
         return toDto(saved);
     }
 
+    @Transactional(readOnly = true)
+    public Page<AttendanceCorrectionDto> getCorrections(Long employeeId, Long branchId, String status, Pageable pageable, UserPrincipal principal) {
+        boolean isDirector = principal != null && principal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_DIRECTOR".equals(a.getAuthority()) || "ROLE_ADMIN".equals(a.getAuthority()));
+        boolean isManager = principal != null && principal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MANAGER".equals(a.getAuthority()) || "ROLE_HR_MANAGER".equals(a.getAuthority()) || "ROLE_DEPT_MANAGER".equals(a.getAuthority()));
+
+        Long authEmpId = principal != null && principal.getEmployeeId() != null
+                ? principal.getEmployeeId()
+                : (principal != null ? principal.getId() : 1L);
+
+        // If regular employee, only allow viewing their own corrections
+        if (!isDirector && !isManager) {
+            return correctionRepository.findCorrectionsWithFilter(authEmpId, status, pageable)
+                    .map(this::toDto);
+        }
+
+        // If Manager and no explicit branchId passed, scope by manager's branch
+        if (isManager && !isDirector) {
+            Long managerBranchId = branchId;
+            if (managerBranchId == null && principal.getEmployeeId() != null) {
+                managerBranchId = employeeRepository.findByIdAndDeletedAtIsNull(principal.getEmployeeId())
+                        .map(Employee::getBranchId)
+                        .orElse(null);
+            }
+
+            if (employeeId != null) {
+                return correctionRepository.findCorrectionsWithFilter(employeeId, status, pageable)
+                        .map(this::toDto);
+            } else if (managerBranchId != null) {
+                List<Long> branchEmpIds = employeeRepository.findAllByBranchIdAndDeletedAtIsNull(managerBranchId)
+                        .stream().map(Employee::getId).collect(Collectors.toList());
+                if (branchEmpIds.isEmpty()) {
+                    return Page.empty(pageable);
+                }
+                return correctionRepository.findCorrectionsByEmployeeIds(branchEmpIds, status, pageable)
+                        .map(this::toDto);
+            }
+        }
+
+        // Director or Manager with specific branchId
+        if (branchId != null) {
+            List<Long> branchEmpIds = employeeRepository.findAllByBranchIdAndDeletedAtIsNull(branchId)
+                    .stream().map(Employee::getId).collect(Collectors.toList());
+            if (branchEmpIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+            if (employeeId != null) {
+                return correctionRepository.findCorrectionsWithFilter(employeeId, status, pageable)
+                        .map(this::toDto);
+            }
+            return correctionRepository.findCorrectionsByEmployeeIds(branchEmpIds, status, pageable)
+                    .map(this::toDto);
+        }
+
+        return correctionRepository.findCorrectionsWithFilter(employeeId, status, pageable)
+                .map(this::toDto);
+    }
+
     public AttendanceRecordDto toDto(AttendanceRecord r) {
         AttendanceRecordDto dto = new AttendanceRecordDto();
         dto.setId(r.getId());
@@ -188,6 +254,7 @@ public class AttendanceService {
         dto.setReviewedBy(c.getReviewedBy());
         dto.setReviewedAt(c.getReviewedAt());
         dto.setRejectionReason(c.getRejectionReason());
+        dto.setCreatedAt(c.getCreatedAt());
         return dto;
     }
 }

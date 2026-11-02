@@ -18,13 +18,19 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
   onClose,
   leaveRequest,
 }) => {
-  const { approveLeave, rejectLeave, getBalance } = useLeaveStore();
+  const { approveLeave, rejectLeave, getBalance, fetchBalances } = useLeaveStore();
   const { currentUser } = useAuthStore();
   const { addToast } = useUIStore();
   const { employees } = useDirectoryStore();
 
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && leaveRequest?.employeeId) {
+      fetchBalances(leaveRequest.employeeId);
+    }
+  }, [isOpen, leaveRequest?.employeeId, fetchBalances]);
 
   if (!isOpen || !leaveRequest) return null;
 

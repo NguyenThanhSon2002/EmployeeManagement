@@ -41,8 +41,8 @@ public class ShiftAssignment {
     @Column(name = "snapshot_cross_midnight", nullable = false)
     private Boolean snapshotCrossMidnight = false;
 
-    @Column(name = "snapshot_color_code", nullable = false, length = 20)
-    private String snapshotColorCode = "#1677FF";
+    @Column(name = "snapshot_color_code", length = 20)
+    private String snapshotColorCode;
 
     @Column(name = "planned_start_time", nullable = false)
     private LocalDateTime plannedStartTime;

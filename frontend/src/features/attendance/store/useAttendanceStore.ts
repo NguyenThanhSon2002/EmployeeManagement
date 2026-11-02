@@ -11,6 +11,7 @@ interface AttendanceState {
   branchFilter: number | null;
 
   fetchRecords: (workDate?: string, branchId?: number) => Promise<void>;
+  fetchCorrections: (status?: string, branchId?: number, employeeId?: number) => Promise<void>;
   setSelectedDate: (date: string) => void;
   setBranchFilter: (branchId: number | null) => void;
 
@@ -33,6 +34,40 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
     corrections: [],
     selectedDate: todayStr,
     branchFilter: null,
+
+    fetchCorrections: async (status?: string, branchId?: number, employeeId?: number) => {
+      if (isMockEnabled()) return;
+      try {
+        const data = await attendanceService.getCorrections({
+          status,
+          branch_id: branchId,
+          employee_id: employeeId,
+          page: 1,
+          size: 100,
+        });
+        if (data && Array.isArray(data)) {
+          const mapped: AttendanceCorrection[] = data.map((d: any) => ({
+            id: d.id,
+            attendanceRecordId: d.attendance_record_id || d.attendanceRecordId,
+            employeeId: d.employee_id || d.employeeId,
+            originalCheckIn: d.original_check_in || d.originalCheckIn || null,
+            originalCheckOut: d.original_check_out || d.originalCheckOut || null,
+            requestedCheckIn: d.requested_check_in || d.requestedCheckIn,
+            requestedCheckOut: d.requested_check_out || d.requestedCheckOut,
+            reason: d.reason || '',
+            attachmentUrl: d.attachment_url || d.attachmentUrl || null,
+            status: d.status || 'PENDING',
+            reviewedBy: d.reviewed_by || d.reviewedBy || null,
+            reviewedAt: d.reviewed_at || d.reviewedAt || null,
+            rejectionReason: d.rejection_reason || d.rejectionReason || null,
+            createdAt: d.created_at || d.createdAt || null,
+          }));
+          set({ corrections: mapped });
+        }
+      } catch (err) {
+        console.warn('Could not fetch corrections from backend:', err);
+      }
+    },
 
     fetchRecords: async (date?: string, branchId?: number) => {
       if (isMockEnabled()) return;
@@ -104,6 +139,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
                   c.id === newId ? { ...c, id: res.id } : c
                 ),
               }));
+              get().fetchCorrections();
             }
           })
           .catch((err) => {
@@ -163,6 +199,10 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
           .reviewCorrection(correctionId, {
             action: 'APPROVE',
           })
+          .then(() => {
+            get().fetchCorrections();
+            get().fetchRecords(get().selectedDate, get().branchFilter || undefined);
+          })
           .catch((err) => {
             console.warn('Backend reviewCorrection (APPROVE) failed:', err);
           });
@@ -190,6 +230,9 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
           .reviewCorrection(correctionId, {
             action: 'REJECT',
             rejection_reason: rejectionReason,
+          })
+          .then(() => {
+            get().fetchCorrections();
           })
           .catch((err) => {
             console.warn('Backend reviewCorrection (REJECT) failed:', err);

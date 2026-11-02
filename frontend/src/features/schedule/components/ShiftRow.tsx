@@ -46,6 +46,10 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
     return Object.values(assignmentsMap).flat();
   }, [assignmentsMap]);
 
+  const hasColor = Boolean(template.textColor || (template.colorCode && template.colorCode !== '#FFFFFF'));
+  const accentColor = template.textColor || template.colorCode || '#2563EB';
+  const bgColor = template.colorCode || '#EFF6FF';
+
   return (
     <div role="row" style={{ display: 'contents' }}>
       {/* 1. Sticky Column: Shift Template Identity & Info */}
@@ -53,28 +57,43 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
         role="rowheader"
         className="employee-sticky-cell shift-sticky-cell"
         style={{
-          borderLeft: `4px solid ${template.colorCode || '#2563EB'}`,
+          borderLeft: hasColor ? `5px solid ${accentColor}` : '4px solid #CBD5E1',
           padding: '12px 14px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           gap: 6,
           backgroundColor: '#FFFFFF',
+          background: hasColor ? `linear-gradient(90deg, ${bgColor}40 0%, #FFFFFF 120px)` : '#FFFFFF',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-          <span style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', letterSpacing: '-0.01em' }}>
-            {template.shiftName}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            {hasColor && (
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: accentColor,
+                  flexShrink: 0,
+                }}
+              />
+            )}
+            <span style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {template.shiftName}
+            </span>
+          </div>
           <span
             style={{
               fontSize: '11px',
               fontWeight: 700,
-              color: '#2563EB',
-              backgroundColor: '#EFF6FF',
-              padding: '1px 6px',
+              color: hasColor ? accentColor : '#475569',
+              backgroundColor: hasColor ? bgColor : '#F1F5F9',
+              padding: '2px 7px',
               borderRadius: '4px',
-              border: '1px solid #DBEAFE',
+              border: `1px solid ${hasColor ? `${accentColor}33` : '#E2E8F0'}`,
+              flexShrink: 0,
             }}
           >
             {netHours.toFixed(1)}h
@@ -92,7 +111,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
             fontWeight: 500,
           }}
         >
-          <Clock size={12} color="#94A3B8" style={{ flexShrink: 0 }} />
+          <Clock size={12} color={hasColor ? accentColor : '#94A3B8'} style={{ flexShrink: 0 }} />
           <span>
             {template.startTime} - {template.endTime}
             {template.isCrossMidnight && (
@@ -146,6 +165,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
             template={template}
             workDate={dateStr}
             assignments={cellAssignments}
+            allAssignments={allAssignments}
             employees={employees}
             conflictsMap={conflictsMap}
             isToday={isToday}

@@ -92,4 +92,19 @@ public class AttendanceController {
         AttendanceCorrectionDto dto = attendanceService.reviewCorrection(id, request, reviewerId);
         return ApiResponse.success(dto);
     }
+
+    @GetMapping("/corrections")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Lấy danh sách đơn giải trình chấm công", description = "Hỗ trợ phân trang, lọc theo nhân viên, chi nhánh, trạng thái")
+    public PageResponse<AttendanceCorrectionDto> getCorrections(
+            @RequestParam(value = "employee_id", required = false) Long employeeId,
+            @RequestParam(value = "branch_id", required = false) Long branchId,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<AttendanceCorrectionDto> resultPage = attendanceService.getCorrections(employeeId, branchId, status, pageRequest, principal);
+        return PageResponse.of(resultPage);
+    }
 }

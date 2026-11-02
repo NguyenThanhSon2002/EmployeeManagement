@@ -17,16 +17,17 @@ import {
 import { UserAvatar } from '@/components/common/UserAvatar';
 
 export const LeaveRequestsPage: React.FC = () => {
-  const { leaves, getBalance, cancelLeave, fetchLeaves } = useLeaveStore();
+  const { leaves, getBalance, cancelLeave, fetchLeaves, fetchBalances } = useLeaveStore();
   const { currentUser, currentRole } = useAuthStore();
   const { addToast } = useUIStore();
   const { employees } = useDirectoryStore();
 
-  React.useEffect(() => {
-    fetchLeaves?.();
-  }, [fetchLeaves]);
-
   const isManagerOrAdmin = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_MANAGER';
+
+  React.useEffect(() => {
+    fetchLeaves?.(isManagerOrAdmin ? undefined : currentUser.id);
+    fetchBalances?.(currentUser.id);
+  }, [fetchLeaves, fetchBalances, isManagerOrAdmin, currentUser.id]);
 
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');

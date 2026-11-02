@@ -83,20 +83,83 @@ export function calculateShiftDurations(
   return { grossHours, netHours, nightHours };
 }
 
+export interface TimeInterval {
+  startMs: number;
+  endMs: number;
+  breakMinutes?: number;
+}
+
 /**
- * Sums the total scheduled net hours for an employee across given assignments.
+ * Calculates total deduplicated net hours across a set of intervals (merging overlapping periods).
+ * Uses LeetCode #56 Merge Intervals algorithm to prevent duplicate count during handover periods.
+ */
+export function calculateDeduplicatedNetHours(intervals: TimeInterval[]): number {
+  if (!intervals || intervals.length === 0) return 0;
+
+  const valid = intervals.filter((iv) => iv.endMs > iv.startMs);
+  if (valid.length === 0) return 0;
+
+  const sorted = [...valid].sort((a, b) => a.startMs - b.startMs);
+  const merged: TimeInterval[] = [];
+  let current = { ...sorted[0], breakMinutes: sorted[0].breakMinutes || 0 };
+
+  for (let i = 1; i < sorted.length; i++) {
+    const next = sorted[i];
+    if (next.startMs <= current.endMs) {
+      // Overlapping or touching intervals: merge
+      current.endMs = Math.max(current.endMs, next.endMs);
+      current.breakMinutes = (current.breakMinutes || 0) + (next.breakMinutes || 0);
+    } else {
+      merged.push(current);
+      current = { ...next, breakMinutes: next.breakMinutes || 0 };
+    }
+  }
+  merged.push(current);
+
+  let totalMinutes = 0;
+  for (const iv of merged) {
+    const rawMinutes = Math.max(0, Math.round((iv.endMs - iv.startMs) / (1000 * 60)));
+    totalMinutes += Math.max(0, rawMinutes - (iv.breakMinutes || 0));
+  }
+
+  return Math.round((totalMinutes / 60) * 100) / 100;
+}
+
+/**
+ * Sums the total scheduled net hours for an employee across given assignments,
+ * deduplicating handover overlaps between adjacent shifts.
  */
 export function sumWeeklyScheduledHours(assignments: ShiftAssignment[]): number {
-  let total = 0;
+  const intervals: TimeInterval[] = [];
+
   for (const a of assignments) {
     if (a.status === 'CANCELLED') continue;
-    const { netHours } = calculateShiftDurations(
-      a.snapshotStartTime,
-      a.snapshotEndTime,
-      a.snapshotBreakMinutes,
-      a.snapshotCrossMidnight
-    );
-    total += netHours;
+
+    const startTimeStr = a.snapshotStartTime || (a.plannedStartTime ? a.plannedStartTime.split('T')[1] : '') || '00:00';
+    const endTimeStr = a.snapshotEndTime || (a.plannedEndTime ? a.plannedEndTime.split('T')[1] : '') || '00:00';
+
+    const [startH, startM] = startTimeStr.split(':').map((s) => parseInt(s, 10) || 0);
+    const [endH, endM] = endTimeStr.split(':').map((s) => parseInt(s, 10) || 0);
+
+    const dateOnly = String(a.workDate).split('T')[0];
+    const startDate = new Date(dateOnly + 'T00:00:00');
+    startDate.setHours(startH, startM, 0, 0);
+    const startMs = startDate.getTime();
+
+    const endDate = new Date(dateOnly + 'T00:00:00');
+    if (a.snapshotCrossMidnight || endH * 60 + endM < startH * 60 + startM) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+    endDate.setHours(endH, endM, 0, 0);
+    const endMs = endDate.getTime();
+
+    intervals.push({
+      startMs,
+      endMs,
+      breakMinutes: a.snapshotBreakMinutes || 0,
+    });
   }
-  return Math.round(total * 100) / 100;
+
+  return calculateDeduplicatedNetHours(intervals);
 }
+

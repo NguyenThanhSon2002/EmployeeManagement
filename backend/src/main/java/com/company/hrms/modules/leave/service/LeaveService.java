@@ -9,6 +9,9 @@ import com.company.hrms.modules.leave.dto.*;
 import com.company.hrms.modules.leave.repository.LeaveBalanceRepository;
 import com.company.hrms.modules.leave.repository.LeaveRequestRepository;
 import com.company.hrms.modules.leave.repository.LeaveTypeRepository;
+import com.company.hrms.modules.employee.domain.Employee;
+import com.company.hrms.modules.employee.repository.EmployeeRepository;
+import com.company.hrms.security.service.UserPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -27,14 +30,17 @@ public class LeaveService {
     private final LeaveTypeRepository leaveTypeRepository;
     private final LeaveBalanceRepository leaveBalanceRepository;
     private final LeaveRequestRepository leaveRequestRepository;
+    private final EmployeeRepository employeeRepository;
 
     public LeaveService(
             LeaveTypeRepository leaveTypeRepository,
             LeaveBalanceRepository leaveBalanceRepository,
-            LeaveRequestRepository leaveRequestRepository) {
+            LeaveRequestRepository leaveRequestRepository,
+            EmployeeRepository employeeRepository) {
         this.leaveTypeRepository = leaveTypeRepository;
         this.leaveBalanceRepository = leaveBalanceRepository;
         this.leaveRequestRepository = leaveRequestRepository;
+        this.employeeRepository = employeeRepository;
     }
 
     @Transactional(readOnly = true)
@@ -158,6 +164,93 @@ public class LeaveService {
         leave.setTier1ReviewedAt(LocalDateTime.now());
         LeaveRequest saved = leaveRequestRepository.save(leave);
         return toDto(saved);
+    }
+
+    @Transactional
+    public LeaveRequestDto cancelLeaveRequest(Long requestId, Long employeeId, boolean isManagerOrDirector) {
+        LeaveRequest leave = leaveRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn xin nghỉ phép", requestId));
+
+        if (!isManagerOrDirector && !leave.getEmployeeId().equals(employeeId)) {
+            throw new BusinessException("FORBIDDEN", "Bạn không có quyền hủy đơn xin nghỉ phép của nhân viên khác", HttpStatus.FORBIDDEN);
+        }
+
+        if (!"SUBMITTED".equalsIgnoreCase(leave.getStatus())) {
+            throw new BusinessException("CONFLICT", "Chỉ có thể hủy đơn nghỉ phép đang ở trạng thái chờ duyệt (SUBMITTED)", HttpStatus.CONFLICT);
+        }
+
+        leave.setStatus("CANCELLED");
+        int year = leave.getStartDate().getYear();
+        LeaveBalance balance = leaveBalanceRepository.findByEmployeeIdAndLeaveTypeIdAndYear(leave.getEmployeeId(), leave.getLeaveTypeId(), year)
+                .orElse(null);
+
+        if (balance != null) {
+            BigDecimal newPending = balance.getPendingDays().subtract(leave.getTotalDays());
+            balance.setPendingDays(newPending.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newPending);
+            leaveBalanceRepository.save(balance);
+        }
+
+        LeaveRequest saved = leaveRequestRepository.save(leave);
+        return toDto(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<LeaveRequestDto> getLeaveRequests(Long employeeId, Long branchId, String status, Pageable pageable, UserPrincipal principal) {
+        boolean isDirector = principal != null && principal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_DIRECTOR".equals(a.getAuthority()) || "ROLE_ADMIN".equals(a.getAuthority()));
+        boolean isManager = principal != null && principal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_MANAGER".equals(a.getAuthority()) || "ROLE_HR_MANAGER".equals(a.getAuthority()) || "ROLE_DEPT_MANAGER".equals(a.getAuthority()));
+
+        Long authEmpId = principal != null && principal.getEmployeeId() != null
+                ? principal.getEmployeeId()
+                : (principal != null ? principal.getId() : 1L);
+
+        // If regular employee, only allow viewing their own leave requests
+        if (!isDirector && !isManager) {
+            return leaveRequestRepository.findLeavesWithFilter(authEmpId, status, pageable)
+                    .map(this::toDto);
+        }
+
+        // If Manager and no explicit branchId, scope by manager's branch
+        if (isManager && !isDirector) {
+            Long managerBranchId = branchId;
+            if (managerBranchId == null && principal.getEmployeeId() != null) {
+                managerBranchId = employeeRepository.findByIdAndDeletedAtIsNull(principal.getEmployeeId())
+                        .map(Employee::getBranchId)
+                        .orElse(null);
+            }
+
+            if (employeeId != null) {
+                return leaveRequestRepository.findLeavesWithFilter(employeeId, status, pageable)
+                        .map(this::toDto);
+            } else if (managerBranchId != null) {
+                List<Long> branchEmpIds = employeeRepository.findAllByBranchIdAndDeletedAtIsNull(managerBranchId)
+                        .stream().map(Employee::getId).collect(Collectors.toList());
+                if (branchEmpIds.isEmpty()) {
+                    return Page.empty(pageable);
+                }
+                return leaveRequestRepository.findLeavesByEmployeeIds(branchEmpIds, status, pageable)
+                        .map(this::toDto);
+            }
+        }
+
+        // Director or Manager with explicit branchId
+        if (branchId != null) {
+            List<Long> branchEmpIds = employeeRepository.findAllByBranchIdAndDeletedAtIsNull(branchId)
+                    .stream().map(Employee::getId).collect(Collectors.toList());
+            if (branchEmpIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+            if (employeeId != null) {
+                return leaveRequestRepository.findLeavesWithFilter(employeeId, status, pageable)
+                        .map(this::toDto);
+            }
+            return leaveRequestRepository.findLeavesByEmployeeIds(branchEmpIds, status, pageable)
+                    .map(this::toDto);
+        }
+
+        return leaveRequestRepository.findLeavesWithFilter(employeeId, status, pageable)
+                .map(this::toDto);
     }
 
     @Transactional(readOnly = true)

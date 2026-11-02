@@ -17,7 +17,7 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
   onClose,
   targetRecord,
 }) => {
-  const { corrections, approveCorrection, rejectCorrection, submitCorrection } =
+  const { corrections, approveCorrection, rejectCorrection, submitCorrection, fetchCorrections } =
     useAttendanceStore();
   const { currentUser, currentRole } = useAuthStore();
   const { addToast } = useUIStore();
@@ -26,6 +26,12 @@ export const AttendanceCorrectionModal: React.FC<AttendanceCorrectionModalProps>
   const [activeTab, setActiveTab] = useState<'NEW' | 'PENDING'>(
     targetRecord ? 'NEW' : 'PENDING'
   );
+
+  React.useEffect(() => {
+    if (isOpen) {
+      fetchCorrections();
+    }
+  }, [isOpen, fetchCorrections]);
 
   // New correction form states
   const [requestedCheckIn, setRequestedCheckIn] = useState('08:00');

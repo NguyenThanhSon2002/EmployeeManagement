@@ -58,10 +58,10 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
       >
         <div style={{ fontSize: 32, marginBottom: 'var(--space-sm)' }}>⏱️</div>
         <h3 style={{ fontSize: 'var(--font-h3)', marginBottom: 'var(--space-xs)' }}>
-          Chưa có mẫu ca làm việc nào
+          Không tìm thấy ca làm việc phù hợp
         </h3>
         <p style={{ fontSize: 'var(--font-body)' }}>
-          Vui lòng kích hoạt hoặc thêm mới các mẫu ca (Shift Templates) để bắt đầu phân công nhân sự.
+          Không có ca làm việc nào khớp với bộ lọc hiện tại hoặc chưa có mẫu ca nào được kích hoạt.
         </p>
       </div>
     );

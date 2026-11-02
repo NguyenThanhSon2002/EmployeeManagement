@@ -48,6 +48,9 @@ public class AttendanceCorrectionDto {
     @JsonProperty("rejection_reason")
     private String rejectionReason;
 
+    @JsonProperty("created_at")
+    private LocalDateTime createdAt;
+
     public AttendanceCorrectionDto() {
     }
 
@@ -77,4 +80,6 @@ public class AttendanceCorrectionDto {
     public void setReviewedAt(LocalDateTime reviewedAt) { this.reviewedAt = reviewedAt; }
     public String getRejectionReason() { return rejectionReason; }
     public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

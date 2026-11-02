@@ -5,11 +5,13 @@ import { Tooltip } from '@/shared/components/Tooltip';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useScheduleStore } from '../store/useScheduleStore';
+import { assignmentToTimeRange, checkShiftOverlap } from '@/utils/conflict-detector.utils';
 
 interface ShiftGridCellProps {
     template: ShiftTemplate;
     workDate: string;
     assignments: ShiftAssignment[];
+    allAssignments?: ShiftAssignment[];
     employees: Employee[];
     conflictsMap: Record<string, ScheduleConflict[]>;
     isToday: boolean;
@@ -25,6 +27,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
   template,
   workDate,
   assignments = [],
+  allAssignments = [],
   employees = [],
   conflictsMap = {},
   isToday,
@@ -246,6 +249,15 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                         const hasConflict = effectiveConflicts.length > 0;
                         const isExternal = Boolean(assignment.isExternal);
 
+                        // Check if this assignment has consecutive handover connection with another shift of this employee
+                        const otherEmpAssignments = allAssignments.filter(
+                            (a) => a.employeeId === assignment.employeeId && a.id !== assignment.id && a.status !== 'CANCELLED'
+                        );
+                        const handoverResult = otherEmpAssignments.length > 0
+                            ? checkShiftOverlap(assignmentToTimeRange(assignment), otherEmpAssignments, assignment.branchId)
+                            : null;
+                        const isHandover = Boolean(handoverResult?.isHandover);
+
                         const displayName = emp ? emp.fullName : `NV #${assignment.employeeId}`;
                         const avatarUrl = emp?.avatarUrl;
 
@@ -305,7 +317,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                         backgroundColor: isExternal ? '#F8FAFC' : '#FFFFFF',
                                         border: isExternal
                                             ? (hasConflict ? '1px dashed #EF4444' : '1px dashed #CBD5E1')
-                                            : (hasConflict ? '1px solid #F59E0B' : (assignment.overrideReason ? '1px solid #93C5FD' : '1px solid #E2E8F0')),
+                                            : (hasConflict ? '1px solid #F59E0B' : (assignment.overrideReason ? '1px solid #93C5FD' : (isHandover ? '1px solid #5EEAD4' : '1px solid #E2E8F0'))),
                                         boxShadow: isExternal ? 'none' : '0 1px 2px rgba(15, 23, 42, 0.04)',
                                         opacity: isExternal ? 0.95 : 1,
                                         fontSize: '12px',

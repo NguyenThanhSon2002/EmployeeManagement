@@ -619,7 +619,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
                                                     width: 10,
                                                     height: 10,
                                                     borderRadius: '50%',
-                                                    backgroundColor: template.colorCode || '#2563EB',
+                                                    backgroundColor: template.textColor || template.colorCode || '#2563EB',
                                                     flexShrink: 0,
                                                 }}
                                             />

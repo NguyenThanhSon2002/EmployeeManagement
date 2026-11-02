@@ -8,8 +8,8 @@ export interface ShiftTemplate {
   end_time: string;
   break_minutes: number;
   is_cross_midnight: boolean;
-  color_code: string;
-  text_color?: string;
+  color_code?: string | null;
+  text_color?: string | null;
   min_staffing: number;
   max_staffing: number;
 }
@@ -25,7 +25,7 @@ export interface ShiftAssignment {
   end_time: string;
   break_minutes?: number;
   is_cross_midnight?: boolean;
-  color_code: string;
+  color_code?: string | null;
   status: string;
   override_rule?: string;
   override_reason?: string;

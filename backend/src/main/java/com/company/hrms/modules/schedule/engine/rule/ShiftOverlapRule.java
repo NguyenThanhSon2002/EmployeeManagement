@@ -34,6 +34,39 @@ public class ShiftOverlapRule implements ConflictRule {
             if (context.getPlannedStartTime().isBefore(existing.getPlannedEndTime()) &&
                     context.getPlannedEndTime().isAfter(existing.getPlannedStartTime())) {
 
+                // Check if this overlap is a valid Handover (Ca gối đầu hợp lệ):
+                // 1. Same branch (if branch information is known)
+                Long candBranchId = context.getTargetBranchId();
+                Long existBranchId = context.getScheduleBranchIdMap() != null && existing.getScheduleId() != null
+                        ? context.getScheduleBranchIdMap().get(existing.getScheduleId())
+                        : null;
+                boolean sameBranch = (candBranchId == null || existBranchId == null || candBranchId.equals(existBranchId));
+
+                // 2. Sequential order: Start1 < Start2 < End1 < End2 and overlap <= 60 minutes
+                boolean isHandover = false;
+                if (sameBranch) {
+                    if (existing.getPlannedStartTime().isBefore(context.getPlannedStartTime()) &&
+                            existing.getPlannedEndTime().isBefore(context.getPlannedEndTime())) {
+                        // Existing is Shift 1, Candidate is Shift 2
+                        long overlapMinutes = java.time.Duration.between(context.getPlannedStartTime(), existing.getPlannedEndTime()).toMinutes();
+                        if (overlapMinutes > 0 && overlapMinutes <= 60) {
+                            isHandover = true;
+                        }
+                    } else if (context.getPlannedStartTime().isBefore(existing.getPlannedStartTime()) &&
+                            context.getPlannedEndTime().isBefore(existing.getPlannedEndTime())) {
+                        // Candidate is Shift 1, Existing is Shift 2
+                        long overlapMinutes = java.time.Duration.between(existing.getPlannedStartTime(), context.getPlannedEndTime()).toMinutes();
+                        if (overlapMinutes > 0 && overlapMinutes <= 60) {
+                            isHandover = true;
+                        }
+                    }
+                }
+
+                if (isHandover) {
+                    // Valid handover overlap (gối đầu bàn giao ca <= 60 phút) -> Cho phép mà không chặn lỗi
+                    continue;
+                }
+
                 String empName = context.getEmployee() != null ? context.getEmployee().getFullName() : "Nhân viên #" + context.getEmployeeId();
                 String branchSuffix = "";
                 if (context.getScheduleBranchNameMap() != null && existing.getScheduleId() != null) {

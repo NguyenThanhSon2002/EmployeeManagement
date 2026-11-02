@@ -1,9 +1,15 @@
 package com.company.hrms;
 
 import com.company.hrms.common.response.ApiResponse;
+import com.company.hrms.modules.auth.domain.Role;
+import com.company.hrms.modules.auth.domain.User;
 import com.company.hrms.modules.auth.dto.AuthResponse;
 import com.company.hrms.modules.auth.dto.LoginRequest;
+import com.company.hrms.modules.auth.repository.RoleRepository;
+import com.company.hrms.modules.auth.repository.UserRepository;
 import com.company.hrms.modules.auth.service.AuthService;
+import com.company.hrms.modules.branch.domain.Branch;
+import com.company.hrms.modules.branch.repository.BranchRepository;
 import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
 import com.company.hrms.modules.report.controller.ReportController;
@@ -11,6 +17,7 @@ import com.company.hrms.modules.report.dto.AttendanceSummaryDto;
 import com.company.hrms.security.service.CustomUserDetailsService;
 import com.company.hrms.security.service.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,9 +25,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,7 +48,106 @@ public class ReportRbacTest {
     private EmployeeRepository employeeRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private BranchRepository branchRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
     private CustomUserDetailsService userDetailsService;
+
+    @BeforeEach
+    void setUp() {
+        Branch branch1 = branchRepository.findById(1L).orElseGet(() -> {
+            Branch b = new Branch();
+            b.setId(1L);
+            b.setBranchCode("CN_CAUGIAY");
+            b.setBranchName("Chi nhánh Cầu Giấy");
+            b.setIsActive(true);
+            return branchRepository.save(b);
+        });
+        if (!"Chi nhánh Cầu Giấy".equals(branch1.getBranchName())) {
+            branch1.setBranchName("Chi nhánh Cầu Giấy");
+            branchRepository.save(branch1);
+        }
+
+        Branch branch2 = branchRepository.findById(2L).orElseGet(() -> {
+            Branch b = new Branch();
+            b.setId(2L);
+            b.setBranchCode("CN_DONGDA");
+            b.setBranchName("Chi nhánh Đống Đa");
+            b.setIsActive(true);
+            return branchRepository.save(b);
+        });
+        if (!"Chi nhánh Đống Đa".equals(branch2.getBranchName())) {
+            branch2.setBranchName("Chi nhánh Đống Đa");
+            branchRepository.save(branch2);
+        }
+
+        Role roleManager = roleRepository.findByRoleCode("ROLE_MANAGER").orElseGet(() -> {
+            Role r = new Role();
+            r.setRoleCode("ROLE_MANAGER");
+            r.setRoleName("Quản lý");
+            return roleRepository.save(r);
+        });
+
+        Role roleDirector = roleRepository.findByRoleCode("ROLE_DIRECTOR").orElseGet(() -> {
+            Role r = new Role();
+            r.setRoleCode("ROLE_DIRECTOR");
+            r.setRoleName("Giám đốc");
+            return roleRepository.save(r);
+        });
+
+        User userEmp002 = userRepository.findByUsername("EMP-002").orElseGet(() -> {
+            User u = new User();
+            u.setUsername("EMP-002");
+            u.setEmail("emp002@company.com");
+            return u;
+        });
+        userEmp002.setPasswordHash(passwordEncoder.encode("emp002@123"));
+        userEmp002.setIsActive(true);
+        userEmp002.setDeletedAt(null);
+        userEmp002.setFailedLoginAttempts(0);
+        userEmp002.setRoles(new HashSet<>(List.of(roleManager)));
+        userEmp002 = userRepository.save(userEmp002);
+
+        final Long userId = userEmp002.getId();
+        Employee emp002 = employeeRepository.findByEmployeeCodeAndDeletedAtIsNull("EMP-002").orElseGet(() -> {
+            Employee e = new Employee();
+            e.setEmployeeCode("EMP-002");
+            e.setFullName("Trần Thị Bích");
+            return e;
+        });
+        emp002.setUserId(userId);
+        emp002.setPositionId(2L);
+        emp002.setBranchId(1L);
+        emp002.setIsActive(true);
+        emp002.setDeletedAt(null);
+        employeeRepository.save(emp002);
+
+        Employee emp021 = employeeRepository.findByEmployeeCodeAndDeletedAtIsNull("EMP-021").orElseGet(() -> {
+            Employee e = new Employee();
+            e.setEmployeeCode("EMP-021");
+            e.setFullName("Đinh Thị Uyên");
+            return e;
+        });
+        emp021.setPositionId(3L);
+        emp021.setBranchId(2L);
+        emp021.setIsActive(true);
+        emp021.setDeletedAt(null);
+        employeeRepository.save(emp021);
+
+        userRepository.findByUsername("admin").ifPresent(admin -> {
+            admin.setRoles(new HashSet<>(List.of(roleDirector)));
+            userRepository.save(admin);
+        });
+    }
 
     @AfterEach
     void tearDown() {

@@ -39,6 +39,24 @@ export const attendanceService = {
     return api.get<AttendanceRecord[]>(`/attendance/records?${query.toString()}`);
   },
 
+  async getCorrections(params?: {
+    employee_id?: number;
+    branch_id?: number;
+    status?: string;
+    page?: number;
+    size?: number;
+  }): Promise<AttendanceCorrectionResponse[]> {
+    const query = new URLSearchParams();
+    if (params?.employee_id) query.set('employee_id', params.employee_id.toString());
+    if (params?.branch_id) query.set('branch_id', params.branch_id.toString());
+    if (params?.status) query.set('status', params.status);
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.size) query.set('size', params.size.toString());
+
+    const res: any = await api.get(`/attendance/corrections?${query.toString()}`);
+    return res?.content || (Array.isArray(res) ? res : []);
+  },
+
   async submitCorrection(data: {
     attendance_record_id: number;
     requested_check_in: string;
@@ -53,3 +71,20 @@ export const attendanceService = {
     return api.put(`/attendance/corrections/${id}/review`, data);
   },
 };
+
+export interface AttendanceCorrectionResponse {
+  id: number;
+  attendance_record_id: number;
+  employee_id: number;
+  original_check_in?: string | null;
+  original_check_out?: string | null;
+  requested_check_in: string;
+  requested_check_out: string;
+  reason: string;
+  attachment_url?: string | null;
+  status: string;
+  reviewed_by?: number | null;
+  reviewed_at?: string | null;
+  rejection_reason?: string | null;
+  created_at?: string | null;
+}

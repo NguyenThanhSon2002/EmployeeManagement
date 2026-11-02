@@ -4,11 +4,15 @@ import com.company.hrms.modules.schedule.domain.ShiftAssignment;
 import com.company.hrms.modules.schedule.dto.ConflictValidationResult;
 import com.company.hrms.modules.schedule.dto.ScheduleConflictDto;
 import com.company.hrms.modules.schedule.engine.ConflictDetectionContext;
+import com.company.hrms.modules.schedule.engine.rule.IntervalMergeUtils.Interval;
+import static com.company.hrms.modules.schedule.engine.rule.IntervalMergeUtils.calculateDeduplicatedMinutes;
+
 import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
-import java.time.Duration;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class WeeklyMaxHoursRule implements ConflictRule {
@@ -22,14 +26,15 @@ public class WeeklyMaxHoursRule implements ConflictRule {
         LocalDate monday = context.getWorkDate().with(DayOfWeek.MONDAY);
         LocalDate sunday = context.getWorkDate().with(DayOfWeek.SUNDAY);
 
+        List<Interval> intervals = new ArrayList<>();
+
         // 1. Candidate shift hours
-        int breakMin = context.getWorkShift() != null && context.getWorkShift().getBreakMinutes() != null
+        int candidateBreak = context.getWorkShift() != null && context.getWorkShift().getBreakMinutes() != null
                 ? context.getWorkShift().getBreakMinutes()
                 : 0;
-        long candidateMinutes = Math.max(0, Duration.between(context.getPlannedStartTime(), context.getPlannedEndTime()).toMinutes() - breakMin);
+        intervals.add(new Interval(context.getPlannedStartTime(), context.getPlannedEndTime(), candidateBreak));
 
         // 2. Existing assignments in this week for this employee
-        long totalMinutes = candidateMinutes;
         for (ShiftAssignment existing : context.getExistingAssignments()) {
             if ("CANCELLED".equalsIgnoreCase(existing.getStatus())) {
                 continue;
@@ -44,11 +49,11 @@ public class WeeklyMaxHoursRule implements ConflictRule {
             LocalDate existingDate = existing.getWorkDate();
             if (!existingDate.isBefore(monday) && !existingDate.isAfter(sunday)) {
                 int existBreak = existing.getSnapshotBreakMinutes() != null ? existing.getSnapshotBreakMinutes() : 0;
-                long mins = Math.max(0, Duration.between(existing.getPlannedStartTime(), existing.getPlannedEndTime()).toMinutes() - existBreak);
-                totalMinutes += mins;
+                intervals.add(new Interval(existing.getPlannedStartTime(), existing.getPlannedEndTime(), existBreak));
             }
         }
 
+        long totalMinutes = calculateDeduplicatedMinutes(intervals);
         double totalHours = totalMinutes / 60.0;
         if (totalHours > context.getMaxWeeklyHours()) {
             String empName = context.getEmployee() != null ? context.getEmployee().getFullName() : "Nhân viên #" + context.getEmployeeId();

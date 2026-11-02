@@ -13,6 +13,7 @@ import {
     checkRestTimeWithDailyThreshold,
     checkTravelBufferBetweenBranches,
     getShiftAbsoluteTimeRange,
+    calculateEmployeeDailyHours,
 } from '@/utils/conflict-detector.utils';
 import {calculateShiftDurations} from '@/utils/schedule-calc.utils';
 import {sumEmployeeHoursInWeek} from '@/utils/weekly-hours.utils';
@@ -28,6 +29,7 @@ import {
     UserCheck,
     Users,
     Star,
+    Link2,
 } from 'lucide-react';
 import {useAvailabilityStore} from '@/features/employees/store/useAvailabilityStore';
 import {UserAvatar} from '@/components/common/UserAvatar';
@@ -183,9 +185,9 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                 // khớp với "Bảng Tổng Hợp Giờ Công" bên dưới lịch
                 const weeklyHours = sumEmployeeHoursInWeek(allAssignments, Number(emp.id), workDate);
 
-                // 1. Check Overlap on the same day
+                // 1. Check Overlap on the same day (supports valid handover overlap <= 60m)
                 const sameDayShifts = otherShifts.filter((s) => s.workDate === workDate);
-                const overlapCheck = checkShiftOverlap(shiftInfo.timeRange, sameDayShifts);
+                const overlapCheck = checkShiftOverlap(shiftInfo.timeRange, sameDayShifts, branchId);
 
                 const travelCheck = checkTravelBufferBetweenBranches(
                     shiftInfo.timeRange,
@@ -206,19 +208,13 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                     settings?.minRestBetweenShiftsHours || 12
                 );
 
-                // 4. Check Daily Hours Limit (> 12h)
-                let sameDayOtherHours = 0;
-                for (const s of sameDayShifts) {
-                    const {netHours} = calculateShiftDurations(
-                        s.snapshotStartTime,
-                        s.snapshotEndTime,
-                        s.snapshotBreakMinutes,
-                        s.snapshotCrossMidnight
-                    );
-                    sameDayOtherHours += netHours;
-                }
-
-                const totalDailyHours = sameDayOtherHours + shiftInfo.netHours;
+                // 4. Check Daily Hours Limit (> 12h) using interval deduplication
+                const totalDailyHours = calculateEmployeeDailyHours(
+                    workDate,
+                    sameDayShifts,
+                    shiftInfo.timeRange,
+                    shiftInfo.netHours
+                );
                 const isDailyExceeded = totalDailyHours > 12.0;
 
                 return {
@@ -229,6 +225,9 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                     leave,
                     hasOverlap: overlapCheck.hasOverlap,
                     overlapMessage: overlapCheck.message,
+                    isHandover: Boolean(overlapCheck.isHandover),
+                    handoverMinutes: overlapCheck.overlapMinutes || 0,
+                    handoverShift: overlapCheck.handoverShift || null,
                     hasTravelWarning: travelCheck.hasBufferConflict,
                     travelMessage: travelCheck.message,
                     travelConflictShift: travelCheck.conflictingShift,
@@ -422,7 +421,7 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                       width: 12,
                       height: 12,
                       borderRadius: 3,
-                      backgroundColor: shiftTemplate.colorCode || '#2563EB',
+                      backgroundColor: shiftTemplate.textColor || shiftTemplate.colorCode || '#2563EB',
                   }}
               />
                             <h2 style={{fontSize: 18, fontWeight: 700, color: 'var(--color-text-primary)', margin: 0}}>
@@ -891,6 +890,26 @@ export const AssignStaffDrawer: React.FC<AssignStaffDrawerProps> = ({
                                                         title={item.overlapMessage || 'Trùng giờ ca khác'}
                                                     >
                             <AlertCircle size={11}/> Trùng ca khác
+                          </span>
+                                                )}
+
+                                                {!isOverlapped && item.isHandover && (
+                                                    <span
+                                                        style={{
+                                                            fontSize: 11,
+                                                            fontWeight: 600,
+                                                            color: '#0D9488',
+                                                            backgroundColor: '#F0FDFA',
+                                                            border: '1px solid #99F6E4',
+                                                            padding: '2px 6px',
+                                                            borderRadius: 4,
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 3,
+                                                        }}
+                                                        title={`Gối đầu ca hợp lệ với ${item.handoverShift?.snapshotShiftName || 'ca liền kề'} (Giao ca ${item.handoverMinutes}p). Giờ công thực tế được tự động khử trùng lặp.`}
+                                                    >
+                            <Link2 size={11} color="#0D9488"/> Ca nối tiếp ({item.handoverMinutes}p)
                           </span>
                                                 )}
 

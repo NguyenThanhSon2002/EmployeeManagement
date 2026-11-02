@@ -45,6 +45,10 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
   const endTimeClean = formatTime(template.endTime);
   const netHours = calculateNetHours(startTimeClean, endTimeClean, template.breakMinutes);
 
+  const hasColor = Boolean(template.textColor || (template.colorCode && template.colorCode !== '#FFFFFF'));
+  const accentColor = template.textColor || template.colorCode || '#2563EB';
+  const bgColor = template.colorCode || '#EFF6FF';
+
   return (
     <div
       className={`card ${readOnly ? '' : 'card-interactive'}`}
@@ -56,7 +60,7 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
         border: '1px solid #E2E8F0',
-        borderTop: `4px solid ${template.textColor || '#2563EB'}`,
+        borderTop: hasColor ? `4px solid ${accentColor}` : '4px solid #CBD5E1',
         boxShadow: '0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05)',
         position: 'relative',
         transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -128,9 +132,9 @@ export const ShiftTemplateCard: React.FC<ShiftTemplateCardProps> = ({
             style={{
               fontSize: 12,
               fontWeight: 700,
-              color: '#1E40AF',
-              backgroundColor: '#EFF6FF',
-              border: '1px solid #DBEAFE',
+              color: hasColor ? accentColor : '#475569',
+              backgroundColor: hasColor ? bgColor : '#F1F5F9',
+              border: `1px solid ${hasColor ? `${accentColor}35` : '#CBD5E1'}`,
               padding: '3px 8px',
               borderRadius: 6,
             }}

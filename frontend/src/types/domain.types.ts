@@ -88,8 +88,8 @@ export interface ShiftTemplate {
   endTime: string;   // HH:mm or HH:mm:ss
   breakMinutes: number;
   isCrossMidnight: boolean;
-  colorCode: string; // Hex color for background
-  textColor: string;  // Hex color for text (WCAG AA compliant)
+  colorCode?: string | null; // Hex color for background
+  textColor?: string | null;  // Hex color for text (WCAG AA compliant)
   minStaffing: number;
   maxStaffing: number;
   applicableDays: string; // "1,2,3,4,5,6,7"
@@ -125,7 +125,7 @@ export interface ShiftAssignment {
   snapshotEndTime: string;   // HH:mm
   snapshotBreakMinutes: number;
   snapshotCrossMidnight: boolean;
-  snapshotColorCode: string;
+  snapshotColorCode?: string | null;
 
   // Absolute UTC timestamps
   plannedStartTime: string; // ISO-8601 UTC
@@ -206,6 +206,7 @@ export interface AttendanceCorrection {
   reviewedBy: number | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
+  createdAt?: string | null;
 }
 
 /** Leave Request */

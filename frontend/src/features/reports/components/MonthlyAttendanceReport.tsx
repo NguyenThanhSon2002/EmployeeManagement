@@ -1,18 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
-import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
-import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
-import { useLeaveStore } from '@/features/leaves/store/useLeaveStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
-import { reportService } from '../api/reportService';
+import { reportService, type AttendanceSummary } from '../api/reportService';
 import { isMockEnabled } from '@/config/env.config';
-import { Download, Search } from 'lucide-react';
+import { Download, Search, Calendar, Loader2 } from 'lucide-react';
 
 export const MonthlyAttendanceReport: React.FC = () => {
-  const { assignments } = useScheduleStore();
-  const { records } = useAttendanceStore();
-  const { leaves } = useLeaveStore();
   const { employees, branches } = useDirectoryStore();
   const { currentRole, currentUser } = useAuthStore();
 
@@ -21,46 +15,72 @@ export const MonthlyAttendanceReport: React.FC = () => {
 
   const [branchFilter, setBranchFilter] = useState<number | null>(!isDirector ? userBranchId : null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const currentDate = new Date();
+  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1);
+
+  const [summaryList, setSummaryList] = useState<AttendanceSummary[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const effectiveBranchId = !isDirector ? userBranchId : branchFilter;
 
-  const reportData = employees.map((emp) => {
+  // Fetch real summary data from backend
+  useEffect(() => {
+    if (isMockEnabled()) return;
+
+    let isMounted = true;
+    setIsLoading(true);
+    reportService
+      .getAttendanceSummary(effectiveBranchId || undefined, selectedYear, selectedMonth)
+      .then((res) => {
+        if (isMounted) {
+          setSummaryList(res || []);
+        }
+      })
+      .catch((err) => {
+        console.warn('Backend attendance-summary failed, keeping local fallback:', err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveBranchId, selectedYear, selectedMonth]);
+
+  // Combine real backend summary with directory employee list
+  const reportData = (summaryList.length > 0 ? summaryList.map((item) => {
+    return {
+      employeeId: item.employee_id,
+      employeeCode: item.employee_code,
+      fullName: item.full_name,
+      branchName: item.branch_name,
+      workingDays: item.total_working_days || 0,
+      actualHours: item.total_actual_hours || 0,
+      regularHours: item.total_regular_hours || 0,
+      otHours: item.total_overtime_hours || 0,
+      nightHours: item.total_night_hours || 0,
+      lateCount: item.late_count || 0,
+      earlyCount: item.early_leave_count || 0,
+    };
+  }) : employees.map((emp) => {
     const branch = branches.find((b) => b.id === emp.branchId);
-
-    // Count assigned shifts
-    const empAssignments = Object.values(assignments).flat().filter(
-      (a) => a.employeeId === emp.id && a.status === 'ASSIGNED'
-    );
-    const scheduledShifts = empAssignments.length;
-
-    // Attendance stats
-    const empRecords = records.filter((r) => r.employeeId === emp.id);
-    const actualHours = empRecords.reduce((acc, r) => acc + (r.actualHours || 8.0), 0) || (scheduledShifts * 8.0);
-    const otHours = empRecords.reduce((acc, r) => acc + (r.overtimeHours || 0), 0);
-    const nightHours = empRecords.reduce((acc, r) => acc + (r.nightHours || 0), 0);
-    const lateCount = empRecords.filter((r) => r.lateMinutes > 0).length;
-    const earlyCount = empRecords.filter((r) => r.earlyLeaveMinutes > 0).length;
-
-    // Leave stats
-    const empApprovedLeaves = leaves.filter((l) => l.employeeId === emp.id && l.status === 'APPROVED');
-    const leaveDays = empApprovedLeaves.reduce((acc, l) => acc + l.totalDays, 0);
-
     return {
       employeeId: emp.id,
       employeeCode: emp.employeeCode,
       fullName: emp.fullName,
-      branchId: emp.branchId,
       branchName: branch?.branchName || '',
-      scheduledShifts,
-      actualHours,
-      otHours,
-      nightHours,
-      lateCount,
-      earlyCount,
-      leaveDays,
+      workingDays: 0,
+      actualHours: 0,
+      regularHours: 0,
+      otHours: 0,
+      nightHours: 0,
+      lateCount: 0,
+      earlyCount: 0,
     };
-  }).filter((item) => {
-    if (effectiveBranchId && item.branchId !== effectiveBranchId) return false;
+  })).filter((item) => {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       return item.fullName.toLowerCase().includes(q) || item.employeeCode.toLowerCase().includes(q);
@@ -73,54 +93,55 @@ export const MonthlyAttendanceReport: React.FC = () => {
       { key: 'employeeCode', header: 'Mã NV' },
       { key: 'fullName', header: 'Họ và tên' },
       { key: 'branchName', header: 'Chi nhánh' },
-      { key: 'scheduledShifts', header: 'Số ca kế hoạch' },
+      { key: 'workingDays', header: 'Số ngày làm việc' },
       { key: 'actualHours', header: 'Giờ làm thực tế' },
+      { key: 'regularHours', header: 'Giờ tiêu chuẩn' },
       { key: 'otHours', header: 'Giờ làm thêm (OT)' },
       { key: 'nightHours', header: 'Giờ làm đêm' },
       { key: 'lateCount', header: 'Số lần đi muộn' },
       { key: 'earlyCount', header: 'Số lần về sớm' },
-      { key: 'leaveDays', header: 'Nghỉ phép (ngày)' },
     ];
 
     const dataRows = reportData.map((d) => ({
       employeeCode: d.employeeCode,
       fullName: d.fullName,
       branchName: d.branchName,
-      scheduledShifts: d.scheduledShifts.toString(),
+      workingDays: d.workingDays.toString(),
       actualHours: d.actualHours.toFixed(1),
+      regularHours: d.regularHours.toFixed(1),
       otHours: d.otHours.toFixed(1),
       nightHours: d.nightHours.toFixed(1),
       lateCount: d.lateCount.toString(),
       earlyCount: d.earlyCount.toString(),
-      leaveDays: d.leaveDays.toString(),
     }));
 
     if (!isMockEnabled()) {
-      reportService.downloadCsv(effectiveBranchId || undefined, 2026, 10).catch(() => {
+      reportService.downloadCsv(effectiveBranchId || undefined, selectedYear, selectedMonth).catch(() => {
         exportToCsv(
-          'BaoCao_TongHopCong_Thang10_2026.csv',
+          `BaoCao_TongHopCong_Thang${selectedMonth}_${selectedYear}.csv`,
           dataRows,
           columns,
-          'Báo cáo Tổng hợp Công Tháng 10/2026'
+          `Báo cáo Tổng hợp Công Tháng ${selectedMonth}/${selectedYear}`
         );
       });
       return;
     }
 
     exportToCsv(
-      'BaoCao_TongHopCong_Thang10_2026.csv',
+      `BaoCao_TongHopCong_Thang${selectedMonth}_${selectedYear}.csv`,
       dataRows,
       columns,
-      'Báo cáo Tổng hợp Công Tháng 10/2026'
+      `Báo cáo Tổng hợp Công Tháng ${selectedMonth}/${selectedYear}`
     );
   };
 
   const handleExportExcel = async () => {
     if (!isMockEnabled()) {
       try {
-        await reportService.downloadExcel(effectiveBranchId || undefined, 2026, 10);
+        await reportService.downloadExcel(effectiveBranchId || undefined, selectedYear, selectedMonth);
       } catch (err) {
         console.warn('Backend Excel export failed:', err);
+        handleExportCsv();
       }
     } else {
       handleExportCsv();
@@ -142,6 +163,7 @@ export const MonthlyAttendanceReport: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Branch Filter */}
           <select
             className="input"
             style={{
@@ -171,7 +193,37 @@ export const MonthlyAttendanceReport: React.FC = () => {
             ))}
           </select>
 
-          <div style={{ position: 'relative', width: 260 }}>
+          {/* Month Picker */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Calendar size={16} color="var(--color-text-muted)" />
+            <select
+              className="input"
+              style={{ width: 130 }}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  Tháng {m}
+                </option>
+              ))}
+            </select>
+            <select
+              className="input"
+              style={{ width: 100 }}
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              {[2024, 2025, 2026, 2027].map((y) => (
+                <option key={y} value={y}>
+                  Năm {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search Box */}
+          <div style={{ position: 'relative', width: 220 }}>
             <Search size={16} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--color-text-muted)' }} />
             <input
               type="text"
@@ -196,54 +248,63 @@ export const MonthlyAttendanceReport: React.FC = () => {
 
       {/* Report Table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th>Mã NV</th>
-              <th>Họ và tên</th>
-              <th>Chi nhánh</th>
-              <th style={{ textAlign: 'right' }}>Số ca chuẩn</th>
-              <th style={{ textAlign: 'right' }}>Giờ thực tế</th>
-              <th style={{ textAlign: 'right' }}>Tăng ca (OT)</th>
-              <th style={{ textAlign: 'right' }}>Giờ đêm</th>
-              <th style={{ textAlign: 'center' }}>Đi muộn/sớm</th>
-              <th style={{ textAlign: 'center' }}>Nghỉ phép</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reportData.map((d) => (
-              <tr key={d.employeeId}>
-                <td>
-                  <span style={{ fontWeight: 600 }}>{d.employeeCode}</span>
-                </td>
-                <td>{d.fullName}</td>
-                <td>{d.branchName}</td>
-                <td style={{ textAlign: 'right', fontWeight: 500 }}>{d.scheduledShifts} ca</td>
-                <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-primary)' }}>
-                  {d.actualHours.toFixed(1)}h
-                </td>
-                <td style={{ textAlign: 'right' }}>{d.otHours > 0 ? `+${d.otHours.toFixed(1)}h` : '-'}</td>
-                <td style={{ textAlign: 'right' }}>{d.nightHours > 0 ? `${d.nightHours.toFixed(1)}h` : '-'}</td>
-                <td style={{ textAlign: 'center' }}>
-                  {d.lateCount > 0 || d.earlyCount > 0 ? (
-                    <span style={{ color: '#cf1322', fontWeight: 600 }}>
-                      {d.lateCount + d.earlyCount} lần
-                    </span>
-                  ) : (
-                    <span style={{ color: '#52c41a' }}>0</span>
-                  )}
-                </td>
-                <td style={{ textAlign: 'center' }}>
-                  {d.leaveDays > 0 ? (
-                    <span className="badge badge-success">{d.leaveDays} ngày</span>
-                  ) : (
-                    '-'
-                  )}
-                </td>
+        {isLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px 0', gap: 10, color: 'var(--color-text-muted)' }}>
+            <Loader2 size={20} className="animate-spin" />
+            <span>Đang tổng hợp dữ liệu chấm công từ hệ thống...</span>
+          </div>
+        ) : (
+          <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th>Mã NV</th>
+                <th>Họ và tên</th>
+                <th>Chi nhánh</th>
+                <th style={{ textAlign: 'right' }}>Ngày công</th>
+                <th style={{ textAlign: 'right' }}>Giờ thực tế</th>
+                <th style={{ textAlign: 'right' }}>Giờ chuẩn</th>
+                <th style={{ textAlign: 'right' }}>Tăng ca (OT)</th>
+                <th style={{ textAlign: 'right' }}>Giờ đêm</th>
+                <th style={{ textAlign: 'center' }}>Đi muộn/sớm</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {reportData.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-muted)' }}>
+                    Không có dữ liệu chấm công cho Tháng {selectedMonth}/{selectedYear}.
+                  </td>
+                </tr>
+              ) : (
+                reportData.map((d) => (
+                  <tr key={d.employeeId}>
+                    <td>
+                      <span style={{ fontWeight: 600 }}>{d.employeeCode}</span>
+                    </td>
+                    <td>{d.fullName}</td>
+                    <td>{d.branchName}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 500 }}>{d.workingDays} ngày</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-primary)' }}>
+                      {d.actualHours.toFixed(1)}h
+                    </td>
+                    <td style={{ textAlign: 'right' }}>{d.regularHours.toFixed(1)}h</td>
+                    <td style={{ textAlign: 'right' }}>{d.otHours > 0 ? `+${d.otHours.toFixed(1)}h` : '-'}</td>
+                    <td style={{ textAlign: 'right' }}>{d.nightHours > 0 ? `${d.nightHours.toFixed(1)}h` : '-'}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      {d.lateCount > 0 || d.earlyCount > 0 ? (
+                        <span style={{ color: '#cf1322', fontWeight: 600 }}>
+                          {d.lateCount + d.earlyCount} lần
+                        </span>
+                      ) : (
+                        <span style={{ color: '#52c41a' }}>0</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

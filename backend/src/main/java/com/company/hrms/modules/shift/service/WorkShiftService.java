@@ -100,6 +100,9 @@ public class WorkShiftService {
         WorkShift entity = workShiftRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", id));
         entity.softDelete();
+        if (!entity.getShiftCode().contains("_DEL_")) {
+            entity.setShiftCode(entity.getShiftCode() + "_DEL_" + entity.getId());
+        }
         workShiftRepository.save(entity);
     }
 
@@ -117,8 +120,8 @@ public class WorkShiftService {
                 : (dto.getEndTime().isBefore(dto.getStartTime()) || dto.getEndTime().equals(dto.getStartTime()));
         entity.setIsCrossMidnight(crossMidnight);
 
-        if (dto.getColorCode() != null) entity.setColorCode(dto.getColorCode());
-        if (dto.getTextColor() != null) entity.setTextColor(dto.getTextColor());
+        entity.setColorCode(dto.getColorCode() != null && !dto.getColorCode().isBlank() ? dto.getColorCode().trim() : null);
+        entity.setTextColor(dto.getTextColor() != null && !dto.getTextColor().isBlank() ? dto.getTextColor().trim() : null);
         if (dto.getMinStaffing() != null) entity.setMinStaffing(dto.getMinStaffing());
         if (dto.getMaxStaffing() != null) entity.setMaxStaffing(dto.getMaxStaffing());
         if (dto.getApplicableDays() != null) entity.setApplicableDays(dto.getApplicableDays());

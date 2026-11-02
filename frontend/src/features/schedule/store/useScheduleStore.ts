@@ -395,7 +395,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
               snapshotEndTime: a.end_time,
               snapshotBreakMinutes: a.break_minutes || 0,
               snapshotCrossMidnight: a.is_cross_midnight || false,
-              snapshotColorCode: a.color_code,
+              snapshotColorCode: a.color_code ?? null,
               plannedStartTime: `${a.work_date}T${a.start_time}`,
               plannedEndTime: `${a.work_date}T${a.end_time}`,
               status: (a.status as any) || 'ASSIGNED',
@@ -433,8 +433,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           endTime: t.end_time || t.endTime,
           breakMinutes: t.break_minutes || t.breakMinutes || 0,
           isCrossMidnight: t.is_cross_midnight || t.isCrossMidnight || false,
-          colorCode: t.color_code || t.colorCode || '#1677FF',
-          textColor: t.text_color || t.textColor || '#FFFFFF',
+          colorCode: t.color_code ?? t.colorCode ?? null,
+          textColor: t.text_color ?? t.textColor ?? null,
           minStaffing: t.min_staffing || t.minStaffing || 1,
           maxStaffing: t.max_staffing || t.maxStaffing || 10,
           applicableDays: t.applicable_days || t.applicableDays || '1,2,3,4,5,6,7',
@@ -1130,24 +1130,42 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         return created;
       } catch (err) {
         console.error('Failed to create shift template on backend:', err);
-        set({ shiftTemplates: [...get().shiftTemplates, localTemplate] });
-        return localTemplate;
+        throw err;
       }
     },
 
     updateShiftTemplate: async (id, data) => {
       const state = get();
+      const prevTemplates = state.shiftTemplates;
       const isTest = isMockEnabled() || import.meta.env.MODE === 'test';
 
+      // Resolve branchName from directory store if not present
+      let branchName = data.branchName;
+      if (!branchName && data.branchId) {
+        const branch = useDirectoryStore.getState().branches.find((b) => b.id === data.branchId);
+        if (branch) {
+          branchName = branch.branchName;
+        }
+      }
+
+      const mergedData = branchName ? { ...data, branchName } : data;
+
+      // Optimistic update
       set({
-        shiftTemplates: state.shiftTemplates.map((t) => (t.id === id ? { ...t, ...data } : t)),
+        shiftTemplates: state.shiftTemplates.map((t) => (t.id === id ? { ...t, ...mergedData } : t)),
       });
 
       if (!isTest) {
         try {
-          await workShiftService.updateWorkShift(id, data);
+          const updated = await workShiftService.updateWorkShift(id, data);
+          set({
+            shiftTemplates: get().shiftTemplates.map((t) => (t.id === id ? updated : t)),
+          });
         } catch (err) {
           console.error('Failed to update shift template on backend:', err);
+          // Rollback state on error
+          set({ shiftTemplates: prevTemplates });
+          throw err;
         }
       }
     },

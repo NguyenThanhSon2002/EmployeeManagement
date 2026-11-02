@@ -34,11 +34,11 @@ public class WorkShift {
     @Column(name = "is_cross_midnight", nullable = false)
     private Boolean isCrossMidnight = false;
 
-    @Column(name = "color_code", nullable = false, length = 20)
-    private String colorCode = "#1677FF";
+    @Column(name = "color_code", length = 20)
+    private String colorCode;
 
-    @Column(name = "text_color", nullable = false, length = 20)
-    private String textColor = "#FFFFFF";
+    @Column(name = "text_color", length = 20)
+    private String textColor;
 
     @Column(name = "min_staffing", nullable = false)
     private Integer minStaffing = 1;
@@ -67,8 +67,8 @@ public class WorkShift {
         this.endTime = endTime;
         this.breakMinutes = breakMinutes != null ? breakMinutes : 0;
         this.isCrossMidnight = isCrossMidnight != null ? isCrossMidnight : false;
-        this.colorCode = colorCode != null ? colorCode : "#1677FF";
-        this.textColor = textColor != null ? textColor : "#FFFFFF";
+        this.colorCode = colorCode;
+        this.textColor = textColor;
         this.minStaffing = minStaffing != null ? minStaffing : 1;
         this.maxStaffing = maxStaffing != null ? maxStaffing : 10;
         this.applicableDays = applicableDays != null ? applicableDays : "1,2,3,4,5,6,7";

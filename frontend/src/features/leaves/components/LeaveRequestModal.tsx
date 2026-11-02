@@ -19,7 +19,7 @@ const LEAVE_TYPES = [
 ];
 
 export const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ isOpen, onClose }) => {
-  const { submitLeave, getBalance } = useLeaveStore();
+  const { submitLeave, getBalance, fetchBalances } = useLeaveStore();
   const { currentUser, currentRole } = useAuthStore();
   const { addToast } = useUIStore();
   const { employees } = useDirectoryStore();
@@ -32,6 +32,12 @@ export const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({ isOpen, on
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      fetchBalances(employeeId);
+    }
+  }, [isOpen, employeeId, fetchBalances]);
 
   if (!isOpen) return null;
 

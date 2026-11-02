@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { ShiftTemplate } from '@/types/domain.types';
-import { X, Moon, AlertCircle, Check, Layers, Copy } from 'lucide-react';
+import { X, Moon, AlertCircle, Check, Layers, Copy, Ban } from 'lucide-react';
 import { SmartTimePicker } from './SmartTimePicker';
 import { generateSlugCode } from '@/utils/code-generator.utils';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
@@ -68,8 +68,8 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
       setBreakMinutes(initialData.breakMinutes);
       setMinStaffing(initialData.minStaffing);
       setMaxStaffing(initialData.maxStaffing);
-      setColorCode(initialData.colorCode);
-      setTextColor(initialData.textColor);
+      setColorCode(initialData.colorCode || '');
+      setTextColor(initialData.textColor || '');
     } else {
       setShiftCode('');
       setShiftName('');
@@ -126,6 +126,7 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
   };
 
   const { workHours } = calculateHours();
+  const hasColor = Boolean(colorCode && textColor);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,18 +145,20 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
     }
 
     const finalShiftCode = shiftCode.trim() || generateSlugCode(shiftName, 'CA_');
+    const selectedBranch = branches.find((b) => b.id === Number(branchId));
 
     onSave(
       {
         shiftCode: finalShiftCode.toUpperCase().trim(),
         shiftName: shiftName.trim(),
         branchId: Number(branchId),
+        branchName: selectedBranch?.branchName || undefined,
         startTime,
         endTime,
         breakMinutes: Number(breakMinutes),
         isCrossMidnight,
-        colorCode,
-        textColor,
+        colorCode: colorCode || null,
+        textColor: textColor || null,
         minStaffing: Number(minStaffing),
         maxStaffing: Number(maxStaffing),
         applicableDays: '1,2,3,4,5,6,7',
@@ -496,14 +499,70 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
 
             {/* Hàng 4: Bảng màu sắc & Thẻ xem trước mini */}
             <div>
-              <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 8 }}>
-                Màu hiển thị trên lịch tuần
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>
+                  Màu hiển thị trên lịch tuần
+                </span>
+                {hasColor && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setColorCode('');
+                      setTextColor('');
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      background: 'none',
+                      border: 'none',
+                      color: '#EF4444',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Xóa lựa chọn màu, dùng giao diện mặc định không màu"
+                  >
+                    <X size={13} strokeWidth={2.5} />
+                    <span>Xóa chọn màu</span>
+                  </button>
+                )}
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 {/* Color Swatches */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {/* Swatch: Không màu (Mặc định) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setColorCode('');
+                      setTextColor('');
+                    }}
+                    title="Không dùng màu (Mặc định)"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      backgroundColor: '#FFFFFF',
+                      color: !hasColor ? '#2563EB' : '#94A3B8',
+                      border: !hasColor ? '2px solid #2563EB' : '1px dashed #CBD5E1',
+                      boxShadow: !hasColor ? '0 0 0 2px rgba(37, 99, 235, 0.25)' : 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.15s ease',
+                      transform: !hasColor ? 'scale(1.1)' : 'scale(1)',
+                    }}
+                  >
+                    <Ban size={15} />
+                  </button>
+
                   {COLOR_PRESETS.map((p) => {
-                    const isSelected = colorCode === p.bg;
+                    const isSelected = hasColor && colorCode === p.bg;
                     return (
                       <button
                         key={p.bg}
@@ -543,18 +602,21 @@ export const ShiftTemplateFormModal: React.FC<ShiftTemplateFormModalProps> = ({
                     gap: 6,
                     padding: '6px 12px',
                     borderRadius: 8,
-                    backgroundColor: colorCode,
-                    color: textColor,
+                    backgroundColor: hasColor ? colorCode : '#F8FAFC',
+                    color: hasColor ? textColor : '#64748B',
                     fontWeight: 700,
                     fontSize: 12,
-                    border: `1px solid ${textColor}40`,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                    border: hasColor ? `1px solid ${textColor}40` : '1px dashed #CBD5E1',
+                    boxShadow: hasColor ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
                   }}
                 >
                   <span>{shiftName || 'Mẫu ca mới'}</span>
                   <span>•</span>
                   <span>{startTime} - {endTime}</span>
                   {isCrossMidnight && <span style={{ fontSize: 10.5 }}>🌙 (+1)</span>}
+                  {!hasColor && (
+                    <span style={{ fontSize: 11, fontStyle: 'italic', color: '#94A3B8' }}>(Mặc định không màu)</span>
+                  )}
                 </div>
               </div>
             </div>

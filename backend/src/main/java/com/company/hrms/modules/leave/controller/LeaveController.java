@@ -59,16 +59,30 @@ public class LeaveController {
 
     @GetMapping("/requests")
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Xem danh sách đơn nghỉ phép của bản thân", description = "Hỗ trợ phân trang danh sách đơn")
+    @Operation(summary = "Xem danh sách đơn nghỉ phép", description = "Hỗ trợ phân trang danh sách đơn, lọc theo nhân viên, chi nhánh, trạng thái")
     public PageResponse<LeaveRequestDto> getEmployeeLeaveRequests(
             @RequestParam(value = "employee_id", required = false) Long employeeId,
+            @RequestParam(value = "branch_id", required = false) Long branchId,
+            @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "20") int size,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long empId = employeeId != null ? employeeId : (principal != null && principal.getEmployeeId() != null ? principal.getEmployeeId() : (principal != null ? principal.getId() : 1L));
         PageRequest pageRequest = PageRequest.of(Math.max(0, page - 1), size);
-        Page<LeaveRequestDto> resultPage = leaveService.getEmployeeLeaveRequests(empId, pageRequest);
+        Page<LeaveRequestDto> resultPage = leaveService.getLeaveRequests(employeeId, branchId, status, pageRequest, principal);
         return PageResponse.of(resultPage);
+    }
+
+    @PutMapping("/requests/{id}/cancel")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Hủy đơn xin nghỉ phép", description = "Hủy đơn nghỉ phép đang chờ duyệt và hoàn trả số ngày phép về quỹ phép năm")
+    public ApiResponse<LeaveRequestDto> cancelLeaveRequest(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Long empId = principal != null && principal.getEmployeeId() != null ? principal.getEmployeeId() : (principal != null ? principal.getId() : 1L);
+        boolean isManagerOrDirector = principal != null && principal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_DIRECTOR".equals(a.getAuthority()) || "ROLE_MANAGER".equals(a.getAuthority()) || "ROLE_ADMIN".equals(a.getAuthority()));
+        LeaveRequestDto dto = leaveService.cancelLeaveRequest(id, empId, isManagerOrDirector);
+        return ApiResponse.success(dto);
     }
 
     @PutMapping("/requests/{id}/review")
