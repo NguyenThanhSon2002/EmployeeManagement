@@ -48,11 +48,53 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
     const isOverCapacity = currentCount > maxCapacity;
     const isSufficient = currentCount >= minRequired && !isOverCapacity;
 
-    // Check if this specific cell contains any assigned employee with a conflict
-    const hasCellConflict = assignments.some((a) => {
-        const key = `${a.employeeId}_${workDate}`;
-        return (conflictsMap[key]?.length || 0) > 0;
-    });
+    // Helper to calculate effective conflicts for an assignment in this specific shift cell
+    const getEffectiveConflicts = (assignment: ShiftAssignment, index: number): ScheduleConflict[] => {
+        const employeeKey = `${assignment.employeeId}_${workDate}`;
+        const rawConflicts = conflictsMap[employeeKey] ?? [];
+
+        // Phân công từ vị trí maxCapacity trở đi trong ô là nhân sự vượt định biên
+        const isOverStaffing = isOverCapacity && index >= maxCapacity;
+
+        // Lọc các cảnh báo thuộc về đúng ca làm việc hiện tại
+        const chipConflicts = rawConflicts.filter((c) => {
+            // Cảnh báo vượt định biên chỉ áp dụng cho đúng ca/phân ca bị vượt
+            if (c.ruleCode === 'WARN_STAFFING_CAPACITY') {
+                if (c.workShiftId && Number(c.workShiftId) !== Number(template.id)) {
+                    return false;
+                }
+                if (c.assignmentId && assignment.id) {
+                    return Number(c.assignmentId) === Number(assignment.id);
+                }
+                return true;
+            }
+            // Các cảnh báo khác nếu có workShiftId chỉ áp dụng cho ca đó
+            if (c.workShiftId !== undefined && Number(c.workShiftId) !== Number(template.id)) {
+                return false;
+            }
+            return true;
+        });
+
+        const effectiveConflicts = [...chipConflicts];
+        if (isOverStaffing && !effectiveConflicts.some((c) => c.ruleCode === 'WARN_STAFFING_CAPACITY')) {
+            effectiveConflicts.push({
+                id: `WARN_CAPACITY_${assignment.employeeId}_${workDate}_${template.id}`,
+                ruleCode: 'WARN_STAFFING_CAPACITY',
+                severity: 'WARNING',
+                employeeId: assignment.employeeId,
+                workDate,
+                workShiftId: Number(template.id),
+                assignmentId: assignment.id,
+                message: `Ca ${template.shiftName} đã vượt định biên tối đa (${currentCount}/${maxCapacity} NV). Bổ sung nhân sự tăng cường.`,
+                canOverride: true,
+            });
+        }
+
+        return effectiveConflicts;
+    };
+
+    // Check if this specific cell contains any assigned employee with a conflict BELONGING TO THIS SHIFT
+    const hasCellConflict = assignments.some((a, idx) => getEffectiveConflicts(a, idx).length > 0);
 
     const isDimmed = onlyShowConflicts && !hasCellConflict;
     const isFocusedConflict = onlyShowConflicts && hasCellConflict;
@@ -200,46 +242,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
                     {assignments.map((assignment, index) => {
                         const emp = employees.find((e) => e.id === assignment.employeeId);
-                        const employeeKey = `${assignment.employeeId}_${workDate}`;
-                        const rawConflicts = conflictsMap[employeeKey] ?? [];
-
-                        // Phân công từ vị trí maxCapacity trở đi trong ô là nhân sự vượt định biên
-                        const isOverStaffing = isOverCapacity && index >= maxCapacity;
-
-                        // Lọc các cảnh báo thuộc về đúng ca làm việc hiện tại
-                        const chipConflicts = rawConflicts.filter((c) => {
-                            // Cảnh báo vượt định biên chỉ áp dụng cho đúng ca/phân ca bị vượt
-                            if (c.ruleCode === 'WARN_STAFFING_CAPACITY') {
-                                if (c.workShiftId && Number(c.workShiftId) !== Number(template.id)) {
-                                    return false;
-                                }
-                                if (c.assignmentId && assignment.id) {
-                                    return Number(c.assignmentId) === Number(assignment.id);
-                                }
-                                return true;
-                            }
-                            // Các cảnh báo khác nếu có workShiftId chỉ áp dụng cho ca đó
-                            if (c.workShiftId !== undefined && Number(c.workShiftId) !== Number(template.id)) {
-                                return false;
-                            }
-                            return true;
-                        });
-
-                        const effectiveConflicts = [...chipConflicts];
-                        if (isOverStaffing && !effectiveConflicts.some((c) => c.ruleCode === 'WARN_STAFFING_CAPACITY')) {
-                            effectiveConflicts.push({
-                                id: `WARN_CAPACITY_${assignment.employeeId}_${workDate}_${template.id}`,
-                                ruleCode: 'WARN_STAFFING_CAPACITY',
-                                severity: 'WARNING',
-                                employeeId: assignment.employeeId,
-                                workDate,
-                                workShiftId: Number(template.id),
-                                assignmentId: assignment.id,
-                                message: `Ca ${template.shiftName} đã vượt định biên tối đa (${currentCount}/${maxCapacity} NV). Bổ sung nhân sự tăng cường.`,
-                                canOverride: true,
-                            });
-                        }
-
+                        const effectiveConflicts = getEffectiveConflicts(assignment, index);
                         const hasConflict = effectiveConflicts.length > 0;
                         const isExternal = Boolean(assignment.isExternal);
 
