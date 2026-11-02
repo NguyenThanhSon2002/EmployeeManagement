@@ -82,6 +82,15 @@ export async function request<T>(
   }));
 
   if (!response.ok || !data.success) {
+    if ((response.status === 401 || response.status === 403) && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+      }
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
     const error = data.error || {
       code: 'UNKNOWN_ERROR',
       message: response.statusText || 'Đã xảy ra lỗi không xác định',

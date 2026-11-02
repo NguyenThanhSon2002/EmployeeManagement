@@ -34,3 +34,8 @@ docs/archive/
 # Uploads
 uploads/
 backend/uploads/
+
+# Backups & Database dumps
+backup/
+*.sql
+!backend/src/main/resources/db/migration/*.sql

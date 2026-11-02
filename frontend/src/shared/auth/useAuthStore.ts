@@ -216,10 +216,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   currentRole: 'ROLE_DIRECTOR',
   currentUser: CANONICAL_AUTH_USERS.admin.employee,
   token: typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null,
-  isAuthenticated:
-    (typeof localStorage !== 'undefined' && !!localStorage.getItem('access_token')) ||
-    import.meta.env?.MODE === 'test',
-  isLoading: false,
+  isAuthenticated: false,
+  isLoading: true,
 
   setUser: (user: Employee) => set({ currentUser: user }),
 
