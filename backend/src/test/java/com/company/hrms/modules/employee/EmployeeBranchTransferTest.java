@@ -16,6 +16,7 @@ import com.company.hrms.modules.schedule.repository.ScheduleRepository;
 import com.company.hrms.modules.schedule.repository.ShiftAssignmentRepository;
 import com.company.hrms.modules.shift.domain.WorkShift;
 import com.company.hrms.modules.shift.repository.WorkShiftRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.company.hrms.common.exception.BusinessException;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -210,5 +215,78 @@ public class EmployeeBranchTransferTest {
         // Verify
         assertEquals(8L, oldAvail.getWorkShiftId(), "work_shift_id của lịch khả dụng phải được chuyển từ 3 sang 8");
         verify(availabilityRepository, times(1)).save(oldAvail);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    @DisplayName("Option 2: updateEmployee allows branch transfer when caller has ROLE_DIRECTOR")
+    void testBranchTransferAllowedForDirector() {
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                "directorUser", null, List.of(new SimpleGrantedAuthority("ROLE_DIRECTOR"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        Employee existingEmployee = new Employee();
+        existingEmployee.setId(employeeId);
+        existingEmployee.setEmployeeCode("EMP-002");
+        existingEmployee.setEmail("emp002@company.com");
+        existingEmployee.setBranchId(oldBranchId);
+        existingEmployee.setPositionId(3L);
+        existingEmployee.setVersion(1);
+
+        EmployeeDto updateRequest = new EmployeeDto();
+        updateRequest.setId(employeeId);
+        updateRequest.setEmployeeCode("EMP-002");
+        updateRequest.setEmail("emp002@company.com");
+        updateRequest.setBranchId(newBranchId);
+        updateRequest.setPositionId(3L);
+        updateRequest.setVersion(1);
+
+        when(employeeRepository.findByIdAndDeletedAtIsNull(employeeId)).thenReturn(Optional.of(existingEmployee));
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(assignmentRepository.findAllByEmployeeIdAndWorkDateBetween(eq(employeeId), any(), any())).thenReturn(List.of());
+        when(workShiftRepository.findAllByBranchIdAndDeletedAtIsNullOrderByStartTimeAsc(newBranchId)).thenReturn(List.of());
+
+        EmployeeDto result = employeeService.updateEmployee(employeeId, updateRequest);
+        assertNotNull(result);
+        assertEquals(newBranchId, result.getBranchId(), "Director phải điều chuyển được branch_id thành công");
+    }
+
+    @Test
+    @DisplayName("Option 2: updateEmployee rejects branch transfer with 403 when caller has only ROLE_MANAGER")
+    void testBranchTransferDeniedForManager() {
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                "managerUser", null, List.of(new SimpleGrantedAuthority("ROLE_MANAGER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        Employee existingEmployee = new Employee();
+        existingEmployee.setId(employeeId);
+        existingEmployee.setEmployeeCode("EMP-002");
+        existingEmployee.setEmail("emp002@company.com");
+        existingEmployee.setBranchId(oldBranchId);
+        existingEmployee.setPositionId(3L);
+        existingEmployee.setVersion(1);
+
+        EmployeeDto updateRequest = new EmployeeDto();
+        updateRequest.setId(employeeId);
+        updateRequest.setEmployeeCode("EMP-002");
+        updateRequest.setEmail("emp002@company.com");
+        updateRequest.setBranchId(newBranchId); // Cố tình đổi sang chi nhánh 2
+        updateRequest.setPositionId(3L);
+        updateRequest.setVersion(1);
+
+        when(employeeRepository.findByIdAndDeletedAtIsNull(employeeId)).thenReturn(Optional.of(existingEmployee));
+
+        BusinessException ex = assertThrows(BusinessException.class, () ->
+                employeeService.updateEmployee(employeeId, updateRequest)
+        );
+        assertEquals("FORBIDDEN_BRANCH_TRANSFER", ex.getErrorCode());
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, ex.getHttpStatus());
+        verify(employeeRepository, never()).save(any(Employee.class));
     }
 }

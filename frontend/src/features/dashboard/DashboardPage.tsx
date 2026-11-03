@@ -5,7 +5,6 @@ import { dashboardService, type DashboardOverview } from './api/dashboardService
 import { TrendBarChart } from '@/components/charts/TrendBarChart';
 import { QuickAttendanceCard } from './components/QuickAttendanceCard';
 import { PendingApprovalsWidget } from './components/PendingApprovalsWidget';
-import { isMockEnabled } from '@/config/env.config';
 import { Users, UserCheck, Clock, Palmtree, Calendar, Sparkles } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 
@@ -18,16 +17,15 @@ export const DashboardPage: React.FC = () => {
   const effectiveBranchId = !isDirector ? currentUser?.branchId : undefined;
 
   const [overview, setOverview] = useState<DashboardOverview>({
-    total_employees: 10,
-    present_count: 8,
-    late_count: 1,
-    on_leave_count: 1,
-    active_contract_rate: 100.0,
-    attendance_rate: 80.0,
+    total_employees: 0,
+    present_count: 0,
+    late_count: 0,
+    on_leave_count: 0,
+    active_contract_rate: 0,
+    attendance_rate: 0,
   });
 
   useEffect(() => {
-    if (isMockEnabled()) return;
 
     let isMounted = true;
     dashboardService

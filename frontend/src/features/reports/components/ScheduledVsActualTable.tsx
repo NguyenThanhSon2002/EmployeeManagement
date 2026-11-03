@@ -39,15 +39,12 @@ export const ScheduledVsActualTable: React.FC = () => {
       scheduledHours += netHours;
     }
 
-    // Default to at least 40h baseline if no assignments in week
-    if (scheduledHours === 0) scheduledHours = 40.0;
-
     // Actual hours
     const empRecords = records.filter((r) => r.employeeId === emp.id);
-    const actualHours = empRecords.reduce((acc, r) => acc + (r.actualHours || 8.0), 0) || scheduledHours;
+    const actualHours = empRecords.reduce((acc, r) => acc + (r.actualHours || 0), 0);
 
     const diffHours = actualHours - scheduledHours;
-    const fulfillmentRate = scheduledHours > 0 ? (actualHours / scheduledHours) * 100 : 100;
+    const fulfillmentRate = scheduledHours > 0 ? (actualHours / scheduledHours) * 100 : (actualHours > 0 ? 100 : 0);
 
     return {
       employeeId: emp.id,

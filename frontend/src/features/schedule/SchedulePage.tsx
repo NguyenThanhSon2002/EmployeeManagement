@@ -21,6 +21,8 @@ import {UnpublishConfirmDialog} from './dialogs/UnpublishConfirmDialog';
 import {OverrideReasonModal} from './dialogs/OverrideReasonModal';
 import {ShiftSwapModal} from './dialogs/ShiftSwapModal';
 import {ShiftSwapManagementModal} from './dialogs/ShiftSwapManagementModal';
+import {ClaimShiftModal} from './dialogs/ClaimShiftModal';
+import type {SwapType} from './types/swap.types';
 import {downloadCsvFile, buildWeeklyRosterCsv} from '@/utils/csv-exporter.utils';
 import {sumWeeklyScheduledHours} from '@/utils/schedule-calc.utils';
 import type {ShiftAssignment, ShiftTemplate} from '@/types/domain.types';
@@ -46,6 +48,7 @@ export const SchedulePage: React.FC = () => {
         assignShift,
         deleteAssignment,
         updateAssignmentOverride,
+        claimShift,
 
         scheduleId,
         applyAutoAssignments,
@@ -130,6 +133,16 @@ export const SchedulePage: React.FC = () => {
     }, [filterOptions.onlyShowConflicts]);
 
     React.useEffect(() => {
+        if (filterOptions.onlyShowUnderstaffed) {
+            const timer = setTimeout(() => {
+                const firstCell = document.querySelector('[data-understaffed="true"]');
+                firstCell?.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [filterOptions.onlyShowUnderstaffed]);
+
+    React.useEffect(() => {
         if (availabilityError) {
             addToast({
                 type: 'error',
@@ -163,9 +176,11 @@ export const SchedulePage: React.FC = () => {
     React.useEffect(() => {
         const branchId = filterOptions.branchId || 1;
         fetchWeeklySchedule(branchId, currentStartDate);
-        fetchBranchAvailabilities(branchId);
+        if (currentRole !== 'ROLE_EMPLOYEE') {
+            fetchBranchAvailabilities(branchId);
+        }
         fetchShiftTemplates(branchId);
-    }, [filterOptions.branchId, currentStartDate, fetchWeeklySchedule, fetchBranchAvailabilities, fetchShiftTemplates]);
+    }, [filterOptions.branchId, currentStartDate, currentRole, fetchWeeklySchedule, fetchBranchAvailabilities, fetchShiftTemplates]);
 
     // Dialog & Drawer Visibility State
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -180,19 +195,71 @@ export const SchedulePage: React.FC = () => {
     const [unpublishDialogOpen, setUnpublishDialogOpen] = useState(false);
     const [overrideModalAssignment, setOverrideModalAssignment] = useState<ShiftAssignment | null>(null);
 
+    
+    // Claim Shift State
+    const [claimModalOpen, setClaimModalOpen] = useState(false);
+    const [claimTemplate, setClaimTemplate] = useState<ShiftTemplate | null>(null);
+    const [claimWorkDate, setClaimWorkDate] = useState<string>('');
+
     // Shift Swap State
     const [swapModalOpen, setSwapModalOpen] = useState(false);
     const [swapSourceAssignment, setSwapSourceAssignment] = useState<ShiftAssignment | null>(null);
+    const [swapTargetAssignment, setSwapTargetAssignment] = useState<ShiftAssignment | null>(null);
+    const [swapInitialType, setSwapInitialType] = useState<SwapType>('HANDOVER');
     const [swapManagementOpen, setSwapManagementOpen] = useState(false);
+
+    const handleOpenClaimModal = useCallback((template: ShiftTemplate, workDate: string) => {
+        setClaimTemplate(template);
+        setClaimWorkDate(workDate);
+        setClaimModalOpen(true);
+    }, []);
+
+    const handleConfirmClaim = useCallback(async (selfVolunteeredConfirm?: boolean) => {
+        if (!claimTemplate || !claimWorkDate) {
+            return { success: false, error: 'Thiếu thông tin ca làm việc' };
+        }
+        const branchId = filterOptions.branchId || 1;
+        const res = await claimShift({
+            workShiftId: claimTemplate.id,
+            workDate: claimWorkDate,
+            selfVolunteeredConfirm: Boolean(selfVolunteeredConfirm),
+        });
+        if (res.success) {
+            addToast({
+                type: 'success',
+                title: 'Đăng ký ca thành công',
+                message: `Bạn đã nhận ca ${claimTemplate.shiftName} ngày ${claimWorkDate}.`,
+            });
+            fetchWeeklySchedule(branchId, currentStartDate);
+        }
+        return res;
+    }, [claimTemplate, claimWorkDate, filterOptions.branchId, claimShift, addToast, fetchWeeklySchedule, currentStartDate]);
 
     const handleOpenSwapModal = useCallback((assignment: ShiftAssignment) => {
         setSwapSourceAssignment(assignment);
+        setSwapTargetAssignment(null);
+        setSwapInitialType('HANDOVER');
+        setSwapModalOpen(true);
+    }, []);
+
+    const handleOpenSwapWithColleague = useCallback((targetAssignment: ShiftAssignment) => {
+        setSwapSourceAssignment(null);
+        setSwapTargetAssignment(targetAssignment);
+        setSwapInitialType('SWAP');
+        setSwapModalOpen(true);
+    }, []);
+
+    const handleOpenCreateSwapFromManagement = useCallback(() => {
+        setSwapSourceAssignment(null);
+        setSwapTargetAssignment(null);
+        setSwapInitialType('HANDOVER');
         setSwapModalOpen(true);
     }, []);
 
     const handleCloseSwapModal = useCallback(() => {
         setSwapModalOpen(false);
         setSwapSourceAssignment(null);
+        setSwapTargetAssignment(null);
     }, []);
 
     const handleCloseSwapManagement = useCallback(() => {
@@ -453,10 +520,27 @@ export const SchedulePage: React.FC = () => {
             hoursCount += sumWeeklyScheduledHours(empShifts);
         }
 
+        const shortageTemplates = shiftTemplates.filter((t) => t.isActive);
+        const shortageEmployeeIds = new Set(
+            employees
+                .filter((e) => e.isActive !== false && e.employmentStatus !== 'RESIGNED')
+                .map((e) => e.id)
+        );
+        const shortageAssignments = Object.values(assignments).flat();
         let understaffed = 0;
         for (let i = 0; i < 7; i++) {
             const d = format(addDays(baseMonday, i), 'yyyy-MM-dd');
-            if ((dailyStaffCountMap[d] || 0) < 2) {
+            const hasShortage = shortageTemplates.some((t) => {
+                const count = shortageAssignments.filter(
+                    (a) =>
+                        a.workShiftId === t.id &&
+                        a.workDate === d &&
+                        a.status !== 'CANCELLED' &&
+                        shortageEmployeeIds.has(a.employeeId)
+                ).length;
+                return count < (t.minStaffing || 1);
+            });
+            if (hasShortage) {
                 understaffed++;
             }
         }
@@ -475,7 +559,7 @@ export const SchedulePage: React.FC = () => {
             conflictCount: conflictsTotal,
             understaffedDaysCount: understaffed,
         };
-    }, [assignments, conflicts, currentStartDate, baseMonday, employees]);
+    }, [assignments, conflicts, currentStartDate, baseMonday, employees, shiftTemplates]);
 
     // Shift-Centric Drawer Opening Handlers
     const handleOpenAssignStaff = (shiftTemplateId: number, workDate: string) => {
@@ -763,6 +847,10 @@ export const SchedulePage: React.FC = () => {
 
             {/* 2. Executive Summary Metrics Cards */}
             <ScheduleSummaryCards
+                onlyShowUnderstaffed={Boolean(filterOptions.onlyShowUnderstaffed)}
+                onToggleUnderstaffedFilter={() =>
+                    setFilters({onlyShowUnderstaffed: !filterOptions.onlyShowUnderstaffed})
+                }
                 totalShifts={totalShifts}
                 totalHours={totalHours}
                 conflictCount={conflictCount}
@@ -775,6 +863,8 @@ export const SchedulePage: React.FC = () => {
 
             {/* 3. Filter and Search Controls */}
             <ScheduleFiltersBar
+                onlyShowUnderstaffed={Boolean(filterOptions.onlyShowUnderstaffed)}
+                onToggleUnderstaffed={(val) => setFilters({onlyShowUnderstaffed: val})}
                 searchTerm={filterOptions.searchTerm || ''}
                 shiftCodeFilter={filterOptions.shiftCodeFilter || ''}
                 onlyShowConflicts={Boolean(filterOptions.onlyShowConflicts)}
@@ -790,7 +880,7 @@ export const SchedulePage: React.FC = () => {
                 onShiftFilterChange={(val) => setFilters({shiftCodeFilter: val})}
                 onToggleConflicts={(val) => setFilters({onlyShowConflicts: val})}
                 onResetFilters={() =>
-                    setFilters({searchTerm: '', shiftCodeFilter: '', onlyShowConflicts: false})
+                    setFilters({searchTerm: '', shiftCodeFilter: '', onlyShowConflicts: false, onlyShowUnderstaffed: false})
                 }
             />
 
@@ -805,6 +895,7 @@ export const SchedulePage: React.FC = () => {
             >
                 {viewMode === 'WEEK' ? (
                     <WeeklyGrid
+                        onlyShowUnderstaffed={Boolean(filterOptions.onlyShowUnderstaffed)}
                         baseMonday={baseMonday}
                         shiftTemplates={filteredShiftTemplates}
                         employees={gridEmployees}
@@ -817,6 +908,8 @@ export const SchedulePage: React.FC = () => {
                         onRemoveAssignment={handleRemoveAssignment}
                         onOpenOverrideModal={handleOpenOverrideModal}
                         onOpenSwapModal={handleOpenSwapModal}
+                        onOpenSwapWithColleague={handleOpenSwapWithColleague}
+                        onClaimShift={handleOpenClaimModal}
                     />
                 ) : (
                     <MonthViewGrid
@@ -933,6 +1026,8 @@ export const SchedulePage: React.FC = () => {
                 isOpen={swapModalOpen}
                 onClose={handleCloseSwapModal}
                 sourceAssignment={swapSourceAssignment}
+                targetAssignment={swapTargetAssignment}
+                initialType={swapInitialType}
                 employees={branchEmployees}
                 allAssignments={allAssignmentsFlat}
                 currentUserId={currentUser?.id || 1}
@@ -947,6 +1042,15 @@ export const SchedulePage: React.FC = () => {
                 }}
             />
 
+            {/* Claim Shift Modal (Đăng ký nhận ca trống) */}
+            <ClaimShiftModal
+                isOpen={claimModalOpen}
+                onClose={() => setClaimModalOpen(false)}
+                template={claimTemplate}
+                workDate={claimWorkDate}
+                onConfirm={handleConfirmClaim}
+            />
+
             {/* Shift Swap Management Modal (Hộp thư duyệt và phản hồi đổi ca) */}
             <ShiftSwapManagementModal
                 isOpen={swapManagementOpen}
@@ -956,6 +1060,7 @@ export const SchedulePage: React.FC = () => {
                     const branchId = filterOptions.branchId || 1;
                     fetchWeeklySchedule(branchId, currentStartDate);
                 }}
+                onOpenCreateSwap={handleOpenCreateSwapFromManagement}
             />
         </div>
     );

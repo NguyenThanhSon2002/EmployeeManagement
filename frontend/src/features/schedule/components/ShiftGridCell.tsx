@@ -1,11 +1,10 @@
 import React from 'react';
-import type { ShiftAssignment, ShiftTemplate, Employee, ScheduleConflict } from '@/types/domain.types';
-import { Plus, X, AlertTriangle, Users, CheckCircle2, Lock, FileText, ArrowLeftRight } from 'lucide-react';
-import { Tooltip } from '@/shared/components/Tooltip';
-import { UserAvatar } from '@/components/common/UserAvatar';
-import { useAuthStore } from '@/shared/auth/useAuthStore';
-import { useScheduleStore } from '../store/useScheduleStore';
-import { assignmentToTimeRange, checkShiftOverlap } from '@/utils/conflict-detector.utils';
+import type {ShiftAssignment, ShiftTemplate, Employee, ScheduleConflict} from '@/types/domain.types';
+import {Plus, X, AlertTriangle, Users, CheckCircle2, Lock, FileText, ArrowLeftRight} from 'lucide-react';
+import {Tooltip} from '@/shared/components/Tooltip';
+import {UserAvatar} from '@/components/common/UserAvatar';
+import {useAuthStore} from '@/shared/auth/useAuthStore';
+import {assignmentToTimeRange, checkShiftOverlap} from '@/utils/conflict-detector.utils';
 
 interface ShiftGridCellProps {
     template: ShiftTemplate;
@@ -17,39 +16,47 @@ interface ShiftGridCellProps {
     isToday: boolean;
     canEdit: boolean;
     onlyShowConflicts?: boolean;
+    onlyShowUnderstaffed?: boolean;
     onOpenAssignDrawer: () => void;
     onRemoveAssignment: (assignmentId: number, e: React.MouseEvent) => void;
     onOpenOverrideModal?: (assignment: ShiftAssignment) => void;
     onOpenSwapModal?: (assignment: ShiftAssignment) => void;
+    onOpenSwapWithColleague?: (targetAssignment: ShiftAssignment) => void;
+    onClaimShift?: (template: ShiftTemplate, workDate: string) => void;
 }
 
 export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
-  template,
-  workDate,
-  assignments = [],
-  allAssignments = [],
-  employees = [],
-  conflictsMap = {},
-  isToday,
-  canEdit,
-  onlyShowConflicts = false,
-  onOpenAssignDrawer,
-  onRemoveAssignment,
-  onOpenOverrideModal,
-  onOpenSwapModal,
+                                                                           template,
+                                                                           workDate,
+                                                                           assignments = [],
+                                                                           allAssignments = [],
+                                                                           employees = [],
+                                                                           conflictsMap = {},
+                                                                           isToday,
+                                                                           canEdit,
+                                                                           onlyShowConflicts = false,
+                                                                           onlyShowUnderstaffed = false,
+                                                                           onOpenAssignDrawer,
+                                                                           onRemoveAssignment,
+                                                                           onOpenOverrideModal,
+                                                                           onOpenSwapModal,
+    onOpenSwapWithColleague,
+    onClaimShift,
 }) => {
-    const { currentRole, currentUser } = useAuthStore();
-    const scheduleStatus = useScheduleStore((s) => s.scheduleStatus);
+    const {currentRole, currentUser} = useAuthStore();
     const isDirectorOrAdmin = currentRole === 'ROLE_DIRECTOR';
     const isManager = currentRole === 'ROLE_MANAGER';
     const isManagerOrAdmin = isDirectorOrAdmin || isManager;
-    const isPublished = scheduleStatus === 'PUBLISHED';
+    const isEmployee = currentRole === 'ROLE_EMPLOYEE';
 
     const currentCount = assignments.length;
     const minRequired = template.minStaffing || 1;
     const maxCapacity = template.maxStaffing || minRequired;
     const isOverCapacity = currentCount > maxCapacity;
     const isSufficient = currentCount >= minRequired && !isOverCapacity;
+    const isAlreadyAssignedInCell = Boolean(
+        currentUser?.id && assignments.some((a) => Number(a.employeeId) === Number(currentUser.id))
+    );
 
     // Helper to calculate effective conflicts for an assignment in this specific shift cell
     const getEffectiveConflicts = (assignment: ShiftAssignment, index: number): ScheduleConflict[] => {
@@ -99,8 +106,12 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
     // Check if this specific cell contains any assigned employee with a conflict BELONGING TO THIS SHIFT
     const hasCellConflict = assignments.some((a, idx) => getEffectiveConflicts(a, idx).length > 0);
 
-    const isDimmed = onlyShowConflicts && !hasCellConflict;
-    const isFocusedConflict = onlyShowConflicts && hasCellConflict;
+    const isUnderstaffed = currentCount < minRequired;
+    const anyFilterActive = onlyShowConflicts || onlyShowUnderstaffed;
+    const matchesFilter =
+        (onlyShowConflicts && hasCellConflict) || (onlyShowUnderstaffed && isUnderstaffed);
+    const isDimmed = anyFilterActive && !matchesFilter;
+    const isFocusedConflict = anyFilterActive && matchesFilter;
 
     let cellClass = 'schedule-cell shift-grid-cell';
     if (isToday) cellClass += ' today-cell';
@@ -109,6 +120,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
         <div
             id={hasCellConflict ? `shift-cell-conflict-${template.id}-${workDate}` : undefined}
             role="gridcell"
+            data-understaffed={isUnderstaffed ? 'true' : undefined}
             className={cellClass}
             tabIndex={canEdit && !isDimmed ? 0 : -1}
             aria-label={`${template.shiftName} ngày ${workDate}: ${currentCount}/${minRequired} nhân viên`}
@@ -153,34 +165,34 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                         backgroundColor: isOverCapacity
                             ? '#EFF6FF'
                             : isSufficient
-                            ? '#ECFDF5'
-                            : '#FFFBEB',
+                                ? '#ECFDF5'
+                                : '#FFFBEB',
                         color: isOverCapacity
                             ? '#1D4ED8'
                             : isSufficient
-                            ? '#047857'
-                            : '#B45309',
+                                ? '#047857'
+                                : '#B45309',
                         border: isOverCapacity
                             ? '1px solid #BFDBFE'
                             : isSufficient
-                            ? '1px solid #A7F3D0'
-                            : '1px solid #FDE68A',
+                                ? '1px solid #A7F3D0'
+                                : '1px solid #FDE68A',
                         letterSpacing: '0.02em',
                     }}
                     title={
                         isOverCapacity
                             ? `Ca được bổ sung tăng cường (${currentCount}/${minRequired} nhân sự)`
                             : isSufficient
-                            ? `Đạt định biên ca (${currentCount}/${minRequired} nhân sự)`
-                            : `Thiếu ${minRequired - currentCount} nhân sự theo định biên (${currentCount}/${minRequired})`
+                                ? `Đạt định biên ca (${currentCount}/${minRequired} nhân sự)`
+                                : `Thiếu ${minRequired - currentCount} nhân sự theo định biên (${currentCount}/${minRequired})`
                     }
                 >
                     {isOverCapacity ? (
-                        <Users size={11} strokeWidth={2.5} />
+                        <Users size={11} strokeWidth={2.5}/>
                     ) : isSufficient ? (
-                        <CheckCircle2 size={11} strokeWidth={2.5} />
+                        <CheckCircle2 size={11} strokeWidth={2.5}/>
                     ) : (
-                        <AlertTriangle size={11} strokeWidth={2.5} />
+                        <AlertTriangle size={11} strokeWidth={2.5}/>
                     )}
                     <span>{currentCount}/{minRequired} NV</span>
                 </span>
@@ -211,38 +223,93 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                             transition: 'all 0.15s ease',
                         }}
                     >
-                        <Plus size={12} strokeWidth={2.5} />
+                        <Plus size={12} strokeWidth={2.5}/>
                         Thêm
+                    </button>
+                )}
+                {/* Quick Claim Button for Employee */}
+                {isEmployee && onClaimShift && currentCount < maxCapacity && !isAlreadyAssignedInCell && (
+                    <button
+                        type="button"
+                        className="shift-cell-quick-claim-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClaimShift(template, workDate);
+                        }}
+                        title="Nhận thêm vào ca còn trống chỗ này"
+                        style={{
+                            background: '#EFF6FF',
+                            border: '1px solid #BFDBFE',
+                            cursor: 'pointer',
+                            color: '#1D4ED8',
+                            padding: '2px 7px',
+                            borderRadius: '6px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            gap: 3,
+                            transition: 'all 0.15s ease',
+                        }}
+                    >
+                        <Plus size={12} strokeWidth={2.5}/>
+                        Nhận ca
                     </button>
                 )}
             </div>
 
             {/* 2. Staff Chips List */}
             {assignments.length === 0 ? (
-                <div
-                    onClick={canEdit ? onOpenAssignDrawer : undefined}
-                    style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '10px 6px',
-                        border: '1px dashed #E2E8F0',
-                        borderRadius: '8px',
-                        backgroundColor: '#F8FAFC',
-                        color: '#94A3B8',
-                        cursor: canEdit ? 'pointer' : 'default',
-                        textAlign: 'center',
-                        transition: 'all 0.15s ease',
-                    }}
-                    title={canEdit ? 'Bấm để phân bổ nhân sự vào ca' : 'Chưa có nhân viên'}
-                >
-                    <Users size={15} style={{ opacity: 0.6, marginBottom: 2 }} />
-                    <span style={{ fontSize: '11px', fontWeight: 500 }}>Chưa phân ca</span>
-                </div>
+                isEmployee && onClaimShift ? (
+                    <div
+                        onClick={() => onClaimShift(template, workDate)}
+                        style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '10px 6px',
+                            border: '1px dashed #38BDF8',
+                            borderRadius: '8px',
+                            backgroundColor: '#F0F9FF',
+                            color: '#0284C7',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'all 0.15s ease',
+                        }}
+                        className="shift-claim-empty-btn"
+                        title="Bấm để đăng ký nhận ca trống này"
+                    >
+                        <Plus size={16} strokeWidth={2.5} style={{marginBottom: 2}}/>
+                        <span style={{fontSize: '11px', fontWeight: 600}}>+ Đăng ký ca này</span>
+                    </div>
+                ) : (
+                    <div
+                        onClick={canEdit ? onOpenAssignDrawer : undefined}
+                        style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '10px 6px',
+                            border: '1px dashed #E2E8F0',
+                            borderRadius: '8px',
+                            backgroundColor: '#F8FAFC',
+                            color: '#94A3B8',
+                            cursor: canEdit ? 'pointer' : 'default',
+                            textAlign: 'center',
+                            transition: 'all 0.15s ease',
+                        }}
+                        title={canEdit ? 'Bấm để phân bổ nhân sự vào ca' : 'Chưa có nhân viên'}
+                    >
+                        <Users size={15} style={{opacity: 0.6, marginBottom: 2}}/>
+                        <span style={{fontSize: '11px', fontWeight: 500}}>Chưa phân ca</span>
+                    </div>
+                )
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                <div style={{display: 'flex', flexDirection: 'column', gap: 4, flex: 1}}>
                     {assignments.map((assignment, index) => {
                         const emp = employees.find((e) => e.id === assignment.employeeId);
                         const effectiveConflicts = getEffectiveConflicts(assignment, index);
@@ -267,23 +334,30 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
 
                         const tooltipContent = (
                             <div>
-                                <div style={{ fontWeight: 600 }}>
+                                <div style={{fontWeight: 600}}>
                                     {displayName}
                                     {emp?.employeeCode ? ` (${emp.employeeCode})` : ''}
                                 </div>
                                 {isExternal && (
-                                    <div style={{ color: '#93C5FD', fontSize: 11, fontWeight: 600, marginTop: 2 }}>
+                                    <div style={{color: '#93C5FD', fontSize: 11, fontWeight: 600, marginTop: 2}}>
                                         📍 Ca ngoại vi tại {assignment.branchName || 'Cơ sở khác'} (Chỉ đọc)
                                     </div>
                                 )}
                                 {assignment.overrideReason && (
-                                    <div style={{ color: '#86EFAC', fontSize: 11, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <FileText size={12} />
+                                    <div style={{
+                                        color: '#86EFAC',
+                                        fontSize: 11,
+                                        marginTop: 4,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 4
+                                    }}>
+                                        <FileText size={12}/>
                                         <span>Đã giải trình: {assignment.overrideReason}</span>
                                     </div>
                                 )}
                                 {effectiveConflicts.map((c, i) => (
-                                    <div key={i} style={{ color: '#FCD34D', marginTop: 4 }}>
+                                    <div key={i} style={{color: '#FCD34D', marginTop: 4}}>
                                         ⚠ {c.message}
                                     </div>
                                 ))}
@@ -326,7 +400,14 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                     }}
                                 >
                                     {/* Employee info */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden', flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 5,
+                                        overflow: 'hidden',
+                                        flex: 1,
+                                        minWidth: 0
+                                    }}>
                                         <UserAvatar
                                             name={displayName}
                                             src={avatarUrl}
@@ -368,8 +449,9 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                         </span>
 
                                         {hasConflict && (
-                                            <span title="Có cảnh báo xung đột" style={{ display: 'inline-flex', flexShrink: 0 }}>
-                                                <AlertTriangle size={12} color="#D97706" />
+                                            <span title="Có cảnh báo xung đột"
+                                                  style={{display: 'inline-flex', flexShrink: 0}}>
+                                                <AlertTriangle size={12} color="#D97706"/>
                                             </span>
                                         )}
 
@@ -389,47 +471,86 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                                     flexShrink: 0,
                                                 }}
                                             >
-                                                <FileText size={11} />
+                                                <FileText size={11}/>
                                             </span>
                                         )}
                                     </div>
 
                                     {/* Action button */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0}}>
                                         {(() => {
                                             const isOwner = Number(assignment.employeeId) === Number(currentUser?.id);
-                                            const canRequestSwap = Boolean(
+                                            const canRequestSwapOwn = Boolean(
                                                 onOpenSwapModal &&
                                                 !isExternal &&
                                                 !assignment.readOnly &&
-                                                (isManagerOrAdmin || (isPublished && isOwner))
+                                                (isManagerOrAdmin || isOwner)
                                             );
-                                            if (!canRequestSwap) return null;
-                                            return (
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onOpenSwapModal?.(assignment);
-                                                    }}
-                                                    className="staff-chip-swap-btn"
-                                                    title={`Đề xuất nhường ca này cho đồng nghiệp`}
-                                                    style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        cursor: 'pointer',
-                                                        padding: 2,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: '#6366F1',
-                                                        borderRadius: 3,
-                                                        transition: 'color 0.15s ease',
-                                                    }}
-                                                >
-                                                    <ArrowLeftRight size={12} />
-                                                </button>
+                                            const canRequestSwapColleague = Boolean(
+                                                onOpenSwapWithColleague &&
+                                                !isExternal &&
+                                                !assignment.readOnly &&
+                                                isEmployee &&
+                                                !isOwner
                                             );
+
+                                            if (canRequestSwapOwn) {
+                                                return (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onOpenSwapModal?.(assignment);
+                                                        }}
+                                                        className="staff-chip-swap-btn"
+                                                        title="Đề xuất nhường ca hoặc đổi ca này"
+                                                        style={{
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            padding: 2,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: '#6366F1',
+                                                            borderRadius: 3,
+                                                            transition: 'color 0.15s ease',
+                                                        }}
+                                                    >
+                                                        <ArrowLeftRight size={12}/>
+                                                    </button>
+                                                );
+                                            }
+
+                                            if (canRequestSwapColleague) {
+                                                return (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onOpenSwapWithColleague?.(assignment);
+                                                        }}
+                                                        className="staff-chip-colleague-swap-btn"
+                                                        title={`Đề xuất đổi ca với đồng nghiệp ${displayName}`}
+                                                        style={{
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            padding: 2,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: '#0284C7',
+                                                            borderRadius: 3,
+                                                            transition: 'color 0.15s ease',
+                                                        }}
+                                                    >
+                                                        <ArrowLeftRight size={12}/>
+                                                    </button>
+                                                );
+                                            }
+
+                                            return null;
                                         })()}
                                         {isExternal || assignment.readOnly ? (
                                             <span
@@ -441,7 +562,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                                     padding: 2,
                                                 }}
                                             >
-                                                <Lock size={12} />
+                                                <Lock size={12}/>
                                             </span>
                                         ) : (
                                             canEdit && (
@@ -466,7 +587,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                                         transition: 'color 0.15s ease',
                                                     }}
                                                 >
-                                                    <X size={12} />
+                                                    <X size={12}/>
                                                 </button>
                                             )
                                         )}

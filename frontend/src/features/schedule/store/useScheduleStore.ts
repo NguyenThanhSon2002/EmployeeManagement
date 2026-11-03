@@ -18,12 +18,10 @@ import {
   getShiftAbsoluteTimeRange,
   assignmentToTimeRange,
 } from '@/utils/conflict-detector.utils';
-import { copyScheduleWeek } from '@/utils/copy-merge.utils';
 import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
 import { useSettingsStore } from '@/features/settings/store/useSettingsStore';
 import { scheduleService } from '../api/scheduleService';
 import { workShiftService } from '@/features/shifts/api/workShiftService';
-import { isMockEnabled } from '@/config/env.config';
 
 const STORAGE_PREFIX = 'EMS_SCHEDULES_BRANCH_';
 
@@ -134,6 +132,16 @@ interface ScheduleState {
   /** Cập nhật giải trình đặc cách cho ca phân công (hỗ trợ null để xóa giải trình) */
   updateAssignmentOverride: (assignmentId: number, overrideReason: string | null, overrideRule?: string) => Promise<boolean>;
 
+  /** Nhân viên tự đăng ký ca trống */
+  claimShift: (data: {
+    workShiftId: number;
+    workDate: string;
+    selfVolunteeredConfirm?: boolean;
+  }) => Promise<{ success: boolean; error?: string; warningMessage?: string; needsConfirm?: boolean }>;
+
+  /** Nhân viên tự hủy ca đã đăng ký */
+  cancelClaimedShift: (assignmentId: number) => Promise<{ success: boolean; error?: string }>;
+
   fetchShiftTemplates: (branchId?: number) => Promise<void>;
   addShiftTemplate: (template: Omit<ShiftTemplate, 'id'>) => Promise<ShiftTemplate> | ShiftTemplate;
   updateShiftTemplate: (id: number, data: Partial<ShiftTemplate>) => Promise<void> | void;
@@ -167,6 +175,7 @@ function initializeStateFromSeed(branchId: number = 1) {
       searchTerm: '',
       shiftCodeFilter: '',
       onlyShowConflicts: false,
+      onlyShowUnderstaffed: false,
     },
     employees: useDirectoryStore.getState().employees.filter((e) => e.branchId === branchId),
     shiftTemplates: [] as ShiftTemplate[],
@@ -314,21 +323,6 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
             ...localCache,
           },
         }));
-      }
-
-      if (isMockEnabled()) {
-        const allEmployees = useDirectoryStore.getState().employees;
-        const branchEmployees = allEmployees.filter((e) => e.branchId === branchId);
-        const secondaryEmployees = allEmployees.filter((e) => e.branchId !== branchId && (e.id === 1 || e.id === 3));
-        const combinedEmployees = [...branchEmployees, ...secondaryEmployees].map((e) => ({
-          ...e,
-          hasMultiBranch: e.id === 1 || e.id === 3 || e.branchId !== branchId,
-          homeBranchId: e.branchId,
-          homeBranchName: e.branchId === 1 ? 'Chi nhánh Cầu Giấy' : (e.branchId === 2 ? 'Chi nhánh Đống Đa' : 'Chi nhánh Hoàn Kiếm'),
-        }));
-        set({ employees: combinedEmployees, isFetchingSchedule: false });
-        get().recomputeAllConflicts();
-        return;
       }
 
       try {
@@ -616,48 +610,46 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         changeHistory: state.changeHistory,
       });
 
-      if (!isMockEnabled()) {
-        scheduleService
-            .assignSingleShift({
-              schedule_id: state.scheduleId,
-              employee_id: payload.employeeId,
-              work_shift_id: payload.workShiftId,
-              work_date: payload.workDate,
-              override_rule: payload.overrideRule || undefined,
-              override_reason: payload.overrideReason || undefined,
-              schedule_version: state.scheduleVersion,
-            })
-            .then((saved) => {
-              if (saved && saved.id) {
-                set((prev) => {
-                  const currentList = prev.assignments[key] || [];
-                  const updatedList = currentList.map((item) =>
-                      item.id === newAssignment.id ? { ...item, id: saved.id, version: saved.version || item.version } : item
-                  );
-                  const newAssignmentsMap = {
-                    ...prev.assignments,
-                    [key]: updatedList,
-                  };
-                  saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, newAssignmentsMap, prev.currentStartDate);
-                  const recomputedConflicts = computeAllConflicts(
-                    newAssignmentsMap,
-                    prev.employees,
-                    prev.approvedLeaves,
-                    prev.holidays,
-                    prev.shiftTemplates
-                  );
-                  return {
-                    assignments: newAssignmentsMap,
-                    conflicts: recomputedConflicts,
-                    scheduleVersion: (prev.scheduleVersion || 1) + 1,
-                  };
-                });
-              }
-            })
-            .catch((err) => {
-              console.warn('Failed to persist shift assignment to backend:', err);
-            });
-      }
+      scheduleService
+          .assignSingleShift({
+            schedule_id: state.scheduleId,
+            employee_id: payload.employeeId,
+            work_shift_id: payload.workShiftId,
+            work_date: payload.workDate,
+            override_rule: payload.overrideRule || undefined,
+            override_reason: payload.overrideReason || undefined,
+            schedule_version: state.scheduleVersion,
+          })
+          .then((saved) => {
+            if (saved && saved.id) {
+              set((prev) => {
+                const currentList = prev.assignments[key] || [];
+                const updatedList = currentList.map((item) =>
+                    item.id === newAssignment.id ? { ...item, id: saved.id, version: saved.version || item.version } : item
+                );
+                const newAssignmentsMap = {
+                  ...prev.assignments,
+                  [key]: updatedList,
+                };
+                saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, newAssignmentsMap, prev.currentStartDate);
+                const recomputedConflicts = computeAllConflicts(
+                  newAssignmentsMap,
+                  prev.employees,
+                  prev.approvedLeaves,
+                  prev.holidays,
+                  prev.shiftTemplates
+                );
+                return {
+                  assignments: newAssignmentsMap,
+                  conflicts: recomputedConflicts,
+                  scheduleVersion: (prev.scheduleVersion || 1) + 1,
+                };
+              });
+            }
+          })
+          .catch((err) => {
+            console.warn('Failed to persist shift assignment to backend:', err);
+          });
 
       return { success: true };
     },
@@ -689,11 +681,9 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         return;
       }
 
-      if (!isMockEnabled()) {
-        scheduleService.deleteAssignment(assignmentId, state.scheduleVersion).catch((err) => {
-          console.warn('Failed to delete assignment on backend:', err);
-        });
-      }
+      scheduleService.deleteAssignment(assignmentId, state.scheduleVersion).catch((err) => {
+        console.warn('Failed to delete assignment on backend:', err);
+      });
 
       const updatedAssignments = { ...state.assignments };
       const filteredList = (updatedAssignments[targetKey] || []).filter((a) => a.id !== assignmentId);
@@ -768,44 +758,89 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         conflicts: updatedConflicts,
       });
 
-      if (!isMockEnabled()) {
-        try {
-          const saved = await scheduleService.updateAssignmentOverride(assignmentId, {
-            override_reason: normalizedReason,
-            override_rule: normalizedReason ? overrideRule : null,
-            schedule_version: state.scheduleVersion,
-          });
+      try {
+        const saved = await scheduleService.updateAssignmentOverride(assignmentId, {
+          override_reason: normalizedReason,
+          override_rule: normalizedReason ? overrideRule : null,
+          schedule_version: state.scheduleVersion,
+        });
 
-          if (saved && targetKey) {
-            set((prev) => {
-              const currentList = prev.assignments[targetKey!] || [];
-              const nextList = currentList.map((item) =>
-                Number(item.id) === Number(assignmentId)
-                  ? {
-                      ...item,
-                      overrideReason: saved.override_reason !== undefined ? saved.override_reason : normalizedReason,
-                      overrideRule: saved.override_rule !== undefined ? saved.override_rule : (normalizedReason ? item.overrideRule : null),
-                      version: saved.version || item.version,
-                    }
-                  : item
-              );
-              const nextMap = {
-                ...prev.assignments,
-                [targetKey!]: nextList,
-              };
-              saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, nextMap, prev.currentStartDate);
-              return {
-                assignments: nextMap,
-                scheduleVersion: (prev.scheduleVersion || 1) + 1,
-              };
-            });
-          }
-        } catch (err) {
-          console.error('Failed to update override reason to backend:', err);
+        if (saved && targetKey) {
+          set((prev) => {
+            const currentList = prev.assignments[targetKey!] || [];
+            const nextList = currentList.map((item) =>
+              Number(item.id) === Number(assignmentId)
+                ? {
+                    ...item,
+                    overrideReason: saved.override_reason !== undefined ? saved.override_reason : normalizedReason,
+                    overrideRule: saved.override_rule !== undefined ? saved.override_rule : (normalizedReason ? item.overrideRule : null),
+                    version: saved.version || item.version,
+                  }
+                : item
+            );
+            const nextMap = {
+              ...prev.assignments,
+              [targetKey!]: nextList,
+            };
+            saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, nextMap, prev.currentStartDate);
+            return {
+              assignments: nextMap,
+              scheduleVersion: (prev.scheduleVersion || 1) + 1,
+            };
+          });
         }
+      } catch (err) {
+        console.error('Failed to update override reason to backend:', err);
       }
 
       return true;
+    },
+
+    claimShift: async (data) => {
+      const state = get();
+      const currentBranchId = state.filterOptions.branchId || 1;
+      try {
+        await scheduleService.claimShift({
+          schedule_id: state.scheduleId,
+          work_shift_id: data.workShiftId,
+          work_date: data.workDate,
+          self_volunteered_confirm: data.selfVolunteeredConfirm,
+        });
+
+        // Tải lại lịch từ backend để cập nhật toàn bộ trạng thái
+        await get().fetchWeeklySchedule(currentBranchId, state.currentStartDate);
+        return { success: true };
+      } catch (err: any) {
+        const errorData = err?.response?.data?.error || err?.response?.data || {};
+        const code = errorData.code || err?.code;
+        const message = errorData.message || err?.message || 'Không thể đăng ký ca làm việc';
+
+        if (code === 'WARN_VOLUNTEER_CONFIRMATION_REQUIRED') {
+          return {
+            success: false,
+            needsConfirm: true,
+            warningMessage: message,
+          };
+        }
+
+        return {
+          success: false,
+          error: message,
+        };
+      }
+    },
+
+    cancelClaimedShift: async (assignmentId) => {
+      const state = get();
+      const currentBranchId = state.filterOptions.branchId || 1;
+      try {
+        await scheduleService.cancelClaimedShift(assignmentId);
+        await get().fetchWeeklySchedule(currentBranchId, state.currentStartDate);
+        return { success: true };
+      } catch (err: any) {
+        const message = err?.response?.data?.error?.message || err?.message || 'Không thể hủy ca làm việc';
+        return { success: false, error: message };
+      }
     },
 
     applyAutoAssignments: (
@@ -863,7 +898,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
 
       set({ assignments: updated, conflicts: updatedConflicts });
 
-      if (!isMockEnabled() && state.scheduleId) {
+      if (state.scheduleId) {
         scheduleService
             .batchAssignShifts({
               schedule_id: state.scheduleId,
@@ -895,108 +930,35 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       const state = get();
       const currentMon = parseISO(state.currentStartDate);
       const prevMon = addDays(currentMon, -7);
-      const prevSun = addDays(currentMon, -1);
       const prevMonStr = format(prevMon, 'yyyy-MM-dd');
-      const prevSunStr = format(prevSun, 'yyyy-MM-dd');
       const branchId = state.filterOptions.branchId || 1;
 
-      if (!isMockEnabled()) {
-        try {
-          const res = await scheduleService.copyScheduleWeek({
-            branch_id: branchId,
-            source_start_date: prevMonStr,
-            target_start_date: state.currentStartDate,
-            mode,
-          });
+      try {
+        const res = await scheduleService.copyScheduleWeek({
+          branch_id: branchId,
+          source_start_date: prevMonStr,
+          target_start_date: state.currentStartDate,
+          mode,
+        });
 
-          // Reload authoritative weekly schedule from backend Single Source of Truth
-          await get().fetchWeeklySchedule(branchId, state.currentStartDate);
+        // Reload authoritative weekly schedule from backend Single Source of Truth
+        await get().fetchWeeklySchedule(branchId, state.currentStartDate);
 
-          return {
-            copiedCount: res.copied_count,
-            skippedCount: res.skipped_count,
-          };
-        } catch (err) {
-          console.error('Failed to copy schedule week via API:', err);
-          throw err;
-        }
+        return {
+          copiedCount: res.copied_count,
+          skippedCount: res.skipped_count,
+        };
+      } catch (err) {
+        console.error('Failed to copy schedule week via API:', err);
+        throw err;
       }
-
-      // Fallback for Mock Mode
-      const currentSun = addDays(currentMon, 6);
-      const currentSunStr = format(currentSun, 'yyyy-MM-dd');
-
-      const allList: ShiftAssignment[] = Object.values(state.assignments).flat();
-
-      const sourceAssignments = allList.filter(
-          (a) => a.workDate >= prevMonStr && a.workDate <= prevSunStr
-      );
-      const targetAssignments = allList.filter(
-          (a) => a.workDate >= state.currentStartDate && a.workDate <= currentSunStr
-      );
-
-      const targetLeaves = state.approvedLeaves.filter(
-          (l) => l.startDate <= currentSunStr && l.endDate >= state.currentStartDate
-      );
-
-      const result = copyScheduleWeek({
-        sourceAssignments,
-        targetAssignments,
-        targetLeaves,
-        daysOffset: 7,
-        mode,
-        newScheduleId: state.scheduleId,
-      });
-
-      const updatedAssignments = { ...state.assignments };
-
-      // Remove current week assignments
-      for (const [key, list] of Object.entries(updatedAssignments)) {
-        const remaining = list.filter((a) => a.workDate < state.currentStartDate || a.workDate > currentSunStr);
-        if (remaining.length > 0) {
-          updatedAssignments[key] = remaining;
-        } else {
-          delete updatedAssignments[key];
-        }
-      }
-
-      // Add merged assignments
-      for (const a of result.mergedAssignments) {
-        const key = `${a.employeeId}_${a.workDate}`;
-        if (!updatedAssignments[key]) {
-          updatedAssignments[key] = [];
-        }
-        updatedAssignments[key].push(a);
-      }
-
-      saveBranchScheduleToStorage(branchId, updatedAssignments, state.currentStartDate);
-
-      const updatedConflicts = computeAllConflicts(
-          updatedAssignments,
-          state.employees,
-          state.approvedLeaves,
-          state.holidays,
-          state.shiftTemplates
-      );
-
-      set({
-        assignments: updatedAssignments,
-        conflicts: updatedConflicts,
-      });
-
-      return {
-        copiedCount: result.copiedCount,
-        skippedCount: result.skippedCount,
-      };
     },
 
     publishSchedule: () => {
       const state = get();
-      if (!isMockEnabled()) {
-        scheduleService.publishSchedule(state.scheduleId, state.scheduleVersion).catch((err) => {
-          console.warn('Failed to publish schedule on backend:', err);
-        });
-      }
+      scheduleService.publishSchedule(state.scheduleId, state.scheduleVersion).catch((err) => {
+        console.warn('Failed to publish schedule on backend:', err);
+      });
       set({
         scheduleStatus: 'PUBLISHED',
         publishedAt: new Date().toISOString(),
@@ -1005,11 +967,9 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
 
     unpublishSchedule: () => {
       const state = get();
-      if (!isMockEnabled()) {
-        scheduleService.unpublishSchedule(state.scheduleId).catch((err) => {
-          console.warn('Failed to unpublish schedule on backend:', err);
-        });
-      }
+      scheduleService.unpublishSchedule(state.scheduleId).catch((err) => {
+        console.warn('Failed to unpublish schedule on backend:', err);
+      });
       set({
         scheduleStatus: 'DRAFT',
       });
@@ -1054,8 +1014,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         conflicts: updatedConflicts,
       });
 
-      // 5. Nếu kết nối Backend thực, gọi API dọn dẹp các phân ca trên server
-      if (!isMockEnabled() && state.scheduleId) {
+      // 5. Nếu có scheduleId thực tế, gọi API dọn dẹp các phân ca trên server
+      if (state.scheduleId) {
         try {
           await scheduleService.deleteAssignment(state.scheduleId, state.scheduleVersion);
         } catch (err) {
@@ -1100,7 +1060,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
     },
 
     fetchShiftTemplates: async (branchId?: number) => {
-      if (isMockEnabled() || import.meta.env.MODE === 'test') {
+      if (import.meta.env.MODE === 'test') {
         return;
       }
       try {
@@ -1115,7 +1075,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
 
     addShiftTemplate: async (template) => {
       const state = get();
-      const isTest = isMockEnabled() || import.meta.env.MODE === 'test';
+      const isTest = import.meta.env.MODE === 'test';
       const tempId = Math.max(0, ...state.shiftTemplates.map((t) => t.id)) + 1;
       const localTemplate: ShiftTemplate = { ...template, id: tempId };
 
@@ -1137,7 +1097,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
     updateShiftTemplate: async (id, data) => {
       const state = get();
       const prevTemplates = state.shiftTemplates;
-      const isTest = isMockEnabled() || import.meta.env.MODE === 'test';
+      const isTest = import.meta.env.MODE === 'test';
 
       // Resolve branchName from directory store if not present
       let branchName = data.branchName;
@@ -1178,7 +1138,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         return { success: false, error: 'Không thể xóa mẫu ca đang có nhân viên được phân công làm việc.' };
       }
 
-      const isTest = isMockEnabled() || import.meta.env.MODE === 'test';
+      const isTest = import.meta.env.MODE === 'test';
       set({
         shiftTemplates: state.shiftTemplates.filter((t) => t.id !== id),
       });

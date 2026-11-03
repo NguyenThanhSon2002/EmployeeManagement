@@ -23,10 +23,31 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .or(() -> userRepository.findByEmail(username))
-                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng với tài khoản/email: " + username));
+    public UserDetails loadUserByUsername(String rawUsername) throws UsernameNotFoundException {
+        if (rawUsername == null || rawUsername.isBlank()) {
+            throw new UsernameNotFoundException("Tên tài khoản không được để trống");
+        }
+        String cleanUsername = rawUsername.trim();
+
+        // 1. Exact username or email lookup
+        java.util.Optional<User> userOpt = userRepository.findByUsername(cleanUsername)
+                .or(() -> userRepository.findByEmail(cleanUsername));
+
+        // 2. Flexible normalization for employee codes (e.g. emp003, emp-003, emp3 -> EMP-003)
+        if (userOpt.isEmpty()) {
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(?i)^EMP[-_]?(\\d+)$").matcher(cleanUsername);
+            if (matcher.matches()) {
+                try {
+                    int num = Integer.parseInt(matcher.group(1));
+                    String normalizedCode = String.format("EMP-%03d", num);
+                    userOpt = userRepository.findByUsername(normalizedCode)
+                            .or(() -> userRepository.findByEmail(normalizedCode.toLowerCase() + "@company.com"));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        User user = userOpt.orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng với tài khoản/email: " + cleanUsername));
 
         Long employeeId = employeeRepository.findByUserIdAndDeletedAtIsNull(user.getId())
                 .map(Employee::getId)

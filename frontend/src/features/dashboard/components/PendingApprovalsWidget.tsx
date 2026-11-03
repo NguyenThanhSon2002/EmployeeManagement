@@ -4,7 +4,6 @@ import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { dashboardService, type PendingApprovalItem } from '../api/dashboardService';
 import { leaveService } from '@/features/leaves/api/leaveService';
 import { attendanceService } from '@/features/attendance/api/attendanceService';
-import { isMockEnabled } from '@/config/env.config';
 import { Check, X, FileText, Palmtree, Loader2 } from 'lucide-react';
 
 export const PendingApprovalsWidget: React.FC = () => {
@@ -17,10 +16,6 @@ export const PendingApprovalsWidget: React.FC = () => {
   const effectiveBranchId = !isDirector ? currentUser?.branchId : undefined;
 
   const loadPending = async () => {
-    if (isMockEnabled()) {
-      setIsLoading(false);
-      return;
-    }
     try {
       setIsLoading(true);
       const data = await dashboardService.getPendingApprovals(effectiveBranchId);
@@ -38,12 +33,10 @@ export const PendingApprovalsWidget: React.FC = () => {
 
   const handleApprove = async (item: PendingApprovalItem) => {
     try {
-      if (!isMockEnabled()) {
-        if (item.type === 'LEAVE') {
-          await leaveService.reviewLeaveRequest(item.id, 'APPROVE');
-        } else {
-          await attendanceService.reviewCorrection(item.id, { action: 'APPROVE' });
-        }
+      if (item.type === 'LEAVE') {
+        await leaveService.reviewLeaveRequest(item.id, 'APPROVE');
+      } else {
+        await attendanceService.reviewCorrection(item.id, { action: 'APPROVE' });
       }
       setItems((prev) => prev.filter((i) => !(i.id === item.id && i.type === item.type)));
       addToast({
@@ -63,15 +56,13 @@ export const PendingApprovalsWidget: React.FC = () => {
 
   const handleReject = async (item: PendingApprovalItem) => {
     try {
-      if (!isMockEnabled()) {
-        if (item.type === 'LEAVE') {
-          await leaveService.reviewLeaveRequest(item.id, 'REJECT', 'Từ chối trên Dashboard');
-        } else {
-          await attendanceService.reviewCorrection(item.id, {
-            action: 'REJECT',
-            rejection_reason: 'Từ chối trên Dashboard',
-          });
-        }
+      if (item.type === 'LEAVE') {
+        await leaveService.reviewLeaveRequest(item.id, 'REJECT', 'Từ chối trên Dashboard');
+      } else {
+        await attendanceService.reviewCorrection(item.id, {
+          action: 'REJECT',
+          rejection_reason: 'Từ chối trên Dashboard',
+        });
       }
       setItems((prev) => prev.filter((i) => !(i.id === item.id && i.type === item.type)));
       addToast({

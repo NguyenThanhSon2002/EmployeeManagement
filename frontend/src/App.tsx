@@ -9,8 +9,12 @@ export default function App(): React.JSX.Element {
   useEffect(() => {
     const bootstrap = async () => {
       await useAuthStore.getState().initAuth();
-      await useDirectoryStore.getState().fetchDirectory();
-      await useSettingsStore.getState().fetchSettings();
+      if (useAuthStore.getState().isAuthenticated) {
+        await Promise.all([
+          useDirectoryStore.getState().fetchDirectory(),
+          useSettingsStore.getState().fetchSettings(),
+        ]).catch((err) => console.warn('Directory/settings bootstrap warning:', err));
+      }
     };
     bootstrap();
   }, []);

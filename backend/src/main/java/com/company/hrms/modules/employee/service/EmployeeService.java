@@ -24,6 +24,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -246,6 +248,21 @@ public class EmployeeService {
         }
 
         Long oldBranchId = employee.getBranchId();
+        // Phân quyền Option 2: Chỉ Giám đốc (ROLE_DIRECTOR / ROLE_ADMIN) mới có thẩm quyền điều chuyển cơ sở làm việc chính
+        if (request.getBranchId() != null && oldBranchId != null && !request.getBranchId().equals(oldBranchId)) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+                boolean isDirectorOrAdmin = auth.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_DIRECTOR".equals(a.getAuthority()) || "ROLE_ADMIN".equals(a.getAuthority()));
+                if (!isDirectorOrAdmin) {
+                    throw new BusinessException(
+                            "FORBIDDEN_BRANCH_TRANSFER",
+                            "Chỉ Giám đốc (ROLE_DIRECTOR / ROLE_ADMIN) mới có thẩm quyền điều chuyển cơ sở làm việc chính của nhân viên.",
+                            HttpStatus.FORBIDDEN
+                    );
+                }
+            }
+        }
         mapDtoToEntity(request, employee);
         Employee updated = employeeRepository.save(employee);
 

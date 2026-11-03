@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import type { ShiftTemplate } from '@/types/domain.types';
 import { useAvailabilityStore } from '../store/useAvailabilityStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useUIStore } from '@/shared/store/useUIStore';
@@ -37,54 +36,6 @@ const DAYS_OF_WEEK = [
     { day: 5, label: 'Thứ Sáu', short: 'T6' },
     { day: 6, label: 'Thứ Bảy', short: 'T7' },
     { day: 7, label: 'Chủ Nhật', short: 'CN' },
-];
-
-const DEFAULT_FALLBACK_TEMPLATES: ShiftTemplate[] = [
-    {
-        id: 1,
-        shiftCode: 'SANG',
-        shiftName: 'Ca Sáng',
-        startTime: '08:00',
-        endTime: '12:00',
-        breakMinutes: 0,
-        isCrossMidnight: false,
-        colorCode: '#2563EB',
-        textColor: '#FFFFFF',
-        minStaffing: 3,
-        maxStaffing: 5,
-        applicableDays: '1,2,3,4,5,6,7',
-        isActive: true,
-    },
-    {
-        id: 2,
-        shiftCode: 'CHIEU',
-        shiftName: 'Ca Chiều',
-        startTime: '13:00',
-        endTime: '17:00',
-        breakMinutes: 0,
-        isCrossMidnight: false,
-        colorCode: '#10B981',
-        textColor: '#FFFFFF',
-        minStaffing: 3,
-        maxStaffing: 5,
-        applicableDays: '1,2,3,4,5,6,7',
-        isActive: true,
-    },
-    {
-        id: 3,
-        shiftCode: 'TOI',
-        shiftName: 'Ca Tối',
-        startTime: '18:00',
-        endTime: '22:00',
-        breakMinutes: 0,
-        isCrossMidnight: false,
-        colorCode: '#8B5CF6',
-        textColor: '#FFFFFF',
-        minStaffing: 2,
-        maxStaffing: 4,
-        applicableDays: '1,2,3,4,5,6,7',
-        isActive: true,
-    },
 ];
 
 export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = ({
@@ -152,8 +103,7 @@ export const EmployeeAvailabilityTab: React.FC<EmployeeAvailabilityTabProps> = (
     }, [employeeId, fetchEmployeeAvailability]);
 
     const activeTemplates = useMemo(() => {
-        const list = shiftTemplates && shiftTemplates.length > 0 ? shiftTemplates : DEFAULT_FALLBACK_TEMPLATES;
-        return list.filter((t) => t.isActive);
+        return (shiftTemplates || []).filter((t) => t.isActive);
     }, [shiftTemplates]);
 
     const activeTemplateIds = useMemo(() => {

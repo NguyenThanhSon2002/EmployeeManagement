@@ -66,18 +66,25 @@ public class ShiftSwapService {
                 .orElseThrow(() -> new ResourceNotFoundException("Nhân viên đối tác", request.getTargetEmployeeId()));
 
         if (targetEmp.getId().equals(reqAssign.getEmployeeId())) {
-            throw new BusinessException("INVALID_TARGET", "Không thể tự nhường ca cho chính mình.", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("INVALID_TARGET", "Không thể tự nhường/đổi ca cho chính mình.", HttpStatus.BAD_REQUEST);
         }
 
         SimulateSwapResponse response = new SimulateSwapResponse();
         List<ScheduleConflictDto> targetConflicts = new ArrayList<>();
+        List<ScheduleConflictDto> requesterConflicts = new ArrayList<>();
 
-        // Kiểm tra đồng nghiệp B nhận thêm ca của A
+        SwapType swapType = request.getType() != null ? request.getType() : SwapType.HANDOVER;
+        ShiftAssignment targetAssign = null;
+        if (swapType == SwapType.SWAP && request.getTargetAssignmentId() != null) {
+            targetAssign = assignmentRepository.findById(request.getTargetAssignmentId()).orElse(null);
+        }
+
+        // 1. Kiểm tra đồng nghiệp B nhận thêm ca của A
         ConflictValidationResult bResult = conflictEngine.validateAssignment(
                 request.getTargetEmployeeId(),
                 reqAssign.getWorkShiftId(),
                 reqAssign.getWorkDate(),
-                reqAssign.getId(),
+                targetAssign != null ? targetAssign.getId() : reqAssign.getId(),
                 schedule.getId(),
                 schedule.getBranchId()
         );
@@ -120,29 +127,57 @@ public class ShiftSwapService {
             }
         }
 
-        boolean hasError = targetConflicts.stream().anyMatch(c -> "ERROR".equalsIgnoreCase(c.getSeverity()) || "MANDATORY".equalsIgnoreCase(c.getSeverity()));
-        boolean hasWarning = !targetConflicts.isEmpty();
+        // 2. Nếu là đổi chéo 2 chiều (SWAP), kiểm tra A nhận ca của B
+        if (swapType == SwapType.SWAP && targetAssign != null) {
+            ConflictValidationResult aResult = conflictEngine.validateAssignment(
+                    reqAssign.getEmployeeId(),
+                    targetAssign.getWorkShiftId(),
+                    targetAssign.getWorkDate(),
+                    reqAssign.getId(),
+                    schedule.getId(),
+                    schedule.getBranchId()
+            );
+
+            if (aResult.getHasMandatoryErrors()) {
+                requesterConflicts.addAll(aResult.getMandatoryErrors());
+            }
+            if (aResult.getHasWarnings()) {
+                requesterConflicts.addAll(aResult.getWarnings());
+            }
+
+            LocalDateTime targetStart = LocalDateTime.of(
+                    targetAssign.getWorkDate(),
+                    targetAssign.getSnapshotStartTime() != null ? targetAssign.getSnapshotStartTime() : LocalTime.of(8, 0)
+            );
+            if (targetStart.isBefore(now)) {
+                requesterConflicts.add(new ScheduleConflictDto(
+                        "PAST_SHIFT",
+                        "WARNING",
+                        targetAssign.getEmployeeId(),
+                        targetAssign.getSnapshotShiftName(),
+                        targetAssign.getWorkDate(),
+                        targetAssign.getWorkShiftId(),
+                        "Ca đối ứng trong quá khứ."
+                ));
+            }
+        }
+
+        boolean hasError = targetConflicts.stream().anyMatch(c -> "ERROR".equalsIgnoreCase(c.getSeverity()) || "MANDATORY".equalsIgnoreCase(c.getSeverity()))
+                || requesterConflicts.stream().anyMatch(c -> "ERROR".equalsIgnoreCase(c.getSeverity()) || "MANDATORY".equalsIgnoreCase(c.getSeverity()));
+        boolean hasWarning = !targetConflicts.isEmpty() || !requesterConflicts.isEmpty();
 
         response.setValid(!hasError);
         response.setHasError(hasError);
         response.setHasWarning(hasWarning);
-        response.setRequesterConflicts(Collections.emptyList());
+        response.setRequesterConflicts(requesterConflicts);
         response.setTargetConflicts(targetConflicts);
 
         if (hasError) {
-            response.setMessage("Không thể nhường ca: Đồng nghiệp vi phạm quy định làm việc (nghỉ ngơi tối thiểu hoặc trùng ca).");
+            response.setMessage("Không thể đổi ca: Phát sinh vi phạm quy định làm việc (nghỉ ngơi tối thiểu hoặc trùng ca).");
         } else if (hasWarning) {
-            boolean isPast = targetConflicts.stream().anyMatch(c -> "PAST_SHIFT".equals(c.getRuleCode()));
-            boolean isShortNotice = targetConflicts.stream().anyMatch(c -> "WARN_SHORT_NOTICE_SWAP".equals(c.getRuleCode()));
-            if (isPast) {
-                response.setMessage("Cảnh báo đổi ca hồi tố: Ca làm việc đã diễn ra trong quá khứ, Quản lý sẽ thẩm định và đối soát chấm công.");
-            } else if (isShortNotice) {
-                response.setMessage("Cảnh báo đổi ca sát giờ: Yêu cầu gửi cách giờ vào ca chưa đầy 24h, Quản lý sẽ thẩm định lý do khẩn cấp.");
-            } else {
-                response.setMessage("Có cảnh báo nhẹ về quy định làm việc nhưng vẫn có thể gửi đề xuất để Quản lý xem xét.");
-            }
+            response.setMessage("Có cảnh báo về quy định làm việc hoặc đổi sát giờ nhưng vẫn có thể gửi đề xuất để Quản lý xem xét.");
         } else {
-            response.setMessage("Ca làm việc hoàn toàn hợp lệ, đồng nghiệp có thể nhận ca.");
+            response.setMessage("Ca làm việc hoàn toàn hợp lệ, có thể tạo yêu cầu đổi/nhường ca.");
         }
 
         return response;
@@ -173,21 +208,29 @@ public class ShiftSwapService {
                     throw new BusinessException("FORBIDDEN_SWAP", "Quản lý chỉ được phép tạo đề xuất cho nhân sự thuộc chi nhánh mình phụ trách.", HttpStatus.FORBIDDEN);
                 }
             } else {
-                throw new BusinessException("FORBIDDEN_SWAP", "Bạn chỉ được phép đề xuất nhường ca làm việc của chính mình.", HttpStatus.FORBIDDEN);
+                throw new BusinessException("FORBIDDEN_SWAP", "Bạn chỉ được phép đề xuất nhường/đổi ca làm việc của chính mình.", HttpStatus.FORBIDDEN);
             }
         }
 
-        // Kiểm tra trạng thái công bố lịch tuần:
-        // Nhân viên chỉ được phép đề xuất khi lịch đã PUBLISHED
-        if (!isDirectorOrAdmin && !isManager) {
-            if (!"PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
-                throw new BusinessException("SCHEDULE_NOT_PUBLISHED", "Nhân viên chỉ được phép gửi đề xuất đổi/nhường ca khi lịch làm việc tuần đã được công bố chính thức.", HttpStatus.BAD_REQUEST);
+        SwapType swapType = request.getType() != null ? request.getType() : SwapType.HANDOVER;
+        ShiftAssignment targetAssign = null;
+        if (swapType == SwapType.SWAP) {
+            if (request.getTargetAssignmentId() == null) {
+                throw new BusinessException("MISSING_TARGET_ASSIGNMENT", "Đổi ca 2 chiều bắt buộc phải chọn ca đối ứng của đồng nghiệp.", HttpStatus.BAD_REQUEST);
+            }
+            targetAssign = assignmentRepository.findById(request.getTargetAssignmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Phân ca của đối tác", request.getTargetAssignmentId()));
+            if (!targetAssign.getEmployeeId().equals(request.getTargetEmployeeId())) {
+                throw new BusinessException("TARGET_MISMATCH", "Ca đối ứng không thuộc về đồng nghiệp được chọn.", HttpStatus.BAD_REQUEST);
             }
         }
 
         // Kiểm tra xem ca này đã có đơn chờ duyệt nào chưa
         List<SwapStatus> pendingStatuses = List.of(SwapStatus.PENDING_PEER, SwapStatus.PEER_ACCEPTED);
         boolean exists = swapRepository.existsByRequesterAssignmentIdAndStatusIn(reqAssign.getId(), pendingStatuses);
+        if (targetAssign != null) {
+            exists = exists || swapRepository.existsByRequesterAssignmentIdAndStatusIn(targetAssign.getId(), pendingStatuses);
+        }
         if (exists) {
             throw new BusinessException("SWAP_ALREADY_EXISTS", "Ca làm việc này đã có đơn đổi ca đang chờ xử lý.", HttpStatus.BAD_REQUEST);
         }
@@ -196,14 +239,16 @@ public class ShiftSwapService {
         SimulateSwapRequest simReq = new SimulateSwapRequest();
         simReq.setRequesterAssignmentId(request.getRequesterAssignmentId());
         simReq.setTargetEmployeeId(request.getTargetEmployeeId());
-        simReq.setType(SwapType.HANDOVER);
+        simReq.setTargetAssignmentId(targetAssign != null ? targetAssign.getId() : null);
+        simReq.setType(swapType);
 
         SimulateSwapResponse simRes = simulateSwap(simReq, reqAssign.getEmployeeId());
         if (simRes.isHasError()) {
             throw new BusinessException("SWAP_CONFLICT", simRes.getMessage(), HttpStatus.BAD_REQUEST);
         }
 
-        String requestCode = "HANDOVER-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + "-"
+        String prefix = swapType == SwapType.SWAP ? "SWAP-" : "HANDOVER-";
+        String requestCode = prefix + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + "-"
                 + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
 
         ShiftSwapRequest swap = new ShiftSwapRequest();
@@ -212,8 +257,8 @@ public class ShiftSwapService {
         swap.setRequesterId(reqAssign.getEmployeeId());
         swap.setRequesterAssignmentId(reqAssign.getId());
         swap.setTargetId(request.getTargetEmployeeId());
-        swap.setTargetAssignmentId(null);
-        swap.setType(SwapType.HANDOVER);
+        swap.setTargetAssignmentId(targetAssign != null ? targetAssign.getId() : null);
+        swap.setType(swapType);
         swap.setReason(request.getReason());
         swap.setStatus(SwapStatus.PENDING_PEER);
 
@@ -283,7 +328,8 @@ public class ShiftSwapService {
             SimulateSwapRequest simReq = new SimulateSwapRequest();
             simReq.setRequesterAssignmentId(swap.getRequesterAssignmentId());
             simReq.setTargetEmployeeId(swap.getTargetId());
-            simReq.setType(SwapType.HANDOVER);
+            simReq.setTargetAssignmentId(swap.getTargetAssignmentId());
+            simReq.setType(swap.getType() != null ? swap.getType() : SwapType.HANDOVER);
 
             SimulateSwapResponse simRes = simulateSwap(simReq, swap.getRequesterId());
             if (simRes.isHasError()) {
@@ -293,10 +339,24 @@ public class ShiftSwapService {
             ShiftAssignment reqAssign = assignmentRepository.findById(swap.getRequesterAssignmentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Phân ca của người yêu cầu", swap.getRequesterAssignmentId()));
 
-            // Chuyển quyền phân ca sang đồng nghiệp nhận ca
-            reqAssign.setEmployeeId(swap.getTargetId());
-            reqAssign.setOverrideReason("Nhường ca theo " + swap.getRequestCode());
-            assignmentRepository.save(reqAssign);
+            if (swap.getType() == SwapType.SWAP && swap.getTargetAssignmentId() != null) {
+                ShiftAssignment targetAssign = assignmentRepository.findById(swap.getTargetAssignmentId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Phân ca của đối tác", swap.getTargetAssignmentId()));
+
+                reqAssign.setEmployeeId(swap.getTargetId());
+                reqAssign.setOverrideReason("Đổi ca theo " + swap.getRequestCode());
+
+                targetAssign.setEmployeeId(swap.getRequesterId());
+                targetAssign.setOverrideReason("Đổi ca theo " + swap.getRequestCode());
+
+                assignmentRepository.save(reqAssign);
+                assignmentRepository.save(targetAssign);
+            } else {
+                // Chuyển quyền phân ca sang đồng nghiệp nhận ca (HANDOVER)
+                reqAssign.setEmployeeId(swap.getTargetId());
+                reqAssign.setOverrideReason("Nhường ca theo " + swap.getRequestCode());
+                assignmentRepository.save(reqAssign);
+            }
 
             // Tăng phiên bản schedule
             Schedule sched = scheduleRepository.findById(reqAssign.getScheduleId()).orElse(null);

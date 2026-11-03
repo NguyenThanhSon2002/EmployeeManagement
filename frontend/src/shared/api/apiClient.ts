@@ -82,7 +82,7 @@ export async function request<T>(
   }));
 
   if (!response.ok || !data.success) {
-    if ((response.status === 401 || response.status === 403) && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
+    if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');

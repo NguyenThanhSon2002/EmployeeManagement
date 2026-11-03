@@ -67,6 +67,28 @@ public class ScheduleController {
         return ApiResponse.success(assignment);
     }
 
+    @PostMapping("/assignments/claim")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Nhân viên tự đăng ký ca trống", description = "Nhân viên tự nhận ca làm việc còn trống chỗ hoặc thiếu định biên")
+    public ApiResponse<ShiftAssignmentDto> claimShift(
+            @Valid @RequestBody ClaimShiftRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Long userId = principal != null ? principal.getId() : 1L;
+        ShiftAssignmentDto assignment = scheduleService.claimShift(request, userId);
+        return ApiResponse.success(assignment);
+    }
+
+    @DeleteMapping("/assignments/claim/{id}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Nhân viên hủy ca đã đăng ký", description = "Nhân viên tự hủy ca làm việc do chính mình đã đăng ký trước đó")
+    public ApiResponse<Void> cancelClaimedShift(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Long userId = principal != null ? principal.getId() : 1L;
+        scheduleService.cancelClaimedShift(id, userId);
+        return ApiResponse.success(null);
+    }
+
     @DeleteMapping("/assignments/{id}")
     @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Xóa một ca phân công", description = "Xóa phân ca và ghi nhận lịch sử nếu lịch đã công bố")

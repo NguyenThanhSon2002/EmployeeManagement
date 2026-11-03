@@ -104,6 +104,19 @@ export const scheduleService = {
     return api.post<ShiftAssignment>('/schedules/assignments', data);
   },
 
+  async claimShift(data: {
+    schedule_id: number;
+    work_shift_id: number;
+    work_date: string;
+    self_volunteered_confirm?: boolean;
+  }): Promise<ShiftAssignment> {
+    return api.post<ShiftAssignment>('/schedules/assignments/claim', data);
+  },
+
+  async cancelClaimedShift(assignmentId: number): Promise<void> {
+    return api.delete<void>(`/schedules/assignments/claim/${assignmentId}`);
+  },
+
   async deleteAssignment(assignmentId: number, scheduleVersion?: number): Promise<void> {
     const query = scheduleVersion !== undefined ? `?schedule_version=${scheduleVersion}` : '';
     return api.delete<void>(`/schedules/assignments/${assignmentId}${query}`);

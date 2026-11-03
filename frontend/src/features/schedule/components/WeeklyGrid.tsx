@@ -19,10 +19,13 @@ interface WeeklyGridProps {
   holidays: CompanyHoliday[];
   canEdit: boolean;
   onlyShowConflicts?: boolean;
+  onlyShowUnderstaffed?: boolean;
   onOpenAssignStaff: (shiftTemplateId: number, workDate: string) => void;
   onRemoveAssignment: (assignmentId: number) => void;
   onOpenOverrideModal?: (assignment: ShiftAssignment) => void;
   onOpenSwapModal?: (assignment: ShiftAssignment) => void;
+  onOpenSwapWithColleague?: (targetAssignment: ShiftAssignment) => void;
+  onClaimShift?: (template: ShiftTemplate, workDate: string) => void;
 }
 
 export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
@@ -34,6 +37,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   holidays,
   canEdit,
   onlyShowConflicts = false,
+  onlyShowUnderstaffed = false,
   onOpenAssignStaff,
   onRemoveAssignment,
   onOpenOverrideModal,
@@ -95,6 +99,7 @@ export const WeeklyGrid: React.FC<WeeklyGridProps> = ({
           todayDateStr={todayDateStr}
           canEdit={canEdit}
           onlyShowConflicts={onlyShowConflicts}
+          onlyShowUnderstaffed={onlyShowUnderstaffed}
           onOpenAssignDrawer={onOpenAssignStaff}
           onRemoveAssignment={onRemoveAssignment}
           onOpenOverrideModal={onOpenOverrideModal}

@@ -28,6 +28,7 @@ export interface ShiftSwapManagementModalProps {
   onClose: () => void;
   branchId: number;
   onScheduleUpdated: () => void;
+  onOpenCreateSwap?: () => void;
 }
 
 export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> = ({
@@ -35,6 +36,7 @@ export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> =
   onClose,
   branchId,
   onScheduleUpdated,
+  onOpenCreateSwap,
 }) => {
   const modalRef = useModalFocusTrap({ isOpen, onClose });
   const { addToast } = useUIStore();
@@ -311,6 +313,30 @@ export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> =
               </p>
             </div>
           </div>
+          {onOpenCreateSwap && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  onClose();
+                  onOpenCreateSwap();
+                }}
+                style={{
+                  height: 32,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  backgroundColor: '#4F46E5',
+                  borderColor: '#4338CA',
+                  marginRight: 10,
+                }}
+              >
+                <ArrowLeftRight size={13} />
+                + Tạo đề xuất mới
+              </button>
+            )}
           <button
             type="button"
             onClick={onClose}
@@ -591,7 +617,7 @@ export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> =
                           {item.requestCode}
                         </span>
                         <span style={{ fontSize: 12, fontWeight: 600, color: '#475569' }}>
-                          🎁 Nhường ca 1 chiều
+                          {item.type === 'SWAP' ? '🔄 Đổi ca 2 chiều' : '🎁 Nhường ca 1 chiều'}
                         </span>
                         {(() => {
                           if (!item.requesterWorkDate || !item.requesterStartTime) return null;
@@ -657,6 +683,16 @@ export const ShiftSwapManagementModal: React.FC<ShiftSwapManagementModalProps> =
                         <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
                           Đồng nghiệp nhận ca: {item.targetName}
                         </div>
+                        {item.type === 'SWAP' && item.targetShiftName && (
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#1E293B', marginTop: 2 }}>
+                            {item.targetShiftName}
+                          </div>
+                        )}
+                        {item.type === 'SWAP' && item.targetWorkDate && (
+                          <div style={{ fontSize: 11.5, color: '#475569', marginTop: 2 }}>
+                            📅 {item.targetWorkDate} ({item.targetStartTime} - {item.targetEndTime})
+                          </div>
+                        )}
                         <div style={{ fontSize: 12.5, fontWeight: 600, color: item.status === 'PENDING_PEER' ? '#D97706' : '#059669', marginTop: 4 }}>
                           {item.status === 'PENDING_PEER' ? '⏳ Đang chờ xác nhận' : '✓ Đồng ý nhận làm thay'}
                         </div>

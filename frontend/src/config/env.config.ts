@@ -10,12 +10,7 @@ const getProcessEnv = (): Record<string, string | undefined> | undefined => {
     : undefined;
 };
 
-export const isMockEnabled = (): boolean => {
-  return (
-    import.meta.env?.VITE_USE_MOCK === 'true' ||
-    getProcessEnv()?.VITE_USE_MOCK === 'true'
-  );
-};
+export const isMockEnabled = (): boolean => false;
 
 export const getApiBaseUrl = (): string => {
   return (

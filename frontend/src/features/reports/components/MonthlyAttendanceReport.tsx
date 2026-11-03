@@ -3,7 +3,6 @@ import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
 import { reportService, type AttendanceSummary } from '../api/reportService';
-import { isMockEnabled } from '@/config/env.config';
 import { Download, Search, Calendar, Loader2 } from 'lucide-react';
 
 export const MonthlyAttendanceReport: React.FC = () => {
@@ -27,7 +26,6 @@ export const MonthlyAttendanceReport: React.FC = () => {
 
   // Fetch real summary data from backend
   useEffect(() => {
-    if (isMockEnabled()) return;
 
     let isMounted = true;
     setIsLoading(true);
@@ -115,35 +113,21 @@ export const MonthlyAttendanceReport: React.FC = () => {
       earlyCount: d.earlyCount.toString(),
     }));
 
-    if (!isMockEnabled()) {
-      reportService.downloadCsv(effectiveBranchId || undefined, selectedYear, selectedMonth).catch(() => {
-        exportToCsv(
-          `BaoCao_TongHopCong_Thang${selectedMonth}_${selectedYear}.csv`,
-          dataRows,
-          columns,
-          `Báo cáo Tổng hợp Công Tháng ${selectedMonth}/${selectedYear}`
-        );
-      });
-      return;
-    }
-
-    exportToCsv(
-      `BaoCao_TongHopCong_Thang${selectedMonth}_${selectedYear}.csv`,
-      dataRows,
-      columns,
-      `Báo cáo Tổng hợp Công Tháng ${selectedMonth}/${selectedYear}`
-    );
+    reportService.downloadCsv(effectiveBranchId || undefined, selectedYear, selectedMonth).catch(() => {
+      exportToCsv(
+        `BaoCao_TongHopCong_Thang${selectedMonth}_${selectedYear}.csv`,
+        dataRows,
+        columns,
+        `Báo cáo Tổng hợp Công Tháng ${selectedMonth}/${selectedYear}`
+      );
+    });
   };
 
   const handleExportExcel = async () => {
-    if (!isMockEnabled()) {
-      try {
-        await reportService.downloadExcel(effectiveBranchId || undefined, selectedYear, selectedMonth);
-      } catch (err) {
-        console.warn('Backend Excel export failed:', err);
-        handleExportCsv();
-      }
-    } else {
+    try {
+      await reportService.downloadExcel(effectiveBranchId || undefined, selectedYear, selectedMonth);
+    } catch (err) {
+      console.warn('Backend Excel export failed, falling back to CSV:', err);
       handleExportCsv();
     }
   };

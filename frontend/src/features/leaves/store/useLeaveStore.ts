@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import type { LeaveRequest } from '@/types/domain.types';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { leaveService } from '../api/leaveService';
-import { isMockEnabled } from '@/config/env.config';
 
 interface LeaveBalanceState {
   annualQuota: number;
@@ -33,7 +32,6 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
     balances: {},
 
     fetchLeaves: async (employeeId?: number) => {
-      if (isMockEnabled()) return;
       try {
         const response: any = await leaveService.getLeaveRequests(employeeId, 1, 100);
         const items = response?.content || (Array.isArray(response) ? response : []);
@@ -60,7 +58,6 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
     },
 
     fetchBalances: async (employeeId?: number, year?: number) => {
-      if (isMockEnabled()) return;
       try {
         const data = await leaveService.getLeaveBalances(employeeId, year);
         if (data && Array.isArray(data)) {
@@ -135,24 +132,22 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
 
       set({ leaves: [newLeave, ...state.leaves] });
 
-      if (!isMockEnabled()) {
-        leaveService.submitLeaveRequest({
-          leave_type_id: payload.leaveTypeId,
-          start_date: payload.startDate,
-          end_date: payload.endDate,
-          total_days: payload.totalDays,
-          reason: payload.reason,
-        }).then((created: any) => {
-          if (created && created.id) {
-            set((curr) => ({
-              leaves: curr.leaves.map((l) => (l.id === newLeave.id ? { ...l, id: created.id } : l)),
-            }));
-            get().fetchBalances(payload.employeeId);
-          }
-        }).catch((err) => {
-          console.error('Failed to submit leave to backend:', err);
-        });
-      }
+      leaveService.submitLeaveRequest({
+        leave_type_id: payload.leaveTypeId,
+        start_date: payload.startDate,
+        end_date: payload.endDate,
+        total_days: payload.totalDays,
+        reason: payload.reason,
+      }).then((created: any) => {
+        if (created && created.id) {
+          set((curr) => ({
+            leaves: curr.leaves.map((l) => (l.id === newLeave.id ? { ...l, id: created.id } : l)),
+          }));
+          get().fetchBalances(payload.employeeId);
+        }
+      }).catch((err) => {
+        console.error('Failed to submit leave to backend:', err);
+      });
 
       return { success: true };
     },
@@ -194,16 +189,14 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
         console.warn('Could not sync approved leave to schedule store:', err);
       }
 
-      if (!isMockEnabled()) {
-        leaveService
-          .reviewLeaveRequest(leaveId, 'APPROVE')
-          .then(() => {
-            get().fetchBalances(target.employeeId);
-          })
-          .catch((err) => {
-            console.error('Failed to approve leave on backend:', err);
-          });
-      }
+      leaveService
+        .reviewLeaveRequest(leaveId, 'APPROVE')
+        .then(() => {
+          get().fetchBalances(target.employeeId);
+        })
+        .catch((err) => {
+          console.error('Failed to approve leave on backend:', err);
+        });
     },
 
     rejectLeave: (leaveId, reviewerId, rejectionReason) => {
@@ -227,18 +220,16 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
         console.warn('Could not remove leave from schedule store:', err);
       }
 
-      if (!isMockEnabled()) {
-        leaveService
-          .reviewLeaveRequest(leaveId, 'REJECT', rejectionReason)
-          .then(() => {
-            if (target?.employeeId) {
-              get().fetchBalances(target.employeeId);
-            }
-          })
-          .catch((err) => {
-            console.error('Failed to reject leave on backend:', err);
-          });
-      }
+      leaveService
+        .reviewLeaveRequest(leaveId, 'REJECT', rejectionReason)
+        .then(() => {
+          if (target?.employeeId) {
+            get().fetchBalances(target.employeeId);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to reject leave on backend:', err);
+        });
     },
 
     cancelLeave: (leaveId) => {
@@ -256,18 +247,16 @@ export const useLeaveStore = create<LeaveState>((set, get) => {
         console.warn('Could not remove leave from schedule store:', err);
       }
 
-      if (!isMockEnabled()) {
-        leaveService
-          .cancelLeaveRequest(leaveId)
-          .then(() => {
-            if (target?.employeeId) {
-              get().fetchBalances(target.employeeId);
-            }
-          })
-          .catch((err) => {
-            console.error('Failed to cancel leave on backend:', err);
-          });
-      }
+      leaveService
+        .cancelLeaveRequest(leaveId)
+        .then(() => {
+          if (target?.employeeId) {
+            get().fetchBalances(target.employeeId);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to cancel leave on backend:', err);
+        });
     },
   };
 });

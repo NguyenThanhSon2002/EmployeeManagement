@@ -14,10 +14,13 @@ interface ShiftRowProps {
   todayDateStr: string;
   canEdit: boolean;
   onlyShowConflicts?: boolean;
+  onlyShowUnderstaffed?: boolean;
   onOpenAssignDrawer: (shiftTemplateId: number, workDate: string) => void;
   onRemoveAssignment: (assignmentId: number) => void;
   onOpenOverrideModal?: (assignment: ShiftAssignment) => void;
   onOpenSwapModal?: (assignment: ShiftAssignment) => void;
+  onOpenSwapWithColleague?: (targetAssignment: ShiftAssignment) => void;
+  onClaimShift?: (template: ShiftTemplate, workDate: string) => void;
 }
 
 export const ShiftRow: React.FC<ShiftRowProps> = ({
@@ -29,6 +32,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
   todayDateStr,
   canEdit,
   onlyShowConflicts = false,
+  onlyShowUnderstaffed = false,
   onOpenAssignDrawer,
   onRemoveAssignment,
   onOpenOverrideModal,
@@ -171,6 +175,7 @@ export const ShiftRow: React.FC<ShiftRowProps> = ({
             isToday={isToday}
             canEdit={canEdit}
             onlyShowConflicts={onlyShowConflicts}
+            onlyShowUnderstaffed={onlyShowUnderstaffed}
             onOpenAssignDrawer={() => onOpenAssignDrawer(template.id, dateStr)}
             onRemoveAssignment={(assignmentId, e) => {
               e.stopPropagation();

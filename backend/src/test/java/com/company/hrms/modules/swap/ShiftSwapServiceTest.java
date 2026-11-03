@@ -31,6 +31,9 @@ public class ShiftSwapServiceTest {
     @Autowired
     private EmployeeRepository employeeRepository;
 
+    @Autowired
+    private com.company.hrms.modules.swap.repository.ShiftSwapRequestRepository swapRepository;
+
     @Test
     @DisplayName("simulateSwap executes successfully for valid handover without throwing unhandled exceptions")
     void testSimulateSwapHandover() {
@@ -64,8 +67,8 @@ public class ShiftSwapServiceTest {
     }
 
     @Test
-    @DisplayName("createSwapRequest rejects employee requests when schedule is not PUBLISHED")
-    void testCreateSwapRequestDraftScheduleBlockedByEmployee() {
+    @DisplayName("createSwapRequest allows employee requests even when schedule is DRAFT")
+    void testCreateSwapRequestDraftScheduleAllowed() {
         LocalDate targetDate = LocalDate.of(2026, 10, 27);
         Employee emp153 = employeeRepository.findByEmployeeCodeAndDeletedAtIsNull("EMP-153").orElse(null);
         assertNotNull(emp153);
@@ -79,13 +82,16 @@ public class ShiftSwapServiceTest {
         com.company.hrms.modules.swap.dto.CreateSwapRequest req = new com.company.hrms.modules.swap.dto.CreateSwapRequest();
         req.setRequesterAssignmentId(matchingAssignment.getId());
         req.setTargetEmployeeId(emp153.getId());
-        req.setReason("Lý do cá nhân");
+        req.setReason("Lý do cá nhân đổi ca");
+
+        swapRepository.deleteAll(swapRepository.findAll().stream()
+                .filter(s -> matchingAssignment.getId().equals(s.getRequesterAssignmentId()))
+                .toList());
 
         // Khi caller là nhân viên thường (!isDirectorOrAdmin && !isManager) và schedule đang là DRAFT
-        com.company.hrms.common.exception.BusinessException ex = assertThrows(
-                com.company.hrms.common.exception.BusinessException.class,
-                () -> shiftSwapService.createSwapRequest(req, matchingAssignment.getEmployeeId(), false, false)
-        );
-        assertTrue(ex.getMessage().contains("chưa được công bố") || "SCHEDULE_NOT_PUBLISHED".equals(ex.getErrorCode()));
+        com.company.hrms.modules.swap.dto.ShiftSwapResponse res = shiftSwapService.createSwapRequest(req, matchingAssignment.getEmployeeId(), false, false);
+        assertNotNull(res);
+        assertNotNull(res.getRequestCode());
+        assertEquals(com.company.hrms.modules.swap.domain.SwapStatus.PENDING_PEER, res.getStatus());
     }
 }

@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { format } from 'date-fns';
 import type { AttendanceRecord, AttendanceCorrection } from '@/types/domain.types';
 import { attendanceService } from '../api/attendanceService';
-import { isMockEnabled } from '@/config/env.config';
 
 interface AttendanceState {
   records: AttendanceRecord[];
@@ -36,7 +35,6 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
     branchFilter: null,
 
     fetchCorrections: async (status?: string, branchId?: number, employeeId?: number) => {
-      if (isMockEnabled()) return;
       try {
         const data = await attendanceService.getCorrections({
           status,
@@ -70,7 +68,6 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
     },
 
     fetchRecords: async (date?: string, branchId?: number) => {
-      if (isMockEnabled()) return;
       try {
         const data = await attendanceService.getRecords({ work_date: date, branch_id: branchId });
         if (data && Array.isArray(data) && data.length > 0) {
@@ -114,38 +111,36 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
       };
       set({ corrections: [newCorrection, ...state.corrections] });
 
-      if (!isMockEnabled()) {
-        const targetRecord = state.records.find((r) => r.id === payload.attendanceRecordId);
-        const workDate = targetRecord?.workDate || format(new Date(), 'yyyy-MM-dd');
-        const reqCheckIn = payload.requestedCheckIn.includes('T')
-          ? payload.requestedCheckIn
-          : `${workDate}T${payload.requestedCheckIn.length === 5 ? payload.requestedCheckIn + ':00' : payload.requestedCheckIn}`;
-        const reqCheckOut = payload.requestedCheckOut.includes('T')
-          ? payload.requestedCheckOut
-          : `${workDate}T${payload.requestedCheckOut.length === 5 ? payload.requestedCheckOut + ':00' : payload.requestedCheckOut}`;
+      const targetRecord = state.records.find((r) => r.id === payload.attendanceRecordId);
+      const workDate = targetRecord?.workDate || format(new Date(), 'yyyy-MM-dd');
+      const reqCheckIn = payload.requestedCheckIn.includes('T')
+        ? payload.requestedCheckIn
+        : `${workDate}T${payload.requestedCheckIn.length === 5 ? payload.requestedCheckIn + ':00' : payload.requestedCheckIn}`;
+      const reqCheckOut = payload.requestedCheckOut.includes('T')
+        ? payload.requestedCheckOut
+        : `${workDate}T${payload.requestedCheckOut.length === 5 ? payload.requestedCheckOut + ':00' : payload.requestedCheckOut}`;
 
-        attendanceService
-          .submitCorrection({
-            attendance_record_id: payload.attendanceRecordId,
-            requested_check_in: reqCheckIn,
-            requested_check_out: reqCheckOut,
-            reason: payload.reason,
-            attachment_url: payload.attachmentUrl || undefined,
-          })
-          .then((res: any) => {
-            if (res && res.id) {
-              set((curr) => ({
-                corrections: curr.corrections.map((c) =>
-                  c.id === newId ? { ...c, id: res.id } : c
-                ),
-              }));
-              get().fetchCorrections();
-            }
-          })
-          .catch((err) => {
-            console.warn('Backend submitCorrection failed:', err);
-          });
-      }
+      attendanceService
+        .submitCorrection({
+          attendance_record_id: payload.attendanceRecordId,
+          requested_check_in: reqCheckIn,
+          requested_check_out: reqCheckOut,
+          reason: payload.reason,
+          attachment_url: payload.attachmentUrl || undefined,
+        })
+        .then((res: any) => {
+          if (res && res.id) {
+            set((curr) => ({
+              corrections: curr.corrections.map((c) =>
+                c.id === newId ? { ...c, id: res.id } : c
+              ),
+            }));
+            get().fetchCorrections();
+          }
+        })
+        .catch((err) => {
+          console.warn('Backend submitCorrection failed:', err);
+        });
     },
 
     approveCorrection: (correctionId, reviewerId) => {
@@ -194,19 +189,17 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
         records: updatedRecords,
       });
 
-      if (!isMockEnabled()) {
-        attendanceService
-          .reviewCorrection(correctionId, {
-            action: 'APPROVE',
-          })
-          .then(() => {
-            get().fetchCorrections();
-            get().fetchRecords(get().selectedDate, get().branchFilter || undefined);
-          })
-          .catch((err) => {
-            console.warn('Backend reviewCorrection (APPROVE) failed:', err);
-          });
-      }
+      attendanceService
+        .reviewCorrection(correctionId, {
+          action: 'APPROVE',
+        })
+        .then(() => {
+          get().fetchCorrections();
+          get().fetchRecords(get().selectedDate, get().branchFilter || undefined);
+        })
+        .catch((err) => {
+          console.warn('Backend reviewCorrection (APPROVE) failed:', err);
+        });
     },
 
     rejectCorrection: (correctionId, reviewerId, rejectionReason) => {
@@ -225,19 +218,17 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
         ),
       });
 
-      if (!isMockEnabled()) {
-        attendanceService
-          .reviewCorrection(correctionId, {
-            action: 'REJECT',
-            rejection_reason: rejectionReason,
-          })
-          .then(() => {
-            get().fetchCorrections();
-          })
-          .catch((err) => {
-            console.warn('Backend reviewCorrection (REJECT) failed:', err);
-          });
-      }
+      attendanceService
+        .reviewCorrection(correctionId, {
+          action: 'REJECT',
+          rejection_reason: rejectionReason,
+        })
+        .then(() => {
+          get().fetchCorrections();
+        })
+        .catch((err) => {
+          console.warn('Backend reviewCorrection (REJECT) failed:', err);
+        });
     },
 
     checkIn: (employeeId) => {
@@ -278,28 +269,26 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
         set({ records: [newRecord, ...state.records] });
       }
 
-      if (!isMockEnabled()) {
-        attendanceService.checkIn('Điểm danh vào ca qua Web', today)
-          .then((saved) => {
-            if (saved && saved.id) {
-              set((curr) => ({
-                records: curr.records.map((r) =>
-                  r.employeeId === employeeId && r.workDate === today
-                    ? {
-                        ...r,
-                        id: saved.id,
-                        checkInTime: saved.check_in_time || r.checkInTime,
-                        status: (saved.status as any) || r.status,
-                      }
-                    : r
-                ),
-              }));
-            }
-          })
-          .catch((err) => {
-            console.warn('Backend check-in sync failed:', err);
-          });
-      }
+      attendanceService.checkIn('Điểm danh vào ca qua Web', today)
+        .then((saved) => {
+          if (saved && saved.id) {
+            set((curr) => ({
+              records: curr.records.map((r) =>
+                r.employeeId === employeeId && r.workDate === today
+                  ? {
+                      ...r,
+                      id: saved.id,
+                      checkInTime: saved.check_in_time || r.checkInTime,
+                      status: (saved.status as any) || r.status,
+                    }
+                  : r
+              ),
+            }));
+          }
+        })
+        .catch((err) => {
+          console.warn('Backend check-in sync failed:', err);
+        });
     },
 
     checkOut: (employeeId) => {
@@ -319,31 +308,29 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => {
       });
       set({ records: updated });
 
-      if (!isMockEnabled()) {
-        attendanceService.checkOut('Điểm danh tan ca qua Web', today)
-          .then((saved) => {
-            if (saved && saved.id) {
-              set((curr) => ({
-                records: curr.records.map((r) =>
-                  r.employeeId === employeeId && r.workDate === today
-                    ? {
-                        ...r,
-                        id: saved.id,
-                        checkOutTime: saved.check_out_time || r.checkOutTime,
-                        actualHours: saved.actual_hours !== undefined ? saved.actual_hours : r.actualHours,
-                        overtimeHours: saved.overtime_hours !== undefined ? saved.overtime_hours : r.overtimeHours,
-                        nightHours: saved.night_hours !== undefined ? saved.night_hours : r.nightHours,
-                        status: (saved.status as any) || r.status,
-                      }
-                    : r
-                ),
-              }));
-            }
-          })
-          .catch((err) => {
-            console.warn('Backend check-out sync failed:', err);
-          });
-      }
+      attendanceService.checkOut('Điểm danh tan ca qua Web', today)
+        .then((saved) => {
+          if (saved && saved.id) {
+            set((curr) => ({
+              records: curr.records.map((r) =>
+                r.employeeId === employeeId && r.workDate === today
+                  ? {
+                      ...r,
+                      id: saved.id,
+                      checkOutTime: saved.check_out_time || r.checkOutTime,
+                      actualHours: saved.actual_hours !== undefined ? saved.actual_hours : r.actualHours,
+                      overtimeHours: saved.overtime_hours !== undefined ? saved.overtime_hours : r.overtimeHours,
+                      nightHours: saved.night_hours !== undefined ? saved.night_hours : r.nightHours,
+                      status: (saved.status as any) || r.status,
+                    }
+                  : r
+              ),
+            }));
+          }
+        })
+        .catch((err) => {
+          console.warn('Backend check-out sync failed:', err);
+        });
     },
   };
 });

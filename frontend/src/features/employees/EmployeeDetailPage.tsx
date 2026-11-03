@@ -11,7 +11,6 @@ import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { employeeService } from './api/employeeService';
 import { branchService } from '@/shared/branch/branchService';
-import { isMockEnabled } from '@/config/env.config';
 import { formatDateVi } from '@/utils/date.utils';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { EmploymentStatusBadge } from '@/components/common/EmploymentStatusBadge';
@@ -81,36 +80,20 @@ export const EmployeeDetailPage: React.FC = () => {
   const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const { assignments, approvedLeaves } = useScheduleStore();
+  const { approvedLeaves } = useScheduleStore();
   const { getEmployeeById, branches, positions } = useDirectoryStore();
   const cachedEmployee = id ? getEmployeeById(Number(id)) : undefined;
 
-  const fallbackEmp: Employee = {
-    id: Number(id) || 1,
-    employeeCode: `EMP-${id || '001'}`,
-    fullName: 'Đang tải thông tin...',
-    email: '',
-    phoneNumber: '',
-    branchId: 1,
-    positionId: 1,
-    managerId: null,
-    employmentStatus: 'OFFICIAL',
-    hireDate: '2026-01-01',
-    isActive: true,
-  };
-
-  const [employee, setEmployee] = useState<Employee | null>(
-    isMockEnabled() ? (cachedEmployee || fallbackEmp) : null
-  );
+  const [employee, setEmployee] = useState<Employee | null>(cachedEmployee || null);
 
   const isSelf = Boolean(currentUser && employee && currentUser.id === employee.id);
   const canManagePassword = isSelf || currentRole === 'ROLE_DIRECTOR';
-  const [branchesList, setBranchesList] = useState<Branch[]>(isMockEnabled() ? branches : []);
-  const [isLoading, setIsLoading] = useState<boolean>(!isMockEnabled());
+  const [branchesList, setBranchesList] = useState<Branch[]>(branches);
+  const [isLoading, setIsLoading] = useState<boolean>(!cachedEmployee);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isMockEnabled() || !id) return;
+    if (!id) return;
 
     let isMounted = true;
     const fetchEmployee = async () => {
@@ -258,9 +241,8 @@ export const EmployeeDetailPage: React.FC = () => {
     const fetchMonthlySchedule = async () => {
       setIsScheduleLoading(true);
       try {
-        if (!isMockEnabled()) {
-          const res: any = await employeeService.getEmployeeMonthlySchedule(employee.id, selectedMonth);
-          if (isMounted && res) {
+        const res: any = await employeeService.getEmployeeMonthlySchedule(employee.id, selectedMonth);
+        if (isMounted && res) {
             const rawShifts: any[] = res.shifts || [];
             const mappedShifts: ShiftAssignment[] = rawShifts.map((a: any) => ({
               id: a.id,
@@ -295,33 +277,6 @@ export const EmployeeDetailPage: React.FC = () => {
               shifts: mappedShifts,
             });
           }
-        } else {
-          // Mock mode fallback
-          const filtered = Object.values(assignments)
-            .flat()
-            .filter((a) => a.employeeId === employee.id && a.status !== 'CANCELLED' && a.workDate.startsWith(selectedMonth));
-          let totalHrs = 0;
-          filtered.forEach((a) => {
-            if (a.snapshotStartTime && a.snapshotEndTime) {
-              const [sh, sm] = a.snapshotStartTime.split(':').map(Number);
-              const [eh, em] = a.snapshotEndTime.split(':').map(Number);
-              let diff = (eh * 60 + em) - (sh * 60 + sm);
-              if (diff < 0) diff += 24 * 60;
-              diff = Math.max(0, diff - (a.snapshotBreakMinutes || 0));
-              totalHrs += diff / 60;
-            }
-          });
-          if (isMounted) {
-            setMonthlySchedule({
-              employeeId: employee.id,
-              month: selectedMonth,
-              totalShifts: filtered.length,
-              totalHours: Math.round(totalHrs * 10) / 10,
-              earliestAvailableMonth: employee.hireDate ? employee.hireDate.substring(0, 7) : currentMonthStr,
-              shifts: filtered,
-            });
-          }
-        }
       } catch (err) {
         console.error('Failed to fetch monthly schedule:', err);
       } finally {
@@ -335,7 +290,7 @@ export const EmployeeDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [employee?.id, selectedMonth, activeTab, assignments, currentMonthStr]);
+  }, [employee?.id, selectedMonth, activeTab, currentMonthStr]);
 
   // Compute available months dropdown list: from earliestAvailableMonth up to nextMonth
   const monthOptions = useMemo(() => {
@@ -442,13 +397,9 @@ export const EmployeeDetailPage: React.FC = () => {
     if (!employee || !employee.id) return;
     setIsDeleting(true);
     try {
-      if (!isMockEnabled()) {
-        await employeeService.deleteEmployee(employee.id);
-      }
+      await employeeService.deleteEmployee(employee.id);
       useDirectoryStore.getState().removeEmployeeFromDirectory(employee.id);
-      if (!isMockEnabled()) {
-        useDirectoryStore.getState().refreshEmployees();
-      }
+      useDirectoryStore.getState().refreshEmployees();
       addToast({
         type: 'success',
         title: 'Xóa nhân viên thành công',
@@ -489,14 +440,8 @@ export const EmployeeDetailPage: React.FC = () => {
 
     setIsUploadingAvatar(true);
     try {
-      let updatedAvatarUrl = '';
-      if (!isMockEnabled()) {
-        const updatedEmp = await employeeService.uploadAvatar(employee.id, file);
-        updatedAvatarUrl = updatedEmp.avatar_url || (updatedEmp as any).avatarUrl || '';
-      } else {
-        // Mock fallback: create local object URL
-        updatedAvatarUrl = URL.createObjectURL(file);
-      }
+      const updatedEmp = await employeeService.uploadAvatar(employee.id, file);
+      const updatedAvatarUrl = updatedEmp.avatar_url || (updatedEmp as any).avatarUrl || '';
 
       setEmployee((prev) => (prev ? { ...prev, avatarUrl: updatedAvatarUrl } : null));
 
@@ -541,9 +486,7 @@ export const EmployeeDetailPage: React.FC = () => {
 
     setIsDeletingAvatar(true);
     try {
-      if (!isMockEnabled()) {
-        await employeeService.deleteAvatar(employee.id);
-      }
+      await employeeService.deleteAvatar(employee.id);
 
       setEmployee((prev) => (prev ? { ...prev, avatarUrl: '' } : null));
 

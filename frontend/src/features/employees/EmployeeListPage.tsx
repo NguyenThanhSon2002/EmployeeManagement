@@ -8,7 +8,6 @@ import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
 import { employeeService } from './api/employeeService';
 import { branchService } from '@/shared/branch/branchService';
-import { isMockEnabled } from '@/config/env.config';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, X, Phone, Mail, Clock, Users, ChevronDown, ChevronUp, Building2, Briefcase, Sparkles } from 'lucide-react';
 import { useAvailabilityStore } from './store/useAvailabilityStore';
@@ -27,12 +26,12 @@ const toArray = (res: any): any[] => {
 export const EmployeeListPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useUIStore();
-  const { employees, branches, positions } = useDirectoryStore();
+  const { positions } = useDirectoryStore();
   const { fetchBranchAvailabilities, availabilities } = useAvailabilityStore();
 
-  const [employeesList, setEmployeesList] = useState<Employee[]>(isMockEnabled() ? employees : []);
-  const [branchesList, setBranchesList] = useState<Branch[]>(isMockEnabled() ? branches : []);
-  const [isLoading, setIsLoading] = useState<boolean>(!isMockEnabled());
+  const [employeesList, setEmployeesList] = useState<Employee[]>([]);
+  const [branchesList, setBranchesList] = useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState<number>(0);
@@ -46,13 +45,6 @@ export const EmployeeListPage: React.FC = () => {
     );
   };
 
-  useEffect(() => {
-    if (isMockEnabled()) {
-      if (employees.length > 0) setEmployeesList(employees);
-      if (branches.length > 0) setBranchesList(branches);
-    }
-  }, [employees, branches]);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
@@ -65,7 +57,6 @@ export const EmployeeListPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (isMockEnabled()) return;
 
     let isMounted = true;
     const loadData = async () => {
@@ -234,32 +225,35 @@ export const EmployeeListPage: React.FC = () => {
       is_active: data.isActive,
     } as any;
 
-    let savedId = data.id ?? Math.max(0, ...employeesList.map((e) => e.id)) + 1;
+    let savedId = data.id ?? 0;
+    let serverRes: any = null;
 
-    if (!isMockEnabled()) {
-      try {
-        if (data.id) {
-          await employeeService.updateEmployee(data.id, payload);
-        } else {
-          const res = await employeeService.createEmployee({ ...payload, employment_type: 'FULL_TIME' });
-          if (res && res.id) savedId = res.id;
-        }
-      } catch (err) {
-        console.error('Lưu nhân viên thất bại:', err);
-        addToast({
-          type: 'error',
-          title: 'Lưu thất bại',
-          message: 'Không lưu được vào máy chủ. Dữ liệu chưa được thay đổi.',
-        });
-        return;
+    try {
+      if (data.id) {
+        serverRes = await employeeService.updateEmployee(data.id, payload);
+      } else {
+        const res = await employeeService.createEmployee({ ...payload, employment_type: 'FULL_TIME' });
+        if (res && res.id) savedId = res.id;
+        serverRes = res;
       }
+    } catch (err: any) {
+      console.error('Lưu nhân viên thất bại:', err);
+      const errorMsg = err?.message || 'Không lưu được vào máy chủ. Dữ liệu chưa được thay đổi.';
+      addToast({
+        type: 'error',
+        title: 'Lưu thất bại',
+        message: errorMsg,
+      });
+      return;
     }
 
+    const effectiveBranchId = serverRes?.branch_id || serverRes?.branchId || data.branchId;
     const existingEmp = employeesList.find((e) => e.id === savedId);
     const updatedEmployee: Employee = {
       ...(existingEmp || {}),
       ...data,
       id: savedId,
+      branchId: effectiveBranchId,
     } as Employee;
 
     // Đồng bộ tức thời vào useDirectoryStore
@@ -279,7 +273,7 @@ export const EmployeeListPage: React.FC = () => {
 
     if (data.id) {
       setEmployeesList((prev) =>
-          prev.map((e) => (e.id === data.id ? updatedEmployee : e))
+        prev.map((e) => (e.id === data.id ? updatedEmployee : e))
       );
       addToast({
         type: 'success',
@@ -294,6 +288,11 @@ export const EmployeeListPage: React.FC = () => {
         message: `Đã thêm nhân viên ${updatedEmployee.fullName} (${updatedEmployee.employeeCode}).`,
       });
     }
+
+    // Làm mới danh bạ Directory Store từ máy chủ để toàn bộ các màn hình khác cập nhật ngay tức thì
+    useDirectoryStore.getState().refreshEmployees().catch((err) => {
+      console.warn('Lỗi làm mới Directory Store sau khi cập nhật nhân viên:', err);
+    });
   };
 
   const getBranchName = (id: number) => {
@@ -317,14 +316,10 @@ export const EmployeeListPage: React.FC = () => {
     }
     setIsDeleting(true);
     try {
-      if (!isMockEnabled()) {
-        await employeeService.deleteEmployee(deletingEmployee.id);
-      }
+      await employeeService.deleteEmployee(deletingEmployee.id);
       setEmployeesList((prev) => prev.filter((e) => e.id !== deletingEmployee.id));
       useDirectoryStore.getState().removeEmployeeFromDirectory(deletingEmployee.id);
-      if (!isMockEnabled()) {
-        useDirectoryStore.getState().refreshEmployees();
-      }
+      useDirectoryStore.getState().refreshEmployees();
       addToast({
         type: 'success',
         title: 'Xóa nhân viên thành công',

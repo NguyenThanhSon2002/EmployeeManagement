@@ -375,6 +375,154 @@ public class ScheduleService {
     }
 
     @Transactional
+    public ShiftAssignmentDto claimShift(ClaimShiftRequest request, Long currentUserId) {
+        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));
+
+        Employee emp = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId)
+                .orElseThrow(() -> new BusinessException("EMPLOYEE_NOT_FOUND", "Không tìm thấy hồ sơ nhân sự của bạn trong hệ thống.", HttpStatus.NOT_FOUND));
+
+        if (emp.getPositionId() != null && emp.getPositionId() == 1L) {
+            throw new BusinessException("DIRECTOR_CANNOT_BE_SCHEDULED", "Không thể phân ca làm việc cho Giám đốc.", HttpStatus.BAD_REQUEST);
+        }
+
+        boolean allowedInBranch = schedule.getBranchId().equals(emp.getBranchId())
+                || secondaryBranchRepository.existsByEmployeeIdAndBranchId(emp.getId(), schedule.getBranchId());
+        if (!allowedInBranch) {
+            throw new BusinessException("BRANCH_MISMATCH", "Bạn chỉ được đăng ký ca làm việc thuộc cơ sở của bạn phụ trách.", HttpStatus.FORBIDDEN);
+        }
+
+        WorkShift shift = workShiftRepository.findByIdAndDeletedAtIsNull(request.getWorkShiftId())
+                .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", request.getWorkShiftId()));
+
+        if (shift.getBranchId() != null && !shift.getBranchId().equals(schedule.getBranchId())) {
+            throw new BusinessException("BRANCH_SHIFT_MISMATCH", "Mẫu ca làm việc không thuộc chi nhánh của lịch làm việc.", HttpStatus.BAD_REQUEST);
+        }
+
+        List<ShiftAssignment> existingInShift = assignmentRepository.findAssignmentsByShiftAndDate(
+                schedule.getId(), shift.getId(), request.getWorkDate()
+        );
+
+        boolean alreadyAssigned = existingInShift.stream()
+                .anyMatch(a -> a.getEmployeeId().equals(emp.getId()));
+        if (alreadyAssigned) {
+            throw new BusinessException("ALREADY_ASSIGNED", "Bạn đã được phân công vào ca làm việc này rồi.", HttpStatus.BAD_REQUEST);
+        }
+
+        int maxCapacity = shift.getMaxStaffing() != null ? shift.getMaxStaffing() : (shift.getMinStaffing() != null ? shift.getMinStaffing() : 1);
+        if (existingInShift.size() >= maxCapacity) {
+            throw new BusinessException("SHIFT_FULL", "Ca làm việc đã đủ định biên nhân sự tối đa (" + existingInShift.size() + "/" + maxCapacity + " NV).", HttpStatus.BAD_REQUEST);
+        }
+
+        ConflictValidationResult validation = conflictEngine.validateAssignment(
+                emp.getId(),
+                shift.getId(),
+                request.getWorkDate(),
+                null,
+                schedule.getId(),
+                schedule.getBranchId()
+        );
+
+        if (validation.getHasMandatoryErrors()) {
+            ScheduleConflictDto err = validation.getMandatoryErrors().get(0);
+            throw new BusinessException(err.getRuleCode(), err.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        if (validation.getHasWarnings() && !Boolean.TRUE.equals(request.getSelfVolunteeredConfirm())) {
+            ScheduleConflictDto warn = validation.getWarnings().get(0);
+            throw new BusinessException("WARN_VOLUNTEER_CONFIRMATION_REQUIRED",
+                    warn.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+
+        LocalDateTime[] times = ConflictDetectionEngine.calculatePlannedTimes(
+                request.getWorkDate(),
+                shift.getStartTime(),
+                shift.getEndTime(),
+                Boolean.TRUE.equals(shift.getIsCrossMidnight())
+        );
+
+        ShiftAssignment assignment = new ShiftAssignment();
+        assignment.setScheduleId(schedule.getId());
+        assignment.setEmployeeId(emp.getId());
+        assignment.setWorkShiftId(shift.getId());
+        assignment.setWorkDate(request.getWorkDate());
+        assignment.setSnapshotShiftName(shift.getShiftName());
+        assignment.setSnapshotStartTime(shift.getStartTime());
+        assignment.setSnapshotEndTime(shift.getEndTime());
+        assignment.setSnapshotBreakMinutes(shift.getBreakMinutes());
+        assignment.setSnapshotCrossMidnight(shift.getIsCrossMidnight());
+        assignment.setSnapshotColorCode(shift.getColorCode());
+        assignment.setPlannedStartTime(times[0]);
+        assignment.setPlannedEndTime(times[1]);
+        assignment.setStatus("ASSIGNED");
+
+        String overrideRule = validation.getHasWarnings() ? validation.getWarnings().get(0).getRuleCode() : null;
+        String overrideReason = Boolean.TRUE.equals(request.getSelfVolunteeredConfirm())
+                ? "Nhân viên tự nguyện đăng ký nhận ca"
+                : "Nhân viên đăng ký nhận ca trống";
+
+        assignment.setOverrideRule(overrideRule);
+        assignment.setOverrideReason(overrideReason);
+
+        ShiftAssignment saved = assignmentRepository.save(assignment);
+
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            historyRepository.save(new ScheduleChangeHistory(
+                    schedule.getId(),
+                    saved.getId(),
+                    "CREATE",
+                    null,
+                    "Nhân viên tự nhận ca: " + shift.getShiftName(),
+                    overrideReason,
+                    currentUserId != null ? currentUserId : 1L
+            ));
+        }
+
+        return toDto(saved);
+    }
+
+    @Transactional
+    public void cancelClaimedShift(Long assignmentId, Long currentUserId) {
+        ShiftAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Phân ca", assignmentId));
+
+        Employee emp = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId)
+                .orElseThrow(() -> new BusinessException("EMPLOYEE_NOT_FOUND", "Không tìm thấy hồ sơ nhân sự của bạn trong hệ thống.", HttpStatus.NOT_FOUND));
+
+        if (!assignment.getEmployeeId().equals(emp.getId())) {
+            throw new BusinessException("FORBIDDEN", "Bạn chỉ được phép hủy ca làm việc do chính mình đã đăng ký.", HttpStatus.FORBIDDEN);
+        }
+
+        Schedule schedule = scheduleRepository.findById(assignment.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", assignment.getScheduleId()));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (assignment.getPlannedStartTime() != null && assignment.getPlannedStartTime().isBefore(now)) {
+            throw new BusinessException("PAST_SHIFT", "Không thể hủy ca làm việc đã diễn ra trong quá khứ.", HttpStatus.BAD_REQUEST);
+        }
+
+        assignmentRepository.delete(assignment);
+
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            historyRepository.save(new ScheduleChangeHistory(
+                    schedule.getId(),
+                    assignment.getId(),
+                    "DELETE",
+                    assignment.getSnapshotShiftName(),
+                    null,
+                    "Nhân viên tự hủy ca đã đăng ký",
+                    currentUserId != null ? currentUserId : 1L
+            ));
+        }
+    }
+
+    @Transactional
     public List<ShiftAssignmentDto> bulkAssign(BulkAssignRequest request, Long currentUserId) {
         Schedule schedule = scheduleRepository.findById(request.getScheduleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));

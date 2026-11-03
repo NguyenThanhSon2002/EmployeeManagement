@@ -24,12 +24,6 @@ interface BranchOption {
   branchName: string;
 }
 
-const DEFAULT_FALLBACK_BRANCHES: BranchOption[] = [
-  { id: 1, branchCode: 'CN_CAUGIAY', branchName: 'Chi nhánh Cầu Giấy' },
-  { id: 2, branchCode: 'CN_DONGDA', branchName: 'Chi nhánh Đống Đa' },
-  { id: 3, branchCode: 'CN_HOANKIEM', branchName: 'Chi nhánh Hoàn Kiếm' },
-];
-
 interface RegisterAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,13 +38,13 @@ export const RegisterAccountModal: React.FC<RegisterAccountModalProps> = ({
   const modalRef = useModalFocusTrap<HTMLDivElement>({ isOpen, onClose });
   const { addToast } = useUIStore();
 
-  const [branches, setBranches] = useState<BranchOption[]>(DEFAULT_FALLBACK_BRANCHES);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [selectedBranchId, setSelectedBranchId] = useState<number | ''>(DEFAULT_FALLBACK_BRANCHES[0].id);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | ''>('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -81,17 +75,14 @@ export const RegisterAccountModal: React.FC<RegisterAccountModalProps> = ({
             branchCode: b.branch_code || b.branchCode || '',
             branchName: b.branch_name || b.branchName || 'Chi nhánh',
           }));
-          const finalList = list.length > 0 ? list : DEFAULT_FALLBACK_BRANCHES;
-          setBranches(finalList);
-          setSelectedBranchId((prev) => (prev ? prev : finalList[0].id));
+          setBranches(list);
+          if (list.length > 0) {
+            setSelectedBranchId((prev) => (prev ? prev : list[0].id));
+          }
         }
       })
       .catch((err) => {
-        console.warn('Không thể tải chi nhánh từ server, dùng chi nhánh mặc định:', err);
-        if (isMounted) {
-          setBranches(DEFAULT_FALLBACK_BRANCHES);
-          setSelectedBranchId((prev) => (prev ? prev : DEFAULT_FALLBACK_BRANCHES[0].id));
-        }
+        console.warn('Không thể tải danh sách chi nhánh từ server:', err);
       })
       .finally(() => {
         if (isMounted) setIsLoadingBranches(false);
@@ -108,7 +99,7 @@ export const RegisterAccountModal: React.FC<RegisterAccountModalProps> = ({
     setFullName('');
     setEmail('');
     setPhone('');
-    setSelectedBranchId(branches.length > 0 ? branches[0].id : DEFAULT_FALLBACK_BRANCHES[0].id);
+    setSelectedBranchId(branches.length > 0 ? branches[0].id : '');
     setErrorMsg(null);
     setRegisteredData(null);
     setCopiedCode(false);

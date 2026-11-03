@@ -104,32 +104,38 @@ public class ReportRbacTest {
             return roleRepository.save(r);
         });
 
-        User userEmp002 = userRepository.findByUsername("EMP-002").orElseGet(() -> {
+        User userEmp001 = userRepository.findByUsername("EMP-001").orElseGet(() -> {
             User u = new User();
-            u.setUsername("EMP-002");
-            u.setEmail("emp002@company.com");
+            u.setUsername("EMP-001");
+            u.setEmail("emp001@company.com");
             return u;
         });
-        userEmp002.setPasswordHash(passwordEncoder.encode("emp002@123"));
-        userEmp002.setIsActive(true);
-        userEmp002.setDeletedAt(null);
-        userEmp002.setFailedLoginAttempts(0);
-        userEmp002.setRoles(new HashSet<>(List.of(roleManager)));
-        userEmp002 = userRepository.save(userEmp002);
+        userEmp001.setPasswordHash(passwordEncoder.encode("emp001@123"));
+        userEmp001.setIsActive(true);
+        userEmp001.setDeletedAt(null);
+        userEmp001.setFailedLoginAttempts(0);
+        userEmp001.setRoles(new HashSet<>(List.of(roleManager)));
+        userEmp001 = userRepository.save(userEmp001);
 
-        final Long userId = userEmp002.getId();
-        Employee emp002 = employeeRepository.findByEmployeeCodeAndDeletedAtIsNull("EMP-002").orElseGet(() -> {
+        final Long userId = userEmp001.getId();
+        Employee emp001 = employeeRepository.findByEmployeeCodeAndDeletedAtIsNull("EMP-001").orElseGet(() -> {
             Employee e = new Employee();
-            e.setEmployeeCode("EMP-002");
-            e.setFullName("Trần Thị Bích");
+            e.setEmployeeCode("EMP-001");
+            e.setFullName("Nguyễn Thu Phương");
             return e;
         });
-        emp002.setUserId(userId);
-        emp002.setPositionId(2L);
-        emp002.setBranchId(1L);
-        emp002.setIsActive(true);
-        emp002.setDeletedAt(null);
-        employeeRepository.save(emp002);
+        emp001.setUserId(userId);
+        emp001.setPositionId(2L);
+        emp001.setBranchId(1L);
+        emp001.setIsActive(true);
+        emp001.setDeletedAt(null);
+        employeeRepository.save(emp001);
+
+        // Đảm bảo EMP-002 luôn thuộc chi nhánh 2 (Đống Đa), không bị gán nhầm
+        employeeRepository.findByEmployeeCodeAndDeletedAtIsNull("EMP-002").ifPresent(e -> {
+            e.setBranchId(2L);
+            employeeRepository.save(e);
+        });
 
         Employee emp021 = employeeRepository.findByEmployeeCodeAndDeletedAtIsNull("EMP-021").orElseGet(() -> {
             Employee e = new Employee();
@@ -164,8 +170,8 @@ public class ReportRbacTest {
     @DisplayName("ROLE_MANAGER Login returns branch_id and branch_name")
     void testManagerLoginReturnsBranchInfo() {
         LoginRequest req = new LoginRequest();
-        req.setUsername("EMP-002");
-        req.setPassword("emp002@123");
+        req.setUsername("EMP-001");
+        req.setPassword("emp001@123");
 
         AuthResponse res = authService.login(req);
         assertNotNull(res);
@@ -173,19 +179,19 @@ public class ReportRbacTest {
 
         AuthResponse.UserInfo user = res.getUser();
         assertNotNull(user);
-        assertEquals("EMP-002", user.getUsername());
+        assertEquals("EMP-001", user.getUsername());
         assertTrue(user.getRoles().contains("ROLE_MANAGER"), "User should have ROLE_MANAGER");
         assertNotNull(user.getBranchId(), "branch_id must not be null for Manager");
-        assertEquals(1L, user.getBranchId(), "EMP-002 must belong to branch 1 (Cầu Giấy)");
+        assertEquals(1L, user.getBranchId(), "EMP-001 must belong to branch 1 (Cầu Giấy)");
         assertEquals("Chi nhánh Cầu Giấy", user.getBranchName(), "branch_name must be Chi nhánh Cầu Giấy");
     }
 
     @Test
     @DisplayName("ReportController enforces Manager branch scope and blocks cross-branch access")
     void testManagerReportBranchScopeEnforcement() throws IOException {
-        UserPrincipal managerPrincipal = (UserPrincipal) userDetailsService.loadUserByUsername("EMP-002");
+        UserPrincipal managerPrincipal = (UserPrincipal) userDetailsService.loadUserByUsername("EMP-001");
         assertNotNull(managerPrincipal);
-        assertEquals("EMP-002", managerPrincipal.getUsername());
+        assertEquals("EMP-001", managerPrincipal.getUsername());
         assertTrue(managerPrincipal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER")));
 
         authenticateAs(managerPrincipal);

@@ -29,12 +29,6 @@ interface EmployeeFormModalProps {
   onSubmit: (employee: Omit<Employee, 'id'> & { id?: number }) => void;
 }
 
-const DEFAULT_POSITIONS: Position[] = [
-  { id: 1, positionCode: 'POS_DIRECTOR', positionName: 'Giám đốc' },
-  { id: 2, positionCode: 'POS_MANAGER', positionName: 'Quản lý' },
-  { id: 3, positionCode: 'POS_EMPLOYEE', positionName: 'Nhân viên' },
-];
-
 export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   isOpen,
   initialData,
@@ -43,7 +37,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const positions = inputPositions && inputPositions.length > 0 ? inputPositions : DEFAULT_POSITIONS;
+  const positions = inputPositions || [];
   const modalRef = useModalFocusTrap({ isOpen, onClose });
   const { currentRole, currentUser } = useAuthStore();
   const isDirector = currentRole === 'ROLE_DIRECTOR';
@@ -139,9 +133,9 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     e.preventDefault();
     if (!validate()) return;
 
-    const effectiveBranchId = !isDirector
-      ? (initialData ? initialData.branchId : userBranchId)
-      : formData.branchId;
+    const effectiveBranchId = isDirector
+      ? formData.branchId
+      : (initialData ? initialData.branchId : userBranchId);
 
     const effectiveStatus = !isDirector
       ? (initialData ? initialData.employmentStatus : 'PROBATION')
@@ -537,57 +531,107 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <label
                       style={{
-                        display: 'block',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
                         fontSize: '12.5px',
                         fontWeight: 600,
                         color: '#334155',
                         margin: 0,
                       }}
                     >
-                      Cơ Sở Làm Việc Chính <span style={{ color: '#DC2626' }}>*</span>
+                      <Building2 size={13} color="#64748B" /> Cơ Sở Làm Việc Chính <span style={{ color: '#DC2626' }}>*</span>
                     </label>
-                    {!isDirector && (
+                    {!isDirector ? (
                       <span
                         style={{
                           fontSize: '10.5px',
-                          color: '#64748B',
-                          backgroundColor: '#F1F5F9',
+                          color: '#B45309',
+                          backgroundColor: '#FEF3C7',
+                          border: '1px solid #FDE68A',
                           padding: '1px 6px',
                           borderRadius: 4,
                           display: 'flex',
                           alignItems: 'center',
                           gap: 3,
-                          fontWeight: 500,
+                          fontWeight: 600,
                         }}
                       >
-                        <Lock size={10} /> Cố định
+                        <Lock size={10} /> Cố định (Giám đốc phê duyệt)
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: '10.5px',
+                          color: '#15803D',
+                          backgroundColor: '#DCFCE7',
+                          border: '1px solid #BBF7D0',
+                          padding: '1px 6px',
+                          borderRadius: 4,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          fontWeight: 600,
+                        }}
+                      >
+                        <ShieldCheck size={10} /> Thẩm quyền Giám đốc
                       </span>
                     )}
                   </div>
-                  <select
-                    className="input-base"
-                    value={formData.branchId}
-                    disabled={!isDirector}
-                    onChange={(e) => setFormData({ ...formData, branchId: Number(e.target.value) })}
-                    style={{
-                      width: '100%',
-                      backgroundColor: !isDirector ? '#F8FAFC' : '#FFFFFF',
-                      color: !isDirector ? '#475569' : '#0F172A',
-                      cursor: !isDirector ? 'not-allowed' : 'pointer',
-                      fontWeight: 500,
-                    }}
-                    title={!isDirector ? 'Chỉ Giám đốc mới có quyền điều chuyển chi nhánh làm việc' : undefined}
-                  >
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.branchName}
-                      </option>
-                    ))}
-                  </select>
-                  {!isDirector && (
-                    <p style={{ fontSize: '11px', color: '#94A3B8', margin: '4px 0 0 0' }}>
-                      Phân bổ cơ sở chính do Giám đốc quản lý
-                    </p>
+
+                  {!isDirector ? (
+                    <div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          backgroundColor: '#F8FAFC',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: '6px',
+                          color: '#1E293B',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Building2 size={14} color="#64748B" />
+                          <span>
+                            {branches.find((b) => b.id === (initialData?.branchId || formData.branchId))?.branchName || 'Cơ sở hiện tại'}
+                          </span>
+                        </div>
+                        <Lock size={13} color="#94A3B8" />
+                      </div>
+                      <p style={{ fontSize: '11px', color: '#64748B', margin: '5px 0 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <AlertCircle size={12} color="#D97706" />
+                        <span>Chỉ Giám đốc mới có thẩm quyền điều chuyển cơ sở làm việc chính của nhân sự.</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <select
+                        className="input-base"
+                        value={formData.branchId}
+                        onChange={(e) => setFormData({ ...formData, branchId: Number(e.target.value) })}
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#FFFFFF',
+                          color: '#0F172A',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {branches.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.branchName}
+                          </option>
+                        ))}
+                      </select>
+                      <p style={{ fontSize: '11px', color: '#64748B', margin: '4px 0 0 0' }}>
+                        Điều chuyển cơ sở chính sẽ tự động chuyển các phân ca và lịch khả dụng sang cơ sở mới.
+                      </p>
+                    </div>
                   )}
                 </div>
 

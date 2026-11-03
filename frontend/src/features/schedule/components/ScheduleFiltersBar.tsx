@@ -18,6 +18,8 @@ interface ScheduleFiltersBarProps {
     onSearchChange: (value: string) => void;
     onShiftFilterChange: (value: string) => void;
     onToggleConflicts: (value: boolean) => void;
+    onlyShowUnderstaffed?: boolean;
+    onToggleUnderstaffed?: (value: boolean) => void;
     onResetFilters: () => void;
 }
 
@@ -36,6 +38,8 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
                                                                           onSearchChange,
                                                                           onShiftFilterChange,
                                                                           onToggleConflicts,
+                                                                          onlyShowUnderstaffed = false,
+                                                                          onToggleUnderstaffed,
                                                                           onResetFilters,
                                                                       }) => {
     const [localSearch, setLocalSearch] = useState(searchTerm);
@@ -48,7 +52,7 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
         return () => clearTimeout(handler);
     }, [localSearch, onSearchChange]);
 
-    const hasActiveFilters = Boolean(searchTerm || shiftCodeFilter || onlyShowConflicts);
+    const hasActiveFilters = Boolean(searchTerm || shiftCodeFilter || onlyShowConflicts || onlyShowUnderstaffed);
 
     return (
         <div
@@ -181,6 +185,35 @@ export const ScheduleFiltersBar: React.FC<ScheduleFiltersBarProps> = ({
                     <AlertTriangle size={13} color={onlyShowConflicts ? '#DC2626' : '#94A3B8'}/>
                     <span>Chỉ hiện có xung đột</span>
                 </label>
+
+                {/* Understaffed Toggle Pill */}
+                {onToggleUnderstaffed && (
+                    <label
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            padding: '5px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: onlyShowUnderstaffed ? '#FFFBEB' : '#F8FAFC',
+                            border: onlyShowUnderstaffed ? '1px solid #FDE68A' : '1px solid #E2E8F0',
+                            color: onlyShowUnderstaffed ? '#B45309' : '#475569',
+                            transition: 'all 0.15s ease',
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={onlyShowUnderstaffed}
+                            onChange={(e) => onToggleUnderstaffed(e.target.checked)}
+                            style={{accentColor: '#D97706', cursor: 'pointer'}}
+                        />
+                        <AlertTriangle size={13} color={onlyShowUnderstaffed ? '#D97706' : '#94A3B8'}/>
+                        <span>Chỉ hiện thiếu định biên</span>
+                    </label>
+                )}
 
                 {/* Clear Filters Button */}
                 {hasActiveFilters && (

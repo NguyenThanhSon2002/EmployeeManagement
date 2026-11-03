@@ -6,6 +6,7 @@ export interface ScheduleFilterOptions {
   searchTerm: string;
   shiftCodeFilter: string;
   onlyShowConflicts: boolean;
+  onlyShowUnderstaffed?: boolean;
 }
 
 /** Day header representation */
