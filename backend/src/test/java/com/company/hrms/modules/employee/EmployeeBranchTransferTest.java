@@ -8,6 +8,7 @@ import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.dto.EmployeeDto;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
 import com.company.hrms.modules.employee.repository.EmployeeSecondaryBranchRepository;
+import com.company.hrms.modules.employee.service.EmployeeBranchMigrationService;
 import com.company.hrms.modules.employee.service.EmployeeService;
 import com.company.hrms.modules.position.repository.PositionRepository;
 import com.company.hrms.modules.schedule.domain.Schedule;
@@ -85,12 +86,35 @@ public class EmployeeBranchTransferTest {
     @Mock
     private com.company.hrms.modules.availability.repository.EmployeePreferredShiftRepository preferredShiftRepository;
 
-    @InjectMocks
+    private EmployeeBranchMigrationService branchMigrationService;
     private EmployeeService employeeService;
 
     private Long employeeId = 2L;
     private Long oldBranchId = 1L; // Cầu Giấy
     private Long newBranchId = 2L; // Đống Đa
+
+    @BeforeEach
+    void setUp() {
+        branchMigrationService = new EmployeeBranchMigrationService(
+                assignmentRepository,
+                scheduleRepository,
+                workShiftRepository,
+                availabilityRepository,
+                preferredShiftRepository
+        );
+        employeeService = new EmployeeService(
+                employeeRepository,
+                branchRepository,
+                positionRepository,
+                assignmentRepository,
+                userRepository,
+                roleRepository,
+                passwordEncoder,
+                secondaryBranchRepository,
+                fileStorageService,
+                branchMigrationService
+        );
+    }
 
     @Test
     @DisplayName("migrateEmployeeShiftsToNewBranch remaps future assignments to new branch schedule and work shifts")
