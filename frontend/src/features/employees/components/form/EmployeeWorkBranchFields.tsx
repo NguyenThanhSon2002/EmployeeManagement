@@ -5,7 +5,6 @@ import {
   Building2,
   Briefcase,
   Lock,
-  ShieldCheck,
   AlertCircle,
   Plus,
   Trash2,
@@ -82,39 +81,22 @@ export const EmployeeWorkBranchFields: React.FC<EmployeeWorkBranchFieldsProps> =
               >
                 <Building2 size={13} color="#64748B" /> Cơ Sở Làm Việc Chính <span style={{ color: '#DC2626' }}>*</span>
               </label>
-              {!isDirector ? (
+              {!isDirector && (
                 <span
                   style={{
                     fontSize: '10.5px',
-                    color: '#B45309',
-                    backgroundColor: '#FEF3C7',
-                    border: '1px solid #FDE68A',
+                    color: '#64748B',
+                    backgroundColor: '#F1F5F9',
+                    border: '1px solid #E2E8F0',
                     padding: '1px 6px',
                     borderRadius: 4,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 3,
-                    fontWeight: 600,
+                    fontWeight: 500,
                   }}
                 >
-                  <Lock size={10} /> Cố định (Giám đốc phê duyệt)
-                </span>
-              ) : (
-                <span
-                  style={{
-                    fontSize: '10.5px',
-                    color: '#15803D',
-                    backgroundColor: '#DCFCE7',
-                    border: '1px solid #BBF7D0',
-                    padding: '1px 6px',
-                    borderRadius: 4,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    fontWeight: 600,
-                  }}
-                >
-                  <ShieldCheck size={10} /> Thẩm quyền Giám đốc
+                  <Lock size={10} /> Cố định
                 </span>
               )}
             </div>
@@ -145,7 +127,7 @@ export const EmployeeWorkBranchFields: React.FC<EmployeeWorkBranchFieldsProps> =
                 </div>
                 <p style={{ fontSize: '11px', color: '#64748B', margin: '5px 0 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <AlertCircle size={12} color="#D97706" />
-                  <span>Chỉ Giám đốc mới có thẩm quyền điều chuyển cơ sở làm việc chính của nhân sự.</span>
+                  <span>Liên hệ Quản trị viên/Giám đốc để điều chuyển cơ sở làm việc chính của nhân sự.</span>
                 </p>
               </div>
             ) : (
