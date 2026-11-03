@@ -69,7 +69,7 @@ interface ScheduleState {
     mode?: 'REPLACE_ALL' | 'FILL_MISSING',
     fromDate?: string,
     toDate?: string
-  ) => void;
+  ) => Promise<{ success: boolean; error?: string }>;
   copyWeek: (mode: 'SKIP_OCCUPIED' | 'REPLACE_ALL') => Promise<{ copiedCount: number; skippedCount: number }>;
   publishSchedule: () => void;
   unpublishSchedule: () => void;
@@ -238,6 +238,9 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
               branchName: a.branch_name || data.branch_name,
               isExternal: Boolean(a.is_external),
               readOnly: Boolean(a.read_only),
+              transferredFromEmployeeId: a.transferred_from_employee_id,
+              transferredFromEmployeeName: a.transferred_from_employee_name,
+              transferredFromEmployeeCode: a.transferred_from_employee_code,
             };
 
             const existingList = mergedAssignments[key] ? [...mergedAssignments[key]] : [];
@@ -681,21 +684,23 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       }
     },
 
-    applyAutoAssignments: (
+    applyAutoAssignments: async (
         newAssignments,
         mode: 'REPLACE_ALL' | 'FILL_MISSING' = 'REPLACE_ALL',
         fromDate?: string,
         toDate?: string
-    ) => {
-      if (newAssignments.length === 0) return;
+    ): Promise<{ success: boolean; error?: string }> => {
+      if (newAssignments.length === 0) return { success: true };
       const state = get();
+      const branchId = state.filterOptions.branchId || 1;
+
+      // 1. Cập nhật optimistic lên UI để hiển thị phản hồi ngay lập tức
       const updated: Record<string, ShiftAssignment[]> = {};
 
       if (mode === 'REPLACE_ALL') {
         const minDate = fromDate || newAssignments.reduce((min, a) => (a.workDate < min ? a.workDate : min), newAssignments[0].workDate);
         const maxDate = toDate || newAssignments.reduce((max, a) => (a.workDate > max ? a.workDate : max), newAssignments[0].workDate);
 
-        // Keep existing assignments outside of [minDate, maxDate]
         for (const [key, list] of Object.entries(state.assignments)) {
           const preserved = list.filter((a) => a.workDate < minDate || a.workDate > maxDate);
           if (preserved.length > 0) {
@@ -703,18 +708,14 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           }
         }
       } else {
-        // FILL_MISSING: preserve all existing assignments
         for (const [key, list] of Object.entries(state.assignments)) {
           updated[key] = [...list];
         }
       }
 
-      // Add new assignments
       for (const a of newAssignments) {
         const key = `${a.employeeId}_${a.workDate}`;
         const list = updated[key] ? [...updated[key]] : [];
-
-        // Avoid exact duplicate
         const alreadyHasShift = list.some(
             (x) => x.workShiftId === a.workShiftId && x.status !== 'CANCELLED'
         );
@@ -723,8 +724,6 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         list.push(a);
         updated[key] = list;
       }
-
-      saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updated, state.currentStartDate);
 
       const updatedConflicts = computeAllConflicts(
           updated,
@@ -736,32 +735,52 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
 
       set({ assignments: updated, conflicts: updatedConflicts });
 
-      if (state.scheduleId) {
-        scheduleService
-            .batchAssignShifts({
-              schedule_id: state.scheduleId,
-              schedule_version: state.scheduleVersion,
-              mode,
-              from_date: fromDate,
-              to_date: toDate,
-              assignments: newAssignments.map((a) => ({
-                employee_id: a.employeeId,
-                work_shift_id: a.workShiftId,
-                work_date: a.workDate,
-                override_rule: a.overrideRule || undefined,
-                override_reason: a.overrideReason || undefined,
-              })),
-            })
-            .then((savedList) => {
-              if (savedList && savedList.length > 0) {
-                // Refresh schedule to ensure exact server IDs and state
-                get().fetchWeeklySchedule(state.filterOptions.branchId || 1, state.currentStartDate);
-              }
-            })
-            .catch((err) => {
-              console.warn('Failed to persist batch assignments to backend:', err);
-            });
+      // 2. Đảm bảo có scheduleId hợp lệ từ backend trước khi lưu hàng loạt
+      let targetScheduleId = state.scheduleId;
+      let targetScheduleVersion = state.scheduleVersion;
+
+      if (!targetScheduleId) {
+        try {
+          const scheduleData = await scheduleService.getWeeklySchedule(branchId, state.currentStartDate);
+          if (scheduleData) {
+            targetScheduleId = scheduleData.schedule_id;
+            targetScheduleVersion = scheduleData.version !== undefined ? scheduleData.version : 0;
+          }
+        } catch (e) {
+          console.warn('Could not fetch schedule before batch persist:', e);
+        }
       }
+
+      if (targetScheduleId) {
+        try {
+          await scheduleService.batchAssignShifts({
+            schedule_id: targetScheduleId,
+            schedule_version: targetScheduleVersion,
+            mode,
+            from_date: fromDate,
+            to_date: toDate,
+            assignments: newAssignments.map((a) => ({
+              employee_id: a.employeeId,
+              work_shift_id: a.workShiftId,
+              work_date: a.workDate,
+              override_rule: a.overrideRule || undefined,
+              override_reason: a.overrideReason || undefined,
+            })),
+          });
+
+          // Tải lại lịch từ máy chủ để nạp toàn bộ ID thực của MySQL vào store & storage
+          await get().fetchWeeklySchedule(branchId, state.currentStartDate);
+          return { success: true };
+        } catch (err: any) {
+          console.error('Failed to persist batch assignments to backend:', err);
+          // Rollback bằng cách nạp lại trạng thái máy chủ
+          await get().fetchWeeklySchedule(branchId, state.currentStartDate);
+          const msg = err?.response?.data?.error?.message || err?.message || 'Không thể lưu phân ca lên máy chủ';
+          return { success: false, error: msg };
+        }
+      }
+
+      return { success: false, error: 'Không tìm thấy thông tin lịch làm việc để lưu.' };
     },
 
     copyWeek: async (mode) => {

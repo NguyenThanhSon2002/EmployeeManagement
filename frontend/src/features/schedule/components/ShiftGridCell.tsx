@@ -1,10 +1,110 @@
 import React from 'react';
 import type {ShiftAssignment, ShiftTemplate, Employee, ScheduleConflict} from '@/types/domain.types';
-import {Plus, X, AlertTriangle, Users, CheckCircle2, Lock, FileText, ArrowLeftRight} from 'lucide-react';
+import {Plus, X, AlertTriangle, Users, CheckCircle2, Lock, FileText, ArrowLeftRight, ChevronDown, ChevronUp, Undo2} from 'lucide-react';
 import {Tooltip} from '@/shared/components/Tooltip';
 import {UserAvatar} from '@/components/common/UserAvatar';
 import {useAuthStore} from '@/shared/auth/useAuthStore';
 import {assignmentToTimeRange, checkShiftOverlap} from '@/utils/conflict-detector.utils';
+
+export interface AssignmentHandoverInfo {
+    isHandover: boolean;
+    origEmployeeId?: number;
+    origName: string;
+    origCode?: string;
+    origAvatarUrl?: string;
+    reasonText?: string;
+    requestCode?: string;
+}
+
+export const getAssignmentHandoverInfo = (
+    assignment: ShiftAssignment,
+    employees: Employee[] = []
+): AssignmentHandoverInfo => {
+    const rawReason = assignment.overrideReason || '';
+    const hasTransferredId = Boolean(assignment.transferredFromEmployeeId);
+    const hasHandoverText = /HANDOVER-/i.test(rawReason) || /nhường ca/i.test(rawReason);
+
+    if (!hasTransferredId && !hasHandoverText) {
+        return { isHandover: false, origName: '' };
+    }
+
+    // Trích xuất mã yêu cầu nếu có (ví dụ: HANDOVER-20261103-94F57)
+    const codeMatch = rawReason.match(/HANDOVER-[A-Z0-9-]+/i);
+    const requestCode = codeMatch ? codeMatch[0] : undefined;
+
+    // Trích xuất lý do sạch (bỏ các tiền tố như "Nhường ca theo...", "Tên nhường ca cho...")
+    let reasonText = '';
+    if (rawReason.includes(':')) {
+        const parts = rawReason.split(':');
+        reasonText = parts.slice(1).join(':').trim();
+    } else if (codeMatch) {
+        const after = rawReason.slice(rawReason.indexOf(codeMatch[0]) + codeMatch[0].length).trim();
+        reasonText = after.replace(/^[:\s-]+/, '').trim();
+    } else {
+        reasonText = rawReason;
+    }
+
+    // Nhận diện nhân sự gốc đã nhường ca
+    let origEmployeeId = assignment.transferredFromEmployeeId;
+    let origName = assignment.transferredFromEmployeeName;
+    let origCode = assignment.transferredFromEmployeeCode;
+    let origAvatarUrl: string | undefined;
+
+    if (origEmployeeId) {
+        const foundEmp = employees.find((e) => Number(e.id) === Number(origEmployeeId));
+        if (foundEmp) {
+            origName = origName || foundEmp.fullName;
+            origCode = origCode || foundEmp.employeeCode;
+            origAvatarUrl = foundEmp.avatarUrl;
+        }
+    }
+
+    // Fallback nếu transferredFromEmployeeId chưa có trên bản ghi cũ:
+    // Kiểm tra định dạng: "Nguyễn Tử Duy Anh (EMP-153) nhường ca cho..."
+    if (!origName && rawReason) {
+        const patternMatch = rawReason.match(/^([^(]+)\s*\((EMP-[^)]+)\)\s*nhường ca cho/i);
+        if (patternMatch) {
+            origName = patternMatch[1].trim();
+            origCode = patternMatch[2].trim();
+            const foundEmp = employees.find((e) => e.employeeCode === origCode || e.fullName === origName);
+            if (foundEmp) {
+                origEmployeeId = foundEmp.id;
+                origAvatarUrl = foundEmp.avatarUrl;
+            }
+        }
+    }
+
+    if (!origName) {
+        origName = origEmployeeId ? `NV #${origEmployeeId}` : 'Nhân sự nhường ca';
+    }
+
+    return {
+        isHandover: true,
+        origEmployeeId,
+        origName,
+        origCode,
+        origAvatarUrl,
+        reasonText: reasonText || undefined,
+        requestCode,
+    };
+};
+
+/**
+ * Rút gọn tên nhân viên hiển thị trên chip ô ca:
+ * Nếu tên dài từ 3 từ trở lên: Rút gọn phần đầu (họ), giữ lại phần đệm + tên chính ở cuối.
+ * Ví dụ: "Nguyễn Xuân Tài" -> "...Xuân Tài", "Nguyễn Tử Duy Anh" -> "...Duy Anh"
+ * Với tên 1-2 từ (ví dụ: "Gia Linh", "Sơn Núi", "NV #2") -> giữ nguyên.
+ */
+export const formatShiftChipName = (fullName: string): string => {
+    if (!fullName) return '';
+    const trimmed = fullName.trim();
+    const parts = trimmed.split(/\s+/);
+    if (parts.length <= 2) {
+        return trimmed;
+    }
+    const lastTwo = parts.slice(-2).join(' ');
+    return `...${lastTwo}`;
+};
 
 interface ShiftGridCellProps {
     template: ShiftTemplate;
@@ -48,6 +148,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
     const isManager = currentRole === 'ROLE_MANAGER';
     const isManagerOrAdmin = isDirectorOrAdmin || isManager;
     const isEmployee = currentRole === 'ROLE_EMPLOYEE';
+    const [showTransferred, setShowTransferred] = React.useState(false);
 
     const currentCount = assignments.length;
     const minRequired = template.minStaffing || 1;
@@ -328,6 +429,8 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                         const displayName = emp ? emp.fullName : `NV #${assignment.employeeId}`;
                         const avatarUrl = emp?.avatarUrl;
 
+                        const handoverInfo = getAssignmentHandoverInfo(assignment, employees);
+
                         // Chỉ cho phép giải trình nếu ca có cảnh báo HOẶC đã có giải trình trước đó
                         const isEligibleForOverride = Boolean(hasConflict || assignment.overrideReason);
                         const canClickToOverride = canEdit && !isExternal && !assignment.readOnly && isEligibleForOverride;
@@ -343,7 +446,13 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                         📍 Ca ngoại vi tại {assignment.branchName || 'Cơ sở khác'} (Chỉ đọc)
                                     </div>
                                 )}
-                                {assignment.overrideReason && (
+                                {handoverInfo.isHandover && (
+                                    <div style={{color: '#93C5FD', fontSize: 11, fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4}}>
+                                        <ArrowLeftRight size={11} />
+                                        <span>Nhận nhường ca từ: {handoverInfo.origName}{handoverInfo.origCode ? ` (${handoverInfo.origCode})` : ''}</span>
+                                    </div>
+                                )}
+                                {!handoverInfo.isHandover && assignment.overrideReason && (
                                     <div style={{
                                         color: '#86EFAC',
                                         fontSize: 11,
@@ -434,6 +543,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                         )}
 
                                         <span
+                                            title={displayName}
                                             style={{
                                                 whiteSpace: 'nowrap',
                                                 overflow: 'hidden',
@@ -445,8 +555,9 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                                 minWidth: 0,
                                             }}
                                         >
-                                            {displayName}
+                                            {formatShiftChipName(displayName)}
                                         </span>
+
 
                                         {hasConflict && (
                                             <span title="Có cảnh báo xung đột"
@@ -455,7 +566,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                             </span>
                                         )}
 
-                                        {assignment.overrideReason && (
+                                        {!handoverInfo.isHandover && assignment.overrideReason && (
                                             <span
                                                 title={`Đã giải trình: ${assignment.overrideReason}`}
                                                 style={{
@@ -596,6 +707,172 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                             </Tooltip>
                         );
                     })}
+
+                    {(() => {
+                        const transferredList = assignments
+                            .map((a) => ({ assignment: a, info: getAssignmentHandoverInfo(a, employees) }))
+                            .filter((item) => item.info.isHandover);
+
+                        if (transferredList.length === 0) return null;
+
+                        return (
+                            <div style={{marginTop: 3, borderTop: '1px dashed #CBD5E1', paddingTop: 3}}>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowTransferred((prev) => !prev);
+                                    }}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        background: showTransferred ? '#F1F5F9' : 'transparent',
+                                        border: 'none',
+                                        padding: '2px 5px',
+                                        fontSize: '10.5px',
+                                        color: '#64748B',
+                                        cursor: 'pointer',
+                                        borderRadius: '4px',
+                                        fontWeight: 600,
+                                        transition: 'all 0.15s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!showTransferred) e.currentTarget.style.backgroundColor = '#F8FAFC';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!showTransferred) e.currentTarget.style.backgroundColor = 'transparent';
+                                    }}
+                                    title={showTransferred ? 'Thu gọn danh sách ca đã nhường' : 'Bấm để xem nhân sự ban đầu đã nhường ca'}
+                                >
+                                    <span style={{display: 'flex', alignItems: 'center', gap: 4}}>
+                                        <Undo2 size={11} color="#64748B"/>
+                                        <span>{transferredList.length} NV đã nhường ca</span>
+                                    </span>
+                                    {showTransferred ? <ChevronUp size={11}/> : <ChevronDown size={11}/>}
+                                </button>
+
+                                {showTransferred && (
+                                    <div style={{display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4}}>
+                                        {transferredList.map(({ assignment, info }) => {
+                                            const activeEmp = employees.find((e) => e.id === assignment.employeeId);
+                                            const activeName = activeEmp?.fullName || `NV #${assignment.employeeId}`;
+
+                                            const origTooltip = (
+                                                <div>
+                                                    <div style={{fontWeight: 600}}>
+                                                        {info.origName} {info.origCode ? `(${info.origCode})` : ''}
+                                                    </div>
+                                                    <div style={{color: '#FCD34D', fontSize: 11, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4}}>
+                                                        <ArrowLeftRight size={11} />
+                                                        <span>Đã nhường ca này cho {activeName}</span>
+                                                    </div>
+                                                    {info.reasonText && (
+                                                        <div style={{
+                                                            color: '#86EFAC',
+                                                            fontSize: 11,
+                                                            marginTop: 3,
+                                                            display: 'flex',
+                                                            alignItems: 'flex-start',
+                                                            gap: 4
+                                                        }}>
+                                                            <FileText size={11} style={{flexShrink: 0, marginTop: 2}}/>
+                                                            <span>Lý do giải trình: <strong>{info.reasonText}</strong></span>
+                                                        </div>
+                                                    )}
+                                                    {info.requestCode && (
+                                                        <div style={{color: '#94A3B8', fontSize: 10, marginTop: 2}}>
+                                                            Mã đơn: {info.requestCode}
+                                                        </div>
+                                                    )}
+                                                    {onOpenOverrideModal && (
+                                                        <div style={{color: '#93C5FD', fontSize: 10.5, marginTop: 4, fontStyle: 'italic'}}>
+                                                            Bấm để xem chi tiết giải trình
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+
+                                            return (
+                                                <Tooltip key={`transferred-${assignment.id}`} content={origTooltip}>
+                                                    <div
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (onOpenOverrideModal) {
+                                                                onOpenOverrideModal(assignment);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between',
+                                                            gap: 5,
+                                                            padding: '3px 6px',
+                                                            borderRadius: '5px',
+                                                            backgroundColor: '#F8FAFC',
+                                                            border: '1px dashed #CBD5E1',
+                                                            opacity: 0.85,
+                                                            fontSize: '11px',
+                                                            cursor: onOpenOverrideModal ? 'pointer' : 'default',
+                                                            transition: 'all 0.15s ease',
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                                            e.currentTarget.style.borderColor = '#93C5FD';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#F8FAFC';
+                                                            e.currentTarget.style.borderColor = '#CBD5E1';
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 4,
+                                                            overflow: 'hidden',
+                                                            flex: 1,
+                                                            minWidth: 0
+                                                        }}>
+                                                            <UserAvatar name={info.origName} src={info.origAvatarUrl} size={16}/>
+                                                            <span
+                                                                title={info.origName}
+                                                                style={{
+                                                                    textDecoration: 'line-through',
+                                                                    color: '#64748B',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis',
+                                                                    whiteSpace: 'nowrap',
+                                                                    fontWeight: 500,
+                                                                    flex: 1,
+                                                                }}
+                                                            >
+                                                                {formatShiftChipName(info.origName)}
+                                                            </span>
+                                                        </div>
+                                                        <span
+                                                            style={{
+                                                                fontSize: '9px',
+                                                                fontWeight: 600,
+                                                                color: '#DC2626',
+                                                                backgroundColor: '#FEE2E2',
+                                                                border: '1px solid #FECACA',
+                                                                padding: '1px 4px',
+                                                                borderRadius: '3px',
+                                                                flexShrink: 0,
+                                                            }}
+                                                        >
+                                                            Đã nhường
+                                                        </span>
+                                                    </div>
+                                                </Tooltip>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
         </div>

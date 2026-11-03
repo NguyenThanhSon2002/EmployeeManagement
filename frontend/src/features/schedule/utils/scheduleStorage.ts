@@ -9,8 +9,12 @@ export function normalizeAssignmentsMap(map: Record<string, any>): Record<string
   const normalized: Record<string, ShiftAssignment[]> = {};
   for (const [key, val] of Object.entries(map || {})) {
     if (Array.isArray(val)) {
-      normalized[key] = val;
-    } else if (val && typeof val === 'object') {
+      // Loại bỏ các phân ca mang ID tạm thời từ client (> 1_000_000_000_000) để không làm sai lệch với backend
+      const validItems = val.filter((item) => item && typeof item.id === 'number' && item.id < 1_000_000_000_000);
+      if (validItems.length > 0) {
+        normalized[key] = validItems;
+      }
+    } else if (val && typeof val === 'object' && typeof (val as any).id === 'number' && (val as any).id < 1_000_000_000_000) {
       normalized[key] = [val as ShiftAssignment];
     }
   }

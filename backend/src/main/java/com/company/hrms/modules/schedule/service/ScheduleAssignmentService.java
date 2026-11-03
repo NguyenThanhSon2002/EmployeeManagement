@@ -586,6 +586,11 @@ public class ScheduleAssignmentService {
 
         assertScheduleNotLocked(schedule);
 
+        if (assignment.getTransferredFromEmployeeId() != null ||
+                (assignment.getOverrideReason() != null && assignment.getOverrideReason().contains("HANDOVER-"))) {
+            throw new BusinessException("IMMUTABLE_OVERRIDE", "Không thể chỉnh sửa giải trình của ca đã được chuyển nhượng hoặc đổi qua hệ thống.", HttpStatus.BAD_REQUEST);
+        }
+
         if (request.getScheduleVersion() != null && !schedule.getVersion().equals(request.getScheduleVersion())) {
             log.warn("Schedule version mismatch on override update for assignment {}: client={}, server={}",
                     id, request.getScheduleVersion(), schedule.getVersion());
@@ -646,6 +651,14 @@ public class ScheduleAssignmentService {
         dto.setOverrideRule(a.getOverrideRule());
         dto.setOverrideReason(a.getOverrideReason());
         dto.setVersion(a.getVersion());
+        dto.setTransferredFromEmployeeId(a.getTransferredFromEmployeeId());
+
+        if (a.getTransferredFromEmployeeId() != null) {
+            employeeRepository.findById(a.getTransferredFromEmployeeId()).ifPresent(emp -> {
+                dto.setTransferredFromEmployeeName(emp.getFullName());
+                dto.setTransferredFromEmployeeCode(emp.getEmployeeCode());
+            });
+        }
 
         if (a.getScheduleId() != null) {
             scheduleRepository.findById(a.getScheduleId()).ifPresent(s -> {

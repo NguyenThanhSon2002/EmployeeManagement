@@ -337,7 +337,8 @@ Lưu phân ca chi tiết cho từng nhân viên vào từng ngày, tích hợp b
 |:---|:---|:---|:---|
 | `id` | `BIGINT UNSIGNED` | `PK, AUTO_INCREMENT` | Định danh bản ghi phân ca |
 | `schedule_id` | `BIGINT UNSIGNED`| `NOT NULL, FK -> schedules(id)`| Bảng lịch tuần chứa ca này |
-| `employee_id` | `BIGINT UNSIGNED`| `NOT NULL, FK -> employees(id)`| Nhân viên được gán ca |
+| `employee_id` | `BIGINT UNSIGNED`| `NOT NULL, FK -> employees(id)`| Nhân viên được gán ca (đi làm thực tế) |
+| `transferred_from_employee_id` | `BIGINT UNSIGNED`| `NULL, FK -> employees(id)`| Nhân viên được phân bổ ban đầu trước khi nhường ca (nếu có) |
 | `work_shift_id` | `BIGINT UNSIGNED`| `NOT NULL, FK -> work_shifts(id)`| Mẫu ca gốc |
 | `work_date` | `DATE` | `NOT NULL` | Ngày làm việc (Theo ngày bắt đầu ca) |
 | `snapshot_shift_name` | `VARCHAR(100)`| `NOT NULL` | [Denorm] Tên ca sao chụp tại thời điểm gán |
@@ -358,6 +359,7 @@ Lưu phân ca chi tiết cho từng nhân viên vào từng ngày, tích hợp b
   - `idx_shift_assign_emp_date` (`employee_id`, `work_date`)
   - `idx_shift_assign_conflict` (`employee_id`, `planned_start_time`, `planned_end_time`, `status`)
   - `idx_shift_assign_schedule` (`schedule_id`, `work_date`)
+  - `idx_shift_assign_transferred` (`transferred_from_employee_id`)
 
 ---
 
