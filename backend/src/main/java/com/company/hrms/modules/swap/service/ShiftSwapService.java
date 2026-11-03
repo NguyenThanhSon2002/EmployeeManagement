@@ -38,6 +38,7 @@ public class ShiftSwapService {
     private final EmployeeRepository employeeRepository;
     private final BranchRepository branchRepository;
     private final ConflictDetectionEngine conflictEngine;
+    private static final int MAX_NOTE_LENGTH = 1000;
 
     public ShiftSwapService(
             ShiftSwapRequestRepository swapRepository,
@@ -344,17 +345,17 @@ public class ShiftSwapService {
                         .orElseThrow(() -> new ResourceNotFoundException("Phân ca của đối tác", swap.getTargetAssignmentId()));
 
                 reqAssign.setEmployeeId(swap.getTargetId());
-                reqAssign.setOverrideReason("Đổi ca theo " + swap.getRequestCode());
+                reqAssign.setOverrideReason(buildSwapNote("Đổi ca", swap));
 
                 targetAssign.setEmployeeId(swap.getRequesterId());
-                targetAssign.setOverrideReason("Đổi ca theo " + swap.getRequestCode());
+                targetAssign.setOverrideReason(buildSwapNote("Đổi ca", swap));
 
                 assignmentRepository.save(reqAssign);
                 assignmentRepository.save(targetAssign);
             } else {
                 // Chuyển quyền phân ca sang đồng nghiệp nhận ca (HANDOVER)
                 reqAssign.setEmployeeId(swap.getTargetId());
-                reqAssign.setOverrideReason("Nhường ca theo " + swap.getRequestCode());
+                reqAssign.setOverrideReason(buildSwapNote("Nhường ca", swap));
                 assignmentRepository.save(reqAssign);
             }
 
@@ -414,6 +415,15 @@ public class ShiftSwapService {
     public List<ShiftSwapResponse> getAllBranchRequests(Long branchId) {
         List<ShiftSwapRequest> list = swapRepository.findByBranchId(branchId);
         return list.stream().map(this::toResponse).toList();
+    }
+
+    private String buildSwapNote(String action, ShiftSwapRequest swap) {
+        String note = action + " theo " + swap.getRequestCode();
+        String reason = swap.getReason();
+        if (reason != null && !reason.isBlank()) {
+            note += ": " + reason.trim();
+        }
+        return note.length() > MAX_NOTE_LENGTH ? note.substring(0, MAX_NOTE_LENGTH) : note;
     }
 
     private ShiftSwapResponse toResponse(ShiftSwapRequest swap) {

@@ -228,7 +228,7 @@ export const SchedulePage: React.FC = () => {
             addToast({
                 type: 'success',
                 title: 'Đăng ký ca thành công',
-                message: `Bạn đã nhận ca ${claimTemplate.shiftName} ngày ${claimWorkDate}.`,
+                message: `Bạn đã nhận ${claimTemplate.shiftName} ngày ${claimWorkDate}.`,
             });
             fetchWeeklySchedule(branchId, currentStartDate);
         }

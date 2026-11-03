@@ -95,7 +95,7 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                 workDate,
                 workShiftId: Number(template.id),
                 assignmentId: assignment.id,
-                message: `Ca ${template.shiftName} đã vượt định biên tối đa (${currentCount}/${maxCapacity} NV). Bổ sung nhân sự tăng cường.`,
+                message: `${template.shiftName} đã vượt định biên tối đa (${currentCount}/${maxCapacity} NV). Bổ sung nhân sự tăng cường.`,
                 canOverride: true,
             });
         }

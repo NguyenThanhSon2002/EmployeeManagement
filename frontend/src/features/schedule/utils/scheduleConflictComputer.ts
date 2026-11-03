@@ -114,7 +114,7 @@ export function computeAllConflicts(
             workDate: dateStr,
             workShiftId: Number(extraAssignment.workShiftId),
             assignmentId: extraAssignment.id,
-            message: `Ca ${extraAssignment.snapshotShiftName} đã vượt định biên tối đa (${list.length}/${maxCap} NV). Bổ sung nhân sự tăng cường.`,
+            message: `${extraAssignment.snapshotShiftName} đã vượt định biên tối đa (${list.length}/${maxCap} NV). Bổ sung nhân sự tăng cường.`,
             canOverride: true,
           };
           conflictsMap[k] = [...(conflictsMap[k] || []), capacityWarning];

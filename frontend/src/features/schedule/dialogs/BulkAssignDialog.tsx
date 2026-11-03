@@ -212,7 +212,7 @@ export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
         onToast({
             type: 'info',
             title: 'Đã giảm 1 ca',
-            message: `Đã giảm ca ${shiftToRemove.assignment.snapshotShiftName} (${formatDayLabel(targetDate)}) của ${shiftToRemove.employeeName}.`,
+            message: `Đã giảm ${shiftToRemove.assignment.snapshotShiftName} (${formatDayLabel(targetDate)}) của ${shiftToRemove.employeeName}.`,
         });
     };
 
@@ -276,7 +276,7 @@ export const BulkAssignDialog: React.FC<BulkAssignDialogProps> = ({
         onToast({
             type: 'success',
             title: 'Đã thêm ca thành công',
-            message: `Đã gán ca ${proposal.assignment.snapshotShiftName} (${formatDayLabel(slot.workDate)}) cho ${proposal.employeeName}.`,
+            message: `Đã gán ${proposal.assignment.snapshotShiftName} (${formatDayLabel(slot.workDate)}) cho ${proposal.employeeName}.`,
         });
     };
 

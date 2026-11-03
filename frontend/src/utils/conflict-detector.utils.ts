@@ -126,7 +126,7 @@ export function checkShiftOverlap(
       return {
         hasOverlap: true,
         conflictingShift: shift,
-        message: `Trùng khung giờ với ca ${shift.snapshotShiftName} (${shift.snapshotStartTime} - ${shift.snapshotEndTime}${branchSuffix})`,
+        message: `Trùng khung giờ với ${shift.snapshotShiftName} (${shift.snapshotStartTime} - ${shift.snapshotEndTime}${branchSuffix})`,
         isHandover: false,
       };
     }
