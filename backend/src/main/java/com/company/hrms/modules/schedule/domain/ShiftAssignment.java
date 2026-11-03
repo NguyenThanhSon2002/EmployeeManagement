@@ -20,6 +20,9 @@ public class ShiftAssignment {
     @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
+    @Column(name = "transferred_from_employee_id")
+    private Long transferredFromEmployeeId;
+
     @Column(name = "work_shift_id", nullable = false)
     private Long workShiftId;
 
@@ -83,6 +86,8 @@ public class ShiftAssignment {
     public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
     public Long getEmployeeId() { return employeeId; }
     public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
+    public Long getTransferredFromEmployeeId() { return transferredFromEmployeeId; }
+    public void setTransferredFromEmployeeId(Long transferredFromEmployeeId) { this.transferredFromEmployeeId = transferredFromEmployeeId; }
     public Long getWorkShiftId() { return workShiftId; }
     public void setWorkShiftId(Long workShiftId) { this.workShiftId = workShiftId; }
     public LocalDate getWorkDate() { return workDate; }

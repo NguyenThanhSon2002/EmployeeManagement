@@ -14,7 +14,10 @@ import {
     ArrowRight,
     Repeat,
     Sparkles,
+    Users,
 } from 'lucide-react';
+
+const isClientTemporaryId = (id: number) => !id || id > 1_000_000_000_000;
 
 const MAX_REASON_LENGTH = 500;
 
@@ -62,23 +65,46 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
     const [isSimulating, setIsSimulating] = useState(false);
     const [simulationResult, setSimulationResult] = useState<SimulateSwapResult | null>(null);
 
-    // Danh sách các ca của người dùng hiện tại
-    const myShifts = useMemo(() => {
-        return allAssignments.filter(
-            (a) => Number(a.employeeId) === Number(currentUserId) && a.status !== 'CANCELLED'
-        );
-    }, [allAssignments, currentUserId]);
+    // Xác định người yêu cầu thực tế:
+    // Nếu modal được mở từ 1 ca cụ thể (sourceAssignment), người yêu cầu là chủ nhân của ca đó (kể cả khi Quản lý/Giám đốc tạo hộ).
+    // Nếu không có sourceAssignment, người yêu cầu là currentUserId.
+    const effectiveRequesterId = useMemo(() => {
+        if (sourceAssignment && sourceAssignment.employeeId) {
+            return Number(sourceAssignment.employeeId);
+        }
+        return Number(currentUserId);
+    }, [sourceAssignment, currentUserId]);
 
-    // Đồng nghiệp hợp lệ để nhường/đổi ca
+    const isManagerOnBehalf = Boolean(
+        sourceAssignment &&
+        Number(sourceAssignment.employeeId) !== Number(currentUserId)
+    );
+
+    const requesterEmployee = useMemo(() => {
+        return employees.find((e) => Number(e.id) === effectiveRequesterId) || null;
+    }, [employees, effectiveRequesterId]);
+
+    // Danh sách các ca của người yêu cầu
+    const myShifts = useMemo(() => {
+        const shifts = allAssignments.filter(
+            (a) => Number(a.employeeId) === effectiveRequesterId && a.status !== 'CANCELLED'
+        );
+        if (sourceAssignment && !shifts.some((s) => s.id === sourceAssignment.id)) {
+            return [sourceAssignment, ...shifts];
+        }
+        return shifts;
+    }, [allAssignments, effectiveRequesterId, sourceAssignment]);
+
+    // Đồng nghiệp hợp lệ để nhường/đổi ca (loại trừ chính người đang giữ ca)
     const candidateEmployees = useMemo(() => {
         return employees.filter(
             (e) =>
-                Number(e.id) !== Number(currentUserId) &&
+                Number(e.id) !== effectiveRequesterId &&
                 e.isActive &&
                 e.employmentStatus !== 'RESIGNED' &&
                 e.positionId !== 1
         );
-    }, [employees, currentUserId]);
+    }, [employees, effectiveRequesterId]);
 
     // Danh sách ca của đồng nghiệp đang chọn (cho chế độ SWAP)
     const targetColleagueShifts = useMemo(() => {
@@ -113,7 +139,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
             setReason('');
             setSimulationResult(null);
         }
-    }, [isOpen, sourceAssignment, targetAssignment, initialType, myShifts]);
+    }, [isOpen, sourceAssignment, targetAssignment, initialType, effectiveRequesterId]);
 
     // Tự động kiểm tra xung đột thời gian thực
     useEffect(() => {
@@ -123,6 +149,20 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
         }
         if (swapType === 'SWAP' && !selectedTargetId) {
             setSimulationResult(null);
+            return;
+        }
+
+        // Bảo vệ an toàn: Không gửi ID tạm thời của client (> 1_000_000_000_000) lên backend để tránh ResourceNotFoundException
+        if (isClientTemporaryId(selectedSourceId) || (swapType === 'SWAP' && isClientTemporaryId(selectedTargetId))) {
+            setSimulationResult({
+                valid: false,
+                hasError: true,
+                hasWarning: false,
+                isServerError: false,
+                requesterConflicts: [],
+                targetConflicts: [],
+                message: 'Ca làm việc này chưa được đồng bộ hoặc lưu lên máy chủ (ID tạm). Vui lòng làm mới trang để nạp dữ liệu chính thức trước khi gửi đề xuất.',
+            });
             return;
         }
 
@@ -182,7 +222,25 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
             addToast({
                 type: 'error',
                 title: 'Thiếu ca nguồn',
-                message: 'Vui lòng chọn ca làm việc của bạn cần đổi/nhường.',
+                message: isManagerOnBehalf ? 'Vui lòng chọn ca làm việc của nhân sự cần đổi/nhường.' : 'Vui lòng chọn ca làm việc của bạn cần đổi/nhường.',
+            });
+            return;
+        }
+
+        if (isClientTemporaryId(selectedSourceId)) {
+            addToast({
+                type: 'error',
+                title: 'Ca làm việc chưa lưu',
+                message: 'Ca làm việc này chưa được đồng bộ hoặc lưu lên máy chủ (ID tạm). Vui lòng tải lại trang trước khi gửi yêu cầu.',
+            });
+            return;
+        }
+
+        if (swapType === 'SWAP' && isClientTemporaryId(selectedTargetId)) {
+            addToast({
+                type: 'error',
+                title: 'Ca đối ứng chưa lưu',
+                message: 'Ca làm việc đối ứng chưa được đồng bộ hoặc lưu lên máy chủ (ID tạm). Vui lòng tải lại trang trước khi gửi yêu cầu.',
             });
             return;
         }
@@ -331,9 +389,12 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                                 {swapType === 'SWAP' ? 'Đề Xuất Đổi Chéo Ca (2 Chiều)' : 'Đề Xuất Nhường Ca (1 Chiều)'}
                             </h3>
                             <p style={{fontSize: 12, color: '#64748B', margin: '2px 0 0'}}>
-                                {swapType === 'SWAP'
-                                    ? 'Hoán đổi ca làm việc giữa bạn và đồng nghiệp, tự động kiểm tra xung đột.'
-                                    : 'Gửi yêu cầu nhường ca cho đồng nghiệp đi làm thay.'}
+                                {isManagerOnBehalf
+                                    ? `Quản lý tạo yêu cầu thay cho nhân sự: ${requesterEmployee?.fullName || `NV #${effectiveRequesterId}`}`
+                                    : (swapType === 'SWAP'
+                                        ? 'Hoán đổi ca làm việc giữa bạn và đồng nghiệp, tự động kiểm tra xung đột.'
+                                        : 'Gửi yêu cầu nhường ca cho đồng nghiệp đi làm thay.')
+                                }
                             </p>
                         </div>
                     </div>
@@ -362,6 +423,28 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                     flexDirection: 'column',
                     gap: 16
                 }}>
+                    {/* Banner thay mặt nhân sự (khi Quản lý/Giám đốc tạo hộ) */}
+                    {isManagerOnBehalf && requesterEmployee && (
+                        <div
+                            style={{
+                                padding: '10px 12px',
+                                backgroundColor: '#EFF6FF',
+                                border: '1px solid #BFDBFE',
+                                borderRadius: 8,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                fontSize: 12.5,
+                                color: '#1E40AF',
+                            }}
+                        >
+                            <Users size={16} color="#3B82F6" />
+                            <span>
+                                Đang tạo đề xuất thay cho: <strong>{requesterEmployee.fullName} ({requesterEmployee.employeeCode})</strong>.
+                            </span>
+                        </div>
+                    )}
+
                     {/* Mode Switcher */}
                     <div
                         style={{
@@ -422,7 +505,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                         </button>
                     </div>
 
-                    {/* 1. Ca nguồn của bạn */}
+                    {/* 1. Ca nguồn */}
                     <div>
                         <label style={{
                             fontSize: 12.5,
@@ -431,7 +514,10 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                             display: 'block',
                             marginBottom: 6
                         }}>
-                            {swapType === 'SWAP' ? 'Ca bạn muốn đổi đi (Của bạn)' : 'Ca bạn muốn nhường (Của bạn)'}{' '}
+                            {swapType === 'SWAP'
+                                ? (isManagerOnBehalf ? `Ca đổi của ${requesterEmployee?.fullName || 'nhân viên'}` : 'Ca bạn muốn đổi đi (Của bạn)')
+                                : (isManagerOnBehalf ? `Ca nhường của ${requesterEmployee?.fullName || 'nhân viên'}` : 'Ca bạn muốn nhường (Của bạn)')
+                            }{' '}
                             <span style={{color: '#DC2626'}}>*</span>
                         </label>
                         {myShifts.length === 0 ? (
@@ -442,7 +528,9 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                                 fontSize: 12,
                                 color: '#DC2626'
                             }}>
-                                Bạn chưa có ca làm việc nào trong tuần này để đề xuất.
+                                {isManagerOnBehalf
+                                    ? `Nhân viên ${requesterEmployee?.fullName || 'này'} chưa có ca làm việc nào trong tuần này để đề xuất.`
+                                    : 'Bạn chưa có ca làm việc nào trong tuần này để đề xuất.'}
                             </div>
                         ) : (
                             <select

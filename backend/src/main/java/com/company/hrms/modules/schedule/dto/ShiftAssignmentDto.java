@@ -59,6 +59,15 @@ public class ShiftAssignmentDto {
     @JsonProperty("read_only")
     private Boolean readOnly = false;
 
+    @JsonProperty("transferred_from_employee_id")
+    private Long transferredFromEmployeeId;
+
+    @JsonProperty("transferred_from_employee_name")
+    private String transferredFromEmployeeName;
+
+    @JsonProperty("transferred_from_employee_code")
+    private String transferredFromEmployeeCode;
+
     private Integer version;
 
     public ShiftAssignmentDto() {
@@ -102,4 +111,10 @@ public class ShiftAssignmentDto {
     public void setIsExternal(Boolean isExternal) { this.isExternal = isExternal; }
     public Boolean getReadOnly() { return readOnly; }
     public void setReadOnly(Boolean readOnly) { this.readOnly = readOnly; }
+    public Long getTransferredFromEmployeeId() { return transferredFromEmployeeId; }
+    public void setTransferredFromEmployeeId(Long transferredFromEmployeeId) { this.transferredFromEmployeeId = transferredFromEmployeeId; }
+    public String getTransferredFromEmployeeName() { return transferredFromEmployeeName; }
+    public void setTransferredFromEmployeeName(String transferredFromEmployeeName) { this.transferredFromEmployeeName = transferredFromEmployeeName; }
+    public String getTransferredFromEmployeeCode() { return transferredFromEmployeeCode; }
+    public void setTransferredFromEmployeeCode(String transferredFromEmployeeCode) { this.transferredFromEmployeeCode = transferredFromEmployeeCode; }
 }

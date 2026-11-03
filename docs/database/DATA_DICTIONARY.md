@@ -219,7 +219,8 @@ erDiagram
 |:---|:---|:---|:---|
 | `id` | BIGINT UNSIGNED | PK, AI | Khóa chính tự tăng, định danh bản ghi phân ca. |
 | `schedule_id` | BIGINT UNSIGNED | NOT NULL, FK -> `schedules.id` | Thuộc bảng lịch tuần nào. |
-| `employee_id` | BIGINT UNSIGNED | NOT NULL, FK -> `employees.id` | Nhân viên được phân công làm ca này. |
+| `employee_id` | BIGINT UNSIGNED | NOT NULL, FK -> `employees.id` | Nhân viên được phân công làm ca này (đi làm thực tế). |
+| `transferred_from_employee_id` | BIGINT UNSIGNED | NULL, FK -> `employees.id` | Nhân viên được phân bổ ban đầu trước khi nhường ca (nếu có). |
 | `work_shift_id` | BIGINT UNSIGNED | NOT NULL, FK -> `work_shifts.id` | Mẫu ca làm việc gốc được chọn để phân công. |
 | `work_date` | DATE | NOT NULL | Ngày làm việc cụ thể của ca phân công. |
 | `snapshot_shift_name` | VARCHAR(100) | NOT NULL | Bản sao tên ca tại thời điểm xếp lịch (bảo vệ dữ liệu lịch sử nếu ca gốc bị sửa). |

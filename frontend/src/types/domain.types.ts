@@ -141,6 +141,11 @@ export interface ShiftAssignment {
   branchName?: string;
   isExternal?: boolean;
   readOnly?: boolean;
+
+  // Handover / Transfer traceability
+  transferredFromEmployeeId?: number;
+  transferredFromEmployeeName?: string;
+  transferredFromEmployeeCode?: string;
 }
 
 /** Employee Monthly Schedule and Summary */

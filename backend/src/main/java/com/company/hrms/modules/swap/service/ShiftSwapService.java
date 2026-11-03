@@ -340,22 +340,30 @@ public class ShiftSwapService {
             ShiftAssignment reqAssign = assignmentRepository.findById(swap.getRequesterAssignmentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Phân ca của người yêu cầu", swap.getRequesterAssignmentId()));
 
+            Employee requester = employeeRepository.findById(swap.getRequesterId()).orElse(null);
+            Employee target = employeeRepository.findById(swap.getTargetId()).orElse(null);
+            String reqStr = requester != null ? (requester.getFullName() + (requester.getEmployeeCode() != null ? " (" + requester.getEmployeeCode() + ")" : "")) : "NV #" + swap.getRequesterId();
+            String targetStr = target != null ? (target.getFullName() + (target.getEmployeeCode() != null ? " (" + target.getEmployeeCode() + ")" : "")) : "NV #" + swap.getTargetId();
+
             if (swap.getType() == SwapType.SWAP && swap.getTargetAssignmentId() != null) {
                 ShiftAssignment targetAssign = assignmentRepository.findById(swap.getTargetAssignmentId())
                         .orElseThrow(() -> new ResourceNotFoundException("Phân ca của đối tác", swap.getTargetAssignmentId()));
 
+                reqAssign.setTransferredFromEmployeeId(null);
                 reqAssign.setEmployeeId(swap.getTargetId());
-                reqAssign.setOverrideReason(buildSwapNote("Đổi ca", swap));
+                reqAssign.setOverrideReason(buildSwapNote(reqStr, targetStr, swap));
 
+                targetAssign.setTransferredFromEmployeeId(null);
                 targetAssign.setEmployeeId(swap.getRequesterId());
-                targetAssign.setOverrideReason(buildSwapNote("Đổi ca", swap));
+                targetAssign.setOverrideReason(buildSwapNote(targetStr, reqStr, swap));
 
                 assignmentRepository.save(reqAssign);
                 assignmentRepository.save(targetAssign);
             } else {
                 // Chuyển quyền phân ca sang đồng nghiệp nhận ca (HANDOVER)
+                reqAssign.setTransferredFromEmployeeId(swap.getRequesterId());
                 reqAssign.setEmployeeId(swap.getTargetId());
-                reqAssign.setOverrideReason(buildSwapNote("Nhường ca", swap));
+                reqAssign.setOverrideReason(buildHandoverNote(reqStr, targetStr, swap));
                 assignmentRepository.save(reqAssign);
             }
 
@@ -417,8 +425,17 @@ public class ShiftSwapService {
         return list.stream().map(this::toResponse).toList();
     }
 
-    private String buildSwapNote(String action, ShiftSwapRequest swap) {
-        String note = action + " theo " + swap.getRequestCode();
+    private String buildHandoverNote(String requesterStr, String targetStr, ShiftSwapRequest swap) {
+        String note = requesterStr + " nhường ca cho " + targetStr + " theo " + swap.getRequestCode();
+        String reason = swap.getReason();
+        if (reason != null && !reason.isBlank()) {
+            note += ": " + reason.trim();
+        }
+        return note.length() > MAX_NOTE_LENGTH ? note.substring(0, MAX_NOTE_LENGTH) : note;
+    }
+
+    private String buildSwapNote(String requesterStr, String targetStr, ShiftSwapRequest swap) {
+        String note = requesterStr + " đổi ca với " + targetStr + " theo " + swap.getRequestCode();
         String reason = swap.getReason();
         if (reason != null && !reason.isBlank()) {
             note += ": " + reason.trim();

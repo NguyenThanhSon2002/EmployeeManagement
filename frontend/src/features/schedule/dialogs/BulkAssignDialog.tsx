@@ -26,7 +26,7 @@ interface BulkAssignDialogProps {
     /** Chạy thuật toán xếp tự động (chỉ tính toán, chưa lưu). Trả về null nếu bị chặn. */
     onGenerateAuto: (fromDate: string, toDate: string, mode: 'REPLACE_ALL' | 'FILL_MISSING') => AutoAssignResult | null;
     /** Lưu các ca đã duyệt từ bản xem trước */
-    onApplyAuto: (assignments: ShiftAssignment[], mode: 'REPLACE_ALL' | 'FILL_MISSING', fromDate: string, toDate: string) => void;
+    onApplyAuto: (assignments: ShiftAssignment[], mode: 'REPLACE_ALL' | 'FILL_MISSING', fromDate: string, toDate: string) => void | Promise<void>;
 
     employees: Employee[];
     shiftTemplates: ShiftTemplate[];

@@ -34,6 +34,9 @@ export interface ShiftAssignment {
   branch_name?: string;
   is_external?: boolean;
   read_only?: boolean;
+  transferred_from_employee_id?: number;
+  transferred_from_employee_name?: string;
+  transferred_from_employee_code?: string;
 }
 
 export interface EmployeeSchedule {

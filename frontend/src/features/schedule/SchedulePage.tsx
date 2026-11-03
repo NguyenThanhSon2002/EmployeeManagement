@@ -726,18 +726,34 @@ export const SchedulePage: React.FC = () => {
         });
     };
 
-    const handleApplyAutoAssign = (
+    const handleApplyAutoAssign = async (
         newAssignments: ShiftAssignment[],
         mode: 'REPLACE_ALL' | 'FILL_MISSING' = 'REPLACE_ALL',
         fromDate?: string,
         toDate?: string
     ) => {
-        applyAutoAssignments(newAssignments, mode, fromDate, toDate);
-        addToast({
-            type: 'success',
-            title: 'Xếp ca tự động hoàn tất',
-            message: `Đã xếp ${newAssignments.length} ca làm việc theo lịch khả dụng (${mode === 'REPLACE_ALL' ? 'Xếp lại toàn bộ' : 'Điền ca còn thiếu'}). Hãy kiểm tra các cảnh báo (nếu có) trước khi công bố.`,
-        });
+        try {
+            const res = await applyAutoAssignments(newAssignments, mode, fromDate, toDate);
+            if (res.success) {
+                addToast({
+                    type: 'success',
+                    title: 'Xếp ca tự động hoàn tất',
+                    message: `Đã xếp ${newAssignments.length} ca làm việc theo lịch khả dụng (${mode === 'REPLACE_ALL' ? 'Xếp lại toàn bộ' : 'Điền ca còn thiếu'}). Dữ liệu đã được lưu trữ vĩnh viễn trên máy chủ.`,
+                });
+            } else {
+                addToast({
+                    type: 'error',
+                    title: 'Lỗi lưu ca tự động',
+                    message: res.error || 'Không thể lưu phân ca tự động lên máy chủ.',
+                });
+            }
+        } catch (err: any) {
+            addToast({
+                type: 'error',
+                title: 'Lỗi lưu ca tự động',
+                message: err?.message || 'Không thể lưu phân ca tự động lên máy chủ.',
+            });
+        }
     };
 
     // Copy Week Handler

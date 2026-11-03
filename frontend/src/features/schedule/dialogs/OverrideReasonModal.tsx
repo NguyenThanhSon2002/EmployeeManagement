@@ -12,6 +12,7 @@ import {
     CheckCircle2,
     Lock,
     Trash2,
+    ArrowLeftRight,
 } from 'lucide-react';
 
 export interface OverrideReasonModalProps {
@@ -51,7 +52,7 @@ export const OverrideReasonModal: React.FC<OverrideReasonModalProps> = ({
 
     const wordCount = countWords(reason);
     const isSwapGeneratedReason = (text?: string | null): boolean =>
-        /^(Nhường|Đổi) ca theo (HANDOVER|SWAP)-/i.test(text ?? '');
+        /theo (HANDOVER|SWAP)-/i.test(text ?? '') || /^(Nhường|Đổi) ca/i.test(text ?? '');
     const isOverLimit = wordCount > MAX_WORDS;
 
     useEffect(() => {
@@ -63,7 +64,7 @@ export const OverrideReasonModal: React.FC<OverrideReasonModalProps> = ({
 
     if (!isOpen || !assignment) return null;
 
-    const isLocked = isSwapGeneratedReason(assignment.overrideReason);
+    const isLocked = isSwapGeneratedReason(assignment.overrideReason) || Boolean(assignment.transferredFromEmployeeId);
 
     const relevantConflicts = conflicts.filter(
         (c) =>
@@ -258,6 +259,31 @@ export const OverrideReasonModal: React.FC<OverrideReasonModalProps> = ({
                             </div>
                         </div>
 
+                        {(Boolean(assignment.transferredFromEmployeeId) || isSwapGeneratedReason(assignment.overrideReason)) && (
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 7,
+                                    padding: '6px 10px',
+                                    backgroundColor: '#EFF6FF',
+                                    borderRadius: '6px',
+                                    border: '1px solid #BFDBFE',
+                                    fontSize: '12px',
+                                    color: '#1E40AF',
+                                }}
+                            >
+                                <ArrowLeftRight size={13} color="#2563EB" style={{flexShrink: 0}} />
+                                <span>
+                                    Ca được chuyển nhượng từ:{' '}
+                                    <strong>
+                                        {assignment.transferredFromEmployeeName || (assignment.transferredFromEmployeeId ? `NV #${assignment.transferredFromEmployeeId}` : 'Nhân sự nhường ca ban đầu')}
+                                    </strong>
+                                    {assignment.transferredFromEmployeeCode ? ` (${assignment.transferredFromEmployeeCode})` : ''}
+                                </span>
+                            </div>
+                        )}
+
                         <div
                             style={{
                                 display: 'flex',
@@ -445,7 +471,9 @@ export const OverrideReasonModal: React.FC<OverrideReasonModalProps> = ({
                                 margin: '6px 0 0 0'
                             }}>
                                 <Lock size={12}/>
-                                Nội dung được tạo tự động từ đơn đổi/nhường ca và không thể chỉnh sửa.
+                                {assignment.transferredFromEmployeeId
+                                    ? `Nội dung giải trình được tạo tự động từ đơn nhường ca của ${assignment.transferredFromEmployeeName || 'nhân sự ban đầu'} và không thể chỉnh sửa.`
+                                    : 'Nội dung được tạo tự động từ đơn đổi/nhường ca và không thể chỉnh sửa.'}
                             </p>
                         )}
                     </div>
