@@ -29,6 +29,7 @@ import type {ShiftAssignment, ShiftTemplate} from '@/types/domain.types';
 import './schedule.css';
 import {autoAssignShifts} from '@/utils/auto-assign.utils';
 import {useAvailabilityStore} from '@/features/employees/store/useAvailabilityStore';
+import {useNotificationStore} from '@/features/notification/store/useNotificationStore';
 
 export const SchedulePage: React.FC = () => {
     const {
@@ -207,6 +208,19 @@ export const SchedulePage: React.FC = () => {
     const [swapTargetAssignment, setSwapTargetAssignment] = useState<ShiftAssignment | null>(null);
     const [swapInitialType, setSwapInitialType] = useState<SwapType>('HANDOVER');
     const [swapManagementOpen, setSwapManagementOpen] = useState(false);
+    const pendingOpen = useNotificationStore((s) => s.pendingOpen);
+    const consumePendingOpen = useNotificationStore((s) => s.consumePendingOpen);
+    const [swapFocus, setSwapFocus] = useState<{ swapId: number | null; tab: 'INBOX' | 'SENT' | 'MANAGER' | null }>(
+        {swapId: null, tab: null}
+    );
+
+    // Mở hộp thư đổi ca khi người dùng bấm vào một thông báo
+    useEffect(() => {
+        if (!pendingOpen) return;
+        setSwapFocus({swapId: pendingOpen.swapId, tab: pendingOpen.tab});
+        setSwapManagementOpen(true);
+        consumePendingOpen();
+    }, [pendingOpen, consumePendingOpen]);
 
     const handleOpenClaimModal = useCallback((template: ShiftTemplate, workDate: string) => {
         setClaimTemplate(template);
@@ -264,6 +278,7 @@ export const SchedulePage: React.FC = () => {
 
     const handleCloseSwapManagement = useCallback(() => {
         setSwapManagementOpen(false);
+        setSwapFocus({swapId: null, tab: null});
     }, []);
 
     const handleOpenOverrideModal = (assignment: ShiftAssignment) => {
@@ -1071,6 +1086,8 @@ export const SchedulePage: React.FC = () => {
             <ShiftSwapManagementModal
                 isOpen={swapManagementOpen}
                 onClose={handleCloseSwapManagement}
+                initialTab={swapFocus.tab}
+                focusSwapId={swapFocus.swapId}
                 branchId={filterOptions.branchId || 1}
                 onScheduleUpdated={() => {
                     const branchId = filterOptions.branchId || 1;

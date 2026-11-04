@@ -6,6 +6,7 @@ import com.company.hrms.modules.branch.domain.Branch;
 import com.company.hrms.modules.branch.repository.BranchRepository;
 import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
+import com.company.hrms.modules.notification.service.NotificationService;
 import com.company.hrms.modules.schedule.domain.Schedule;
 import com.company.hrms.modules.schedule.domain.ShiftAssignment;
 import com.company.hrms.modules.schedule.dto.ConflictValidationResult;
@@ -18,6 +19,8 @@ import com.company.hrms.modules.swap.domain.SwapStatus;
 import com.company.hrms.modules.swap.domain.SwapType;
 import com.company.hrms.modules.swap.dto.*;
 import com.company.hrms.modules.swap.repository.ShiftSwapRequestRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +42,8 @@ public class ShiftSwapService {
     private final BranchRepository branchRepository;
     private final ConflictDetectionEngine conflictEngine;
     private static final int MAX_NOTE_LENGTH = 1000;
+    private static final Logger log = LoggerFactory.getLogger(ShiftSwapService.class);
+    private final NotificationService notificationService;
 
     public ShiftSwapService(
             ShiftSwapRequestRepository swapRepository,
@@ -46,13 +51,15 @@ public class ShiftSwapService {
             ScheduleRepository scheduleRepository,
             EmployeeRepository employeeRepository,
             BranchRepository branchRepository,
-            ConflictDetectionEngine conflictEngine) {
+            ConflictDetectionEngine conflictEngine,
+            NotificationService notificationService) {
         this.swapRepository = swapRepository;
         this.assignmentRepository = assignmentRepository;
         this.scheduleRepository = scheduleRepository;
         this.employeeRepository = employeeRepository;
         this.branchRepository = branchRepository;
         this.conflictEngine = conflictEngine;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -264,6 +271,22 @@ public class ShiftSwapService {
         swap.setStatus(SwapStatus.PENDING_PEER);
 
         ShiftSwapRequest saved = swapRepository.save(swap);
+
+        final String kind = swapType == SwapType.SWAP ? "đổi ca" : "nhường ca";
+        final String prep = swapType == SwapType.SWAP ? "với" : "cho";
+        final String shiftText = describeShift(saved.getRequesterAssignmentId());
+        final String requesterName = nameOf(saved.getRequesterId());
+        safeNotify(() -> notificationService.send(saved.getTargetId(), saved.getBranchId(), "SWAP_REQUESTED",
+                "Có đề xuất " + kind + " mới",
+                requesterName + " đề xuất " + kind + " " + shiftText + " " + prep + " bạn (" + saved.getRequestCode() + ").",
+                saved.getId()));
+        if (!saved.getRequesterId().equals(currentUserId)) {
+            safeNotify(() -> notificationService.send(saved.getRequesterId(), saved.getBranchId(), "SWAP_CREATED_ON_BEHALF",
+                    "Quản lý đã tạo đề xuất " + kind + " cho bạn",
+                    "Đề xuất " + kind + " " + shiftText + " (" + saved.getRequestCode() + ") được tạo thay cho bạn.",
+                    saved.getId()));
+        }
+
         return toResponse(saved);
     }
 
@@ -290,6 +313,27 @@ public class ShiftSwapService {
         }
 
         ShiftSwapRequest saved = swapRepository.save(swap);
+
+        final boolean accepted = saved.getStatus() == SwapStatus.PEER_ACCEPTED;
+        final String peerName = nameOf(saved.getTargetId());
+        final String requesterName = nameOf(saved.getRequesterId());
+        final String shiftText = describeShift(saved.getRequesterAssignmentId());
+        if (accepted) {
+            safeNotify(() -> notificationService.send(saved.getRequesterId(), saved.getBranchId(), "SWAP_PEER_ACCEPTED",
+                    "Đồng nghiệp đã đồng ý",
+                    peerName + " đã đồng ý đề xuất " + saved.getRequestCode() + " (" + shiftText + "). Đơn đang chờ Quản lý duyệt.",
+                    saved.getId()));
+            safeNotify(() -> notificationService.sendToBranchManagers(saved.getBranchId(), "SWAP_PENDING_MANAGER",
+                    "Có đơn đổi/nhường ca chờ duyệt",
+                    requesterName + " và " + peerName + " đã thống nhất " + shiftText + " (" + saved.getRequestCode() + ").",
+                    saved.getId()));
+        } else {
+            safeNotify(() -> notificationService.send(saved.getRequesterId(), saved.getBranchId(), "SWAP_PEER_REJECTED",
+                    "Đồng nghiệp đã từ chối",
+                    peerName + " đã từ chối đề xuất " + saved.getRequestCode() + " (" + shiftText + ").",
+                    saved.getId()));
+        }
+
         return toResponse(saved);
     }
 
@@ -384,6 +428,18 @@ public class ShiftSwapService {
         }
 
         ShiftSwapRequest saved = swapRepository.save(swap);
+
+        final boolean approved = saved.getStatus() == SwapStatus.APPROVED;
+        final String shiftText = describeShift(saved.getRequesterAssignmentId());
+        final String notifType = approved ? "SWAP_APPROVED" : "SWAP_REJECTED";
+        final String notifTitle = approved ? "Đơn đổi/nhường ca đã được duyệt" : "Đơn đổi/nhường ca bị từ chối";
+        final String notifBody = approved
+                ? "Đơn " + saved.getRequestCode() + " (" + shiftText + ") đã được duyệt, lịch làm việc đã cập nhật."
+                : "Đơn " + saved.getRequestCode() + " (" + shiftText + ") bị từ chối."
+                + (saved.getManagerNote() != null ? " Ghi chú: " + saved.getManagerNote() : "");
+        safeNotify(() -> notificationService.send(saved.getRequesterId(), saved.getBranchId(), notifType, notifTitle, notifBody, saved.getId()));
+        safeNotify(() -> notificationService.send(saved.getTargetId(), saved.getBranchId(), notifType, notifTitle, notifBody, saved.getId()));
+
         return toResponse(saved);
     }
 
@@ -405,8 +461,19 @@ public class ShiftSwapService {
             throw new BusinessException("INVALID_STATUS", "Không thể hủy yêu cầu đã được phê duyệt hoặc đã hủy trước đó.", HttpStatus.BAD_REQUEST);
         }
 
+        final SwapStatus previousStatus = swap.getStatus();
         swap.setStatus(SwapStatus.CANCELLED);
         ShiftSwapRequest saved = swapRepository.save(swap);
+
+        final String cancelBody = "Đề xuất " + saved.getRequestCode() + " ("
+                + describeShift(saved.getRequesterAssignmentId()) + ") đã bị hủy.";
+        safeNotify(() -> notificationService.send(saved.getTargetId(), saved.getBranchId(), "SWAP_CANCELLED",
+                "Đề xuất đổi/nhường ca đã bị hủy", cancelBody, saved.getId()));
+        if (previousStatus == SwapStatus.PEER_ACCEPTED) {
+            safeNotify(() -> notificationService.sendToBranchManagers(saved.getBranchId(), "SWAP_CANCELLED",
+                    "Đơn chờ duyệt đã bị hủy", cancelBody, saved.getId()));
+        }
+
         return toResponse(saved);
     }
 
@@ -506,5 +573,26 @@ public class ShiftSwapService {
         res.setCreatedAt(swap.getCreatedAt());
 
         return res;
+    }
+
+    private void safeNotify(Runnable action) {
+        try {
+            action.run();
+        } catch (Exception e) {
+            log.warn("Không gửi được thông báo đổi ca: {}", e.getMessage());
+        }
+    }
+
+    private String nameOf(Long employeeId) {
+        return employeeRepository.findByIdAndDeletedAtIsNull(employeeId)
+                .map(Employee::getFullName)
+                .orElse("Nhân sự #" + employeeId);
+    }
+
+    private String describeShift(Long assignmentId) {
+        return assignmentRepository.findById(assignmentId)
+                .map(a -> a.getSnapshotShiftName() + " ngày "
+                        + a.getWorkDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                .orElse("ca làm việc");
     }
 }
