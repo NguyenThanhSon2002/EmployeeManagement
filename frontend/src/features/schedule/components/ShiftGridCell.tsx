@@ -5,6 +5,8 @@ import {Tooltip} from '@/shared/components/Tooltip';
 import {UserAvatar} from '@/components/common/UserAvatar';
 import {useAuthStore} from '@/shared/auth/useAuthStore';
 import {assignmentToTimeRange, checkShiftOverlap} from '@/utils/conflict-detector.utils';
+import {useScheduleStore} from "@/features/schedule/store/useScheduleStore";
+import {useUIStore} from "@/shared/store/useUIStore";
 
 export interface AssignmentHandoverInfo {
     isHandover: boolean;
@@ -149,6 +151,20 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
     const isManagerOrAdmin = isDirectorOrAdmin || isManager;
     const isEmployee = currentRole === 'ROLE_EMPLOYEE';
     const [showTransferred, setShowTransferred] = React.useState(false);
+    const scheduleStatus = useScheduleStore((s) => s.scheduleStatus);
+    const cancelClaimedShift = useScheduleStore((s) => s.cancelClaimedShift);
+    const addToast = useUIStore((s) => s.addToast);
+    const isDraft = scheduleStatus !== 'PUBLISHED';
+
+    const handleCancelOwnClaim = async (assignment: ShiftAssignment) => {
+        if (!window.confirm(`Hủy đăng ký ${template.shiftName} ngày ${workDate}?`)) return;
+        const res = await cancelClaimedShift(assignment.id);
+        if (res.success) {
+            addToast({type: 'success', title: 'Đã hủy đăng ký ca', message: `${template.shiftName} ngày ${workDate}.`});
+        } else {
+            addToast({type: 'error', title: 'Không thể hủy ca', message: res.error || 'Vui lòng thử lại.'});
+        }
+    };
 
     const currentCount = assignments.length;
     const minRequired = template.minStaffing || 1;
@@ -337,13 +353,14 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                             e.stopPropagation();
                             onClaimShift(template, workDate);
                         }}
-                        title="Nhận thêm vào ca còn trống chỗ này"
+                        title="Đăng ký thêm tên bạn vào ca còn chỗ này"
                         style={{
-                            background: '#EFF6FF',
-                            border: '1px solid #BFDBFE',
+                            background: 'none',
+                            border: '1px solid #DBEAFE',
+                            backgroundColor: '#EFF6FF',
                             cursor: 'pointer',
-                            color: '#1D4ED8',
-                            padding: '2px 7px',
+                            color: '#2563EB',
+                            padding: '2px 6px',
                             borderRadius: '6px',
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -371,10 +388,10 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                             alignItems: 'center',
                             justifyContent: 'center',
                             padding: '10px 6px',
-                            border: '1px dashed #38BDF8',
+                            border: '1px dashed #E2E8F0',
                             borderRadius: '8px',
-                            backgroundColor: '#F0F9FF',
-                            color: '#0284C7',
+                            backgroundColor: '#F8FAFC',
+                            color: '#94A3B8',
                             cursor: 'pointer',
                             textAlign: 'center',
                             transition: 'all 0.15s ease',
@@ -382,8 +399,8 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                         className="shift-claim-empty-btn"
                         title="Bấm để đăng ký nhận ca trống này"
                     >
-                        <Plus size={16} strokeWidth={2.5} style={{marginBottom: 2}}/>
-                        <span style={{fontSize: '11px', fontWeight: 600}}>+ Đăng ký ca này</span>
+                        <Users size={15} style={{opacity: 0.6, marginBottom: 2}}/>
+                        <span style={{fontSize: '11px', fontWeight: 500}}>Chưa phân ca</span>
                     </div>
                 ) : (
                     <div
@@ -416,6 +433,11 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                         const effectiveConflicts = getEffectiveConflicts(assignment, index);
                         const hasConflict = effectiveConflicts.length > 0;
                         const isExternal = Boolean(assignment.isExternal);
+                        const canCancelOwnClaim =
+                            isEmployee &&
+                            isDraft &&
+                            assignment.source === 'SELF_CLAIM' &&
+                            Number(assignment.employeeId) === Number(currentUser?.id);
 
                         // Check if this assignment has consecutive handover connection with another shift of this employee
                         const otherEmpAssignments = allAssignments.filter(
@@ -676,15 +698,19 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                                                 <Lock size={12}/>
                                             </span>
                                         ) : (
-                                            canEdit && (
+                                            (canEdit || canCancelOwnClaim) && (
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        onRemoveAssignment(assignment.id, e);
+                                                        if (canEdit) {
+                                                            onRemoveAssignment(assignment.id, e);
+                                                        } else {
+                                                            handleCancelOwnClaim(assignment);
+                                                        }
                                                     }}
                                                     className="staff-chip-remove-btn"
-                                                    title={`Gỡ ${displayName} khỏi ca này`}
+                                                    title={canEdit ? `Gỡ ${displayName} khỏi ca này` : 'Hủy đăng ký ca này'}
                                                     style={{
                                                         background: 'none',
                                                         border: 'none',

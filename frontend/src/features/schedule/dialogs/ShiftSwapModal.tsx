@@ -7,14 +7,11 @@ import {useUIStore} from '@/shared/store/useUIStore';
 import {
     ArrowLeftRight,
     X,
-    CheckCircle,
     Loader2,
     Send,
     ShieldAlert,
     ArrowRight,
     Repeat,
-    Sparkles,
-    Users,
 } from 'lucide-react';
 
 const isClientTemporaryId = (id: number) => !id || id > 1_000_000_000_000;
@@ -65,37 +62,22 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
     const [isSimulating, setIsSimulating] = useState(false);
     const [simulationResult, setSimulationResult] = useState<SimulateSwapResult | null>(null);
 
-    // Xác định người yêu cầu thực tế:
-    // Nếu modal được mở từ 1 ca cụ thể (sourceAssignment), người yêu cầu là chủ nhân của ca đó (kể cả khi Quản lý/Giám đốc tạo hộ).
-    // Nếu không có sourceAssignment, người yêu cầu là currentUserId.
-    const effectiveRequesterId = useMemo(() => {
-        if (sourceAssignment && sourceAssignment.employeeId) {
-            return Number(sourceAssignment.employeeId);
-        }
-        return Number(currentUserId);
+    // Kiểm tra xem ca được click truyền vào có phải của tài khoản hiện tại hay không
+    const isSelectingOwnShift = useMemo(() => {
+        if (!sourceAssignment) return true;
+        return Number(sourceAssignment.employeeId) === Number(currentUserId);
     }, [sourceAssignment, currentUserId]);
 
-    const isManagerOnBehalf = Boolean(
-        sourceAssignment &&
-        Number(sourceAssignment.employeeId) !== Number(currentUserId)
-    );
+    const effectiveRequesterId = Number(currentUserId);
 
-    const requesterEmployee = useMemo(() => {
-        return employees.find((e) => Number(e.id) === effectiveRequesterId) || null;
-    }, [employees, effectiveRequesterId]);
-
-    // Danh sách các ca của người yêu cầu
+    // Danh sách các ca của người dùng hiện tại
     const myShifts = useMemo(() => {
-        const shifts = allAssignments.filter(
+        return allAssignments.filter(
             (a) => Number(a.employeeId) === effectiveRequesterId && a.status !== 'CANCELLED'
         );
-        if (sourceAssignment && !shifts.some((s) => s.id === sourceAssignment.id)) {
-            return [sourceAssignment, ...shifts];
-        }
-        return shifts;
-    }, [allAssignments, effectiveRequesterId, sourceAssignment]);
+    }, [allAssignments, effectiveRequesterId]);
 
-    // Đồng nghiệp hợp lệ để nhường/đổi ca (loại trừ chính người đang giữ ca)
+    // Đồng nghiệp hợp lệ để nhường/đổi ca
     const candidateEmployees = useMemo(() => {
         return employees.filter(
             (e) =>
@@ -120,39 +102,64 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
             const mode = initialType || (targetAssignment ? 'SWAP' : 'HANDOVER');
             setSwapType(mode);
 
+            // Xử lý đúng phân quyền ca nguồn và ca đối tác
             if (sourceAssignment) {
-                setSelectedSourceId(sourceAssignment.id);
-            } else if (myShifts.length > 0) {
-                setSelectedSourceId(myShifts[0].id);
-            } else {
-                setSelectedSourceId(0);
-            }
+                if (Number(sourceAssignment.employeeId) === Number(currentUserId)) {
+                    // 1. Click vào ca của chính mình -> Đây là ca cần nhường/đổi đi
+                    setSelectedSourceId(sourceAssignment.id);
+                    if (targetAssignment) {
+                        setTargetEmployeeId(targetAssignment.employeeId);
+                        setSelectedTargetId(targetAssignment.id);
+                    } else {
+                        setTargetEmployeeId(0);
+                        setSelectedTargetId(0);
+                    }
+                } else {
+                    // 2. Click vào ca của đồng nghiệp -> Ca đó là ca đối tác (target)
+                    setTargetEmployeeId(Number(sourceAssignment.employeeId));
+                    setSelectedTargetId(sourceAssignment.id);
 
-            if (targetAssignment) {
-                setTargetEmployeeId(targetAssignment.employeeId);
-                setSelectedTargetId(targetAssignment.id);
+                    // Ca nguồn của mình lấy ca hợp lệ đầu tiên của mình
+                    if (myShifts.length > 0) {
+                        setSelectedSourceId(myShifts[0].id);
+                    } else {
+                        setSelectedSourceId(0);
+                    }
+                }
             } else {
-                setTargetEmployeeId(0);
-                setSelectedTargetId(0);
+                if (myShifts.length > 0) {
+                    setSelectedSourceId(myShifts[0].id);
+                } else {
+                    setSelectedSourceId(0);
+                }
+                if (targetAssignment) {
+                    setTargetEmployeeId(targetAssignment.employeeId);
+                    setSelectedTargetId(targetAssignment.id);
+                } else {
+                    setTargetEmployeeId(0);
+                    setSelectedTargetId(0);
+                }
             }
 
             setReason('');
             setSimulationResult(null);
         }
-    }, [isOpen, sourceAssignment, targetAssignment, initialType, effectiveRequesterId]);
+    }, [isOpen, sourceAssignment, targetAssignment, initialType, currentUserId, myShifts]);
 
     // Tự động kiểm tra xung đột thời gian thực
     useEffect(() => {
-        if (!selectedSourceId || !targetEmployeeId) {
+        // HANDOVER: nếu là Xin ca thì ca nguồn là ca của đồng nghiệp (selectedTargetId), nếu Nhường ca thì ca nguồn là selectedSourceId
+        const activeSourceId = isSelectingOwnShift ? selectedSourceId : selectedTargetId;
+
+        if (!activeSourceId || !targetEmployeeId) {
             setSimulationResult(null);
             return;
         }
-        if (swapType === 'SWAP' && !selectedTargetId) {
+        if (swapType === 'SWAP' && (!selectedSourceId || !selectedTargetId)) {
             setSimulationResult(null);
             return;
         }
 
-        // Bảo vệ an toàn: Không gửi ID tạm thời của client (> 1_000_000_000_000) lên backend để tránh ResourceNotFoundException
         if (isClientTemporaryId(selectedSourceId) || (swapType === 'SWAP' && isClientTemporaryId(selectedTargetId))) {
             setSimulationResult({
                 valid: false,
@@ -172,7 +179,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
         const timer = setTimeout(async () => {
             try {
                 const result = await shiftSwapService.simulateSwap({
-                    requesterAssignmentId: selectedSourceId,
+                    requesterAssignmentId: swapType === 'SWAP' ? selectedSourceId : activeSourceId,
                     targetEmployeeId: targetEmployeeId,
                     targetAssignmentId: swapType === 'SWAP' ? selectedTargetId : undefined,
                     type: swapType,
@@ -203,7 +210,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
             isMounted = false;
             clearTimeout(timer);
         };
-    }, [selectedSourceId, targetEmployeeId, selectedTargetId, swapType]);
+    }, [selectedSourceId, targetEmployeeId, selectedTargetId, swapType, isSelectingOwnShift]);
 
     if (!isOpen) return null;
 
@@ -218,29 +225,23 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedSourceId) {
+
+        const activeSourceId = isSelectingOwnShift ? selectedSourceId : selectedTargetId;
+
+        if (swapType === 'SWAP' && !selectedSourceId) {
             addToast({
                 type: 'error',
                 title: 'Thiếu ca nguồn',
-                message: isManagerOnBehalf ? 'Vui lòng chọn ca làm việc của nhân sự cần đổi/nhường.' : 'Vui lòng chọn ca làm việc của bạn cần đổi/nhường.',
+                message: 'Vui lòng chọn ca làm việc của bạn cần đổi.',
             });
             return;
         }
 
-        if (isClientTemporaryId(selectedSourceId)) {
+        if (isClientTemporaryId(activeSourceId)) {
             addToast({
                 type: 'error',
                 title: 'Ca làm việc chưa lưu',
                 message: 'Ca làm việc này chưa được đồng bộ hoặc lưu lên máy chủ (ID tạm). Vui lòng tải lại trang trước khi gửi yêu cầu.',
-            });
-            return;
-        }
-
-        if (swapType === 'SWAP' && isClientTemporaryId(selectedTargetId)) {
-            addToast({
-                type: 'error',
-                title: 'Ca đối ứng chưa lưu',
-                message: 'Ca làm việc đối ứng chưa được đồng bộ hoặc lưu lên máy chủ (ID tạm). Vui lòng tải lại trang trước khi gửi yêu cầu.',
             });
             return;
         }
@@ -284,7 +285,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
         setIsSubmitting(true);
         try {
             await shiftSwapService.createSwapRequest({
-                requesterAssignmentId: selectedSourceId,
+                requesterAssignmentId: swapType === 'SWAP' ? selectedSourceId : activeSourceId,
                 targetEmployeeId,
                 targetAssignmentId: swapType === 'SWAP' ? selectedTargetId : null,
                 type: swapType,
@@ -293,7 +294,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
 
             addToast({
                 type: 'success',
-                title: swapType === 'SWAP' ? 'Đã gửi đề xuất đổi chéo ca' : 'Đã gửi đề xuất nhường ca',
+                title: swapType === 'SWAP' ? 'Đã gửi đề xuất đổi ca làm' : (isSelectingOwnShift ? 'Đã gửi đề xuất nhường ca' : 'Đã gửi đề xuất xin ca làm'),
                 message: 'Đã gửi yêu cầu đến đồng nghiệp thành công. Chờ đồng nghiệp phản hồi trước khi Quản lý duyệt.',
             });
             onSuccess();
@@ -310,9 +311,8 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
     };
 
     const isFormValid =
-        Boolean(selectedSourceId) &&
+        (swapType === 'HANDOVER' || Boolean(selectedSourceId)) &&
         Boolean(targetEmployeeId) &&
-        (swapType === 'HANDOVER' || Boolean(selectedTargetId)) &&
         Boolean(reason.trim()) &&
         !isSimulating &&
         !simulationResult?.hasError;
@@ -384,17 +384,19 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                             <ArrowLeftRight size={20}/>
                         </div>
                         <div>
-                            <h3 id="swap-modal-title"
-                                style={{fontSize: 16, fontWeight: 700, color: '#1E293B', margin: 0}}>
-                                {swapType === 'SWAP' ? 'Đề Xuất Đổi Chéo Ca (2 Chiều)' : 'Đề Xuất Nhường Ca (1 Chiều)'}
+                            <h3 id="swap-modal-title" style={{ fontSize: 16, fontWeight: 700, color: '#1E293B', margin: 0 }}>
+                                {swapType === 'SWAP'
+                                    ? 'Đề Xuất Đổi Ca Làm'
+                                    : isSelectingOwnShift
+                                        ? 'Đề Xuất Nhường Ca'
+                                        : 'Đề Xuất Xin Ca Làm'}
                             </h3>
-                            <p style={{fontSize: 12, color: '#64748B', margin: '2px 0 0'}}>
-                                {isManagerOnBehalf
-                                    ? `Quản lý tạo yêu cầu thay cho nhân sự: ${requesterEmployee?.fullName || `NV #${effectiveRequesterId}`}`
-                                    : (swapType === 'SWAP'
-                                        ? 'Hoán đổi ca làm việc giữa bạn và đồng nghiệp, tự động kiểm tra xung đột.'
-                                        : 'Gửi yêu cầu nhường ca cho đồng nghiệp đi làm thay.')
-                                }
+                            <p style={{ fontSize: 12, color: '#64748B', margin: '2px 0 0' }}>
+                                {swapType === 'SWAP'
+                                    ? 'Hoán đổi ca làm việc giữa bạn và đồng nghiệp, tự động kiểm tra xung đột.'
+                                    : isSelectingOwnShift
+                                        ? 'Gửi yêu cầu nhường ca làm việc của bạn cho đồng nghiệp đi làm thay.'
+                                        : 'Gửi yêu cầu xin nhận ca làm việc này của đồng nghiệp.'}
                             </p>
                         </div>
                     </div>
@@ -423,28 +425,6 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                     flexDirection: 'column',
                     gap: 16
                 }}>
-                    {/* Banner thay mặt nhân sự (khi Quản lý/Giám đốc tạo hộ) */}
-                    {isManagerOnBehalf && requesterEmployee && (
-                        <div
-                            style={{
-                                padding: '10px 12px',
-                                backgroundColor: '#EFF6FF',
-                                border: '1px solid #BFDBFE',
-                                borderRadius: 8,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                fontSize: 12.5,
-                                color: '#1E40AF',
-                            }}
-                        >
-                            <Users size={16} color="#3B82F6" />
-                            <span>
-                                Đang tạo đề xuất thay cho: <strong>{requesterEmployee.fullName} ({requesterEmployee.employeeCode})</strong>.
-                            </span>
-                        </div>
-                    )}
-
                     {/* Mode Switcher */}
                     <div
                         style={{
@@ -477,7 +457,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                             }}
                         >
                             <ArrowRight size={14} color={swapType === 'HANDOVER' ? '#4F46E5' : '#64748B'}/>
-                            Nhường ca 1 chiều (Đi làm thay)
+                            {isSelectingOwnShift ? 'Nhường ca' : 'Xin ca làm'}
                         </button>
                         <button
                             type="button"
@@ -501,56 +481,51 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                             }}
                         >
                             <Repeat size={14} color={swapType === 'SWAP' ? '#4F46E5' : '#64748B'}/>
-                            Đổi ca 2 chiều (Hoán đổi ca)
+                            Đổi ca làm
                         </button>
                     </div>
 
                     {/* 1. Ca nguồn */}
-                    <div>
-                        <label style={{
-                            fontSize: 12.5,
-                            fontWeight: 600,
-                            color: '#334155',
-                            display: 'block',
-                            marginBottom: 6
-                        }}>
-                            {swapType === 'SWAP'
-                                ? (isManagerOnBehalf ? `Ca đổi của ${requesterEmployee?.fullName || 'nhân viên'}` : 'Ca bạn muốn đổi đi (Của bạn)')
-                                : (isManagerOnBehalf ? `Ca nhường của ${requesterEmployee?.fullName || 'nhân viên'}` : 'Ca bạn muốn nhường (Của bạn)')
-                            }{' '}
-                            <span style={{color: '#DC2626'}}>*</span>
-                        </label>
-                        {myShifts.length === 0 ? (
-                            <div style={{
-                                padding: '10px',
-                                backgroundColor: '#FEF2F2',
-                                borderRadius: 8,
-                                fontSize: 12,
-                                color: '#DC2626'
+                    {swapType === 'SWAP' && (
+                        <div>
+                            <label style={{
+                                fontSize: 12.5,
+                                fontWeight: 600,
+                                color: '#334155',
+                                display: 'block',
+                                marginBottom: 6
                             }}>
-                                {isManagerOnBehalf
-                                    ? `Nhân viên ${requesterEmployee?.fullName || 'này'} chưa có ca làm việc nào trong tuần này để đề xuất.`
-                                    : 'Bạn chưa có ca làm việc nào trong tuần này để đề xuất.'}
-                            </div>
-                        ) : (
-                            <select
-                                className="input-base"
-                                value={selectedSourceId}
-                                onChange={(e) => setSelectedSourceId(Number(e.target.value))}
-                                style={{width: '100%', height: 38, fontSize: 13}}
-                                required
-                            >
-                                {myShifts.map((s) => (
-                                    <option key={s.id} value={s.id}>
-                                        {s.snapshotShiftName} -
-                                        Ngày {s.workDate} ({s.snapshotStartTime} - {s.snapshotEndTime})
-                                    </option>
-                                ))}
-                            </select>
-                        )}
-                    </div>
+                                Ca bạn muốn đổi đi (Của bạn) <span style={{color: '#DC2626'}}>*</span>
+                            </label>
+                            {myShifts.length === 0 ? (
+                                <div style={{
+                                    padding: '10px',
+                                    backgroundColor: '#FEF2F2',
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                    color: '#DC2626'
+                                }}>
+                                    Bạn chưa có ca làm việc nào trong tuần này để đề xuất.
+                                </div>
+                            ) : (
+                                <select
+                                    className="input-base"
+                                    value={selectedSourceId}
+                                    onChange={(e) => setSelectedSourceId(Number(e.target.value))}
+                                    style={{width: '100%', height: 38, fontSize: 13}}
+                                    required
+                                >
+                                    {myShifts.map((s) => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.snapshotShiftName} - Ngày {s.workDate} ({s.snapshotStartTime} - {s.snapshotEndTime})
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
+                    )}
 
-                    {/* 2. Chọn đồng nghiệp */}
+                    {/* 2. Chọn đồng nghiệp đối tác */}
                     <div>
                         <label style={{
                             fontSize: 12.5,
@@ -559,7 +534,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                             display: 'block',
                             marginBottom: 6
                         }}>
-                            Chọn đồng nghiệp đối tác <span style={{color: '#DC2626'}}>*</span>
+                            Đồng nghiệp <span style={{color: '#DC2626'}}>*</span>
                         </label>
                         {candidateEmployees.length === 0 ? (
                             <div style={{
@@ -580,7 +555,16 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                                     setTargetEmployeeId(empId);
                                     setSelectedTargetId(0);
                                 }}
-                                style={{width: '100%', height: 38, fontSize: 13}}
+                                disabled={Boolean(targetEmployeeId)}
+                                style={{
+                                    width: '100%',
+                                    height: 38,
+                                    fontSize: 13,
+                                    backgroundColor: Boolean(targetEmployeeId) ? '#F1F5F9' : '#FFFFFF',
+                                    cursor: Boolean(targetEmployeeId) ? 'not-allowed' : 'pointer',
+                                    color: Boolean(targetEmployeeId) ? '#475569' : '#1E293B',
+                                    borderColor: '#CBD5E1',
+                                }}
                                 required
                             >
                                 <option value={0}>-- Chọn đồng nghiệp trong chi nhánh --</option>
@@ -603,7 +587,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                                 display: 'block',
                                 marginBottom: 6
                             }}>
-                                Chọn ca của đồng nghiệp bạn muốn nhận lấy <span style={{color: '#DC2626'}}>*</span>
+                                Ca của đồng nghiệp bạn muốn đổi <span style={{color: '#DC2626'}}>*</span>
                             </label>
                             {targetColleagueShifts.length === 0 ? (
                                 <div style={{
@@ -620,14 +604,22 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                                     className="input-base"
                                     value={selectedTargetId}
                                     onChange={(e) => setSelectedTargetId(Number(e.target.value))}
-                                    style={{width: '100%', height: 38, fontSize: 13}}
+                                    disabled={Boolean(selectedTargetId)}
+                                    style={{
+                                        width: '100%',
+                                        height: 38,
+                                        fontSize: 13,
+                                        backgroundColor: Boolean(selectedTargetId) ? '#F1F5F9' : '#FFFFFF',
+                                        cursor: Boolean(selectedTargetId) ? 'not-allowed' : 'pointer',
+                                        color: Boolean(selectedTargetId) ? '#475569' : '#1E293B',
+                                        borderColor: '#CBD5E1',
+                                    }}
                                     required
                                 >
                                     <option value={0}>-- Chọn ca của đồng nghiệp --</option>
                                     {targetColleagueShifts.map((s) => (
                                         <option key={s.id} value={s.id}>
-                                            {s.snapshotShiftName} -
-                                            Ngày {s.workDate} ({s.snapshotStartTime} - {s.snapshotEndTime})
+                                            {s.snapshotShiftName} - Ngày {s.workDate} ({s.snapshotStartTime} - {s.snapshotEndTime})
                                         </option>
                                     ))}
                                 </select>
@@ -647,18 +639,6 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                             Lý do xin đổi / nhường ca <span style={{color: '#DC2626'}}>*</span>
                         </label>
 
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 5,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: '#334155',
-                            marginBottom: 6
-                        }}>
-                            <Sparkles size={14} color="#F59E0B"/>
-                            Gợi ý lý do nhanh:
-                        </div>
                         <div style={{display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8}}>
                             {SWAP_REASON_SUGGESTIONS.map((text) => (
                                 <button
@@ -708,25 +688,13 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                     </div>
 
                     {/* 5. Hộp Kiểm Tra Xung Đột Thời Gian Thực */}
-                    {(isSimulating || simulationResult) && (
+                    {(isSimulating || simulationResult?.hasError) && (
                         <div
                             style={{
                                 borderRadius: 10,
                                 padding: '12px 14px',
-                                backgroundColor: isSimulating
-                                    ? '#F8FAFC'
-                                    : simulationResult?.hasError
-                                        ? '#FEF2F2'
-                                        : simulationResult?.hasWarning
-                                            ? '#FFFBEB'
-                                            : '#F0FDF4',
-                                border: isSimulating
-                                    ? '1px solid #E2E8F0'
-                                    : simulationResult?.hasError
-                                        ? '1px solid #FECACA'
-                                        : simulationResult?.hasWarning
-                                            ? '1px solid #FDE68A'
-                                            : '1px solid #BBF7D0',
+                                backgroundColor: isSimulating ? '#F8FAFC' : '#FEF2F2',
+                                border: isSimulating ? '1px solid #E2E8F0' : '1px solid #FECACA',
                                 transition: 'all 0.2s ease',
                             }}
                         >
@@ -741,7 +709,7 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                                     <Loader2 size={16} className="animate-spin" color="#4F46E5"/>
                                     <span>Đang phân tích tuân thủ luật lao động & thời gian nghỉ...</span>
                                 </div>
-                            ) : simulationResult?.hasError ? (
+                            ) : (
                                 <div>
                                     <div style={{
                                         display: 'flex',
@@ -754,60 +722,18 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                                         <ShieldAlert size={16}/> Vi phạm quy định làm việc (Bị chặn)
                                     </div>
                                     <div style={{fontSize: 12, color: '#991B1B', marginTop: 4}}>
-                                        {simulationResult.message}
+                                        {simulationResult?.message}
                                     </div>
-                                    {simulationResult.targetConflicts.map((c, idx) => (
-                                        <div key={`target-${idx}`}
-                                             style={{fontSize: 11.5, color: '#B91C1C', marginTop: 3}}>
+                                    {simulationResult?.targetConflicts?.map((c, idx) => (
+                                        <div key={`target-${idx}`} style={{fontSize: 11.5, color: '#B91C1C', marginTop: 3}}>
                                             • <strong>Đồng nghiệp:</strong> {c.message}
                                         </div>
                                     ))}
-                                    {simulationResult.requesterConflicts?.map((c, idx) => (
-                                        <div key={`req-${idx}`}
-                                             style={{fontSize: 11.5, color: '#B91C1C', marginTop: 3}}>
+                                    {simulationResult?.requesterConflicts?.map((c, idx) => (
+                                        <div key={`req-${idx}`} style={{fontSize: 11.5, color: '#B91C1C', marginTop: 3}}>
                                             • <strong>Bạn:</strong> {c.message}
                                         </div>
                                     ))}
-                                </div>
-                            ) : simulationResult?.hasWarning ? (
-                                <div>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        color: '#D97706',
-                                        fontWeight: 700,
-                                        fontSize: 12.5
-                                    }}>
-                                        <ShieldAlert size={16}/> Cảnh báo quy định làm việc
-                                    </div>
-                                    <div style={{fontSize: 12, color: '#92400E', marginTop: 4}}>
-                                        {simulationResult.message}
-                                    </div>
-                                    {simulationResult.targetConflicts.map((c, idx) => (
-                                        <div key={`warn-target-${idx}`}
-                                             style={{fontSize: 11.5, color: '#B45309', marginTop: 3}}>
-                                            • {c.message}
-                                        </div>
-                                    ))}
-                                    {simulationResult.requesterConflicts?.map((c, idx) => (
-                                        <div key={`warn-req-${idx}`}
-                                             style={{fontSize: 11.5, color: '#B45309', marginTop: 3}}>
-                                            • {c.message}
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    color: '#15803D',
-                                    fontSize: 12.5,
-                                    fontWeight: 600
-                                }}>
-                                    <CheckCircle size={16} color="#16A34A"/>
-                                    <span>Hoàn toàn hợp lệ! Đảm bảo thời gian nghỉ tối thiểu và không trùng ca.</span>
                                 </div>
                             )}
                         </div>
@@ -856,7 +782,13 @@ export const ShiftSwapModal: React.FC<ShiftSwapModalProps> = ({
                             ) : (
                                 <>
                                     <Send size={15}/>
-                                    <span>{swapType === 'SWAP' ? 'Gửi đề xuất đổi chéo ca' : 'Gửi đề xuất nhường ca'}</span>
+                                    <span>
+                                        {swapType === 'SWAP'
+                                            ? 'Gửi đề xuất đổi ca làm'
+                                            : isSelectingOwnShift
+                                                ? 'Gửi đề xuất nhường ca'
+                                                : 'Gửi đề xuất xin ca làm'}
+                                    </span>
                                 </>
                             )}
                         </button>

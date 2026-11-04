@@ -72,6 +72,9 @@ public class ShiftAssignment {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    @Column(name = "source", nullable = false, length = 20)
+    private String source = "MANAGER";
+
     public ShiftAssignment() {
     }
 
@@ -120,4 +123,6 @@ public class ShiftAssignment {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
 }
