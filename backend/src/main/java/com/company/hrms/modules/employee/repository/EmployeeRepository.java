@@ -31,6 +31,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     List<Employee> findAllByBranchIdAndDeletedAtIsNull(Long branchId);
 
+    List<Employee> findAllByBranchIdAndPositionIdAndDeletedAtIsNull(Long branchId, Long positionId);
+
     List<Employee> findAllByDeletedAtIsNull();
 
     long countByBranchIdAndDeletedAtIsNull(Long branchId);
