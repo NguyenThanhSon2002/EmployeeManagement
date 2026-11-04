@@ -68,6 +68,9 @@ public class ShiftAssignmentDto {
     @JsonProperty("transferred_from_employee_code")
     private String transferredFromEmployeeCode;
 
+    @JsonProperty("source")
+    private String source;
+
     private Integer version;
 
     public ShiftAssignmentDto() {
@@ -117,4 +120,6 @@ public class ShiftAssignmentDto {
     public void setTransferredFromEmployeeName(String transferredFromEmployeeName) { this.transferredFromEmployeeName = transferredFromEmployeeName; }
     public String getTransferredFromEmployeeCode() { return transferredFromEmployeeCode; }
     public void setTransferredFromEmployeeCode(String transferredFromEmployeeCode) { this.transferredFromEmployeeCode = transferredFromEmployeeCode; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
 }

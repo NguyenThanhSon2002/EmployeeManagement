@@ -134,6 +134,7 @@ export interface ShiftAssignment {
   status: 'ASSIGNED' | 'CANCELLED' | 'COMPLETED';
   overrideRule: string | null;
   overrideReason: string | null;
+  source?: 'MANAGER' | 'SELF_CLAIM';
   version: number;
 
   // Multi-branch assignment properties

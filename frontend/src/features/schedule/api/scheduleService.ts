@@ -29,6 +29,7 @@ export interface ShiftAssignment {
   status: string;
   override_rule?: string;
   override_reason?: string;
+  source?: string;
   version?: number;
   branch_id?: number;
   branch_name?: string;

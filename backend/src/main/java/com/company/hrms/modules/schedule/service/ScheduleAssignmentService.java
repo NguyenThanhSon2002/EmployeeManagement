@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 public class ScheduleAssignmentService {
 
     private static final Logger log = LoggerFactory.getLogger(ScheduleAssignmentService.class);
+    private static final Set<String> IGNORED_CLAIM_WARNINGS =
+            Set.of("WARN_WEEKLY_HOURS_EXCEEDED", "WARN_HOLIDAY_ASSIGNMENT");
 
     private final ScheduleRepository scheduleRepository;
     private final ShiftAssignmentRepository assignmentRepository;
@@ -173,7 +175,7 @@ public class ScheduleAssignmentService {
 
     @Transactional
     public ShiftAssignmentDto claimShift(ClaimShiftRequest request, Long currentUserId) {
-        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+        Schedule schedule = scheduleRepository.findByIdForUpdate(request.getScheduleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));
 
         Employee emp = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId)
@@ -225,8 +227,12 @@ public class ScheduleAssignmentService {
             throw new BusinessException(err.getRuleCode(), err.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
-        if (validation.getHasWarnings() && !Boolean.TRUE.equals(request.getSelfVolunteeredConfirm())) {
-            ScheduleConflictDto warn = validation.getWarnings().get(0);
+        List<ScheduleConflictDto> claimWarnings = validation.getWarnings().stream()
+                .filter(w -> !IGNORED_CLAIM_WARNINGS.contains(w.getRuleCode()))
+                .toList();
+
+        if (!claimWarnings.isEmpty() && !Boolean.TRUE.equals(request.getSelfVolunteeredConfirm())) {
+            ScheduleConflictDto warn = claimWarnings.get(0);
             throw new BusinessException("WARN_VOLUNTEER_CONFIRMATION_REQUIRED",
                     warn.getMessage(), HttpStatus.BAD_REQUEST);
         }
@@ -252,8 +258,9 @@ public class ScheduleAssignmentService {
         assignment.setPlannedStartTime(times[0]);
         assignment.setPlannedEndTime(times[1]);
         assignment.setStatus("ASSIGNED");
+        assignment.setSource("SELF_CLAIM");
 
-        String overrideRule = validation.getHasWarnings() ? validation.getWarnings().get(0).getRuleCode() : null;
+        String overrideRule = !claimWarnings.isEmpty() ? claimWarnings.get(0).getRuleCode() : null;
         String overrideReason = Boolean.TRUE.equals(request.getSelfVolunteeredConfirm())
                 ? "Nhân viên tự nguyện đăng ký nhận ca"
                 : "Nhân viên đăng ký nhận ca trống";
@@ -293,8 +300,18 @@ public class ScheduleAssignmentService {
             throw new BusinessException("FORBIDDEN", "Bạn chỉ được phép hủy ca làm việc do chính mình đã đăng ký.", HttpStatus.FORBIDDEN);
         }
 
-        Schedule schedule = scheduleRepository.findById(assignment.getScheduleId())
+        if (!"SELF_CLAIM".equals(assignment.getSource())) {
+            throw new BusinessException("NOT_SELF_CLAIMED",
+                    "Ca này do quản lý phân công, bạn không thể tự hủy. Hãy dùng chức năng Nhường ca.", HttpStatus.FORBIDDEN);
+        }
+
+        Schedule schedule = scheduleRepository.findByIdForUpdate(assignment.getScheduleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", assignment.getScheduleId()));
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            throw new BusinessException("SCHEDULE_PUBLISHED",
+                    "Lịch đã được công bố nên bạn không thể tự hủy ca. Hãy dùng chức năng Nhường ca.", HttpStatus.FORBIDDEN);
+        }
 
         LocalDateTime now = LocalDateTime.now();
         if (assignment.getPlannedStartTime() != null && assignment.getPlannedStartTime().isBefore(now)) {
@@ -305,18 +322,6 @@ public class ScheduleAssignmentService {
 
         schedule.setVersion(schedule.getVersion() + 1);
         scheduleRepository.save(schedule);
-
-        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
-            historyRepository.save(new ScheduleChangeHistory(
-                    schedule.getId(),
-                    assignment.getId(),
-                    "DELETE",
-                    assignment.getSnapshotShiftName(),
-                    null,
-                    "Nhân viên tự hủy ca đã đăng ký",
-                    currentUserId != null ? currentUserId : 1L
-            ));
-        }
     }
 
     @Transactional
@@ -648,6 +653,7 @@ public class ScheduleAssignmentService {
         dto.setIsCrossMidnight(a.getSnapshotCrossMidnight());
         dto.setColorCode(a.getSnapshotColorCode());
         dto.setStatus(a.getStatus());
+        dto.setSource(a.getSource());
         dto.setOverrideRule(a.getOverrideRule());
         dto.setOverrideReason(a.getOverrideReason());
         dto.setVersion(a.getVersion());

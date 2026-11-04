@@ -233,6 +233,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
               status: (a.status as any) || 'ASSIGNED',
               overrideRule: a.override_rule ?? null,
               overrideReason: a.override_reason ?? null,
+              source: a.source === 'SELF_CLAIM' ? 'SELF_CLAIM' : 'MANAGER',
               version: a.version || 1,
               branchId: a.branch_id || data.branch_id || branchId,
               branchName: a.branch_name || data.branch_name,

@@ -351,10 +351,12 @@ public class ShiftSwapService {
 
                 reqAssign.setTransferredFromEmployeeId(null);
                 reqAssign.setEmployeeId(swap.getTargetId());
+                reqAssign.setSource("MANAGER");
                 reqAssign.setOverrideReason(buildSwapNote(reqStr, targetStr, swap));
 
                 targetAssign.setTransferredFromEmployeeId(null);
                 targetAssign.setEmployeeId(swap.getRequesterId());
+                targetAssign.setSource("MANAGER");
                 targetAssign.setOverrideReason(buildSwapNote(targetStr, reqStr, swap));
 
                 assignmentRepository.save(reqAssign);
@@ -363,6 +365,7 @@ public class ShiftSwapService {
                 // Chuyển quyền phân ca sang đồng nghiệp nhận ca (HANDOVER)
                 reqAssign.setTransferredFromEmployeeId(swap.getRequesterId());
                 reqAssign.setEmployeeId(swap.getTargetId());
+                reqAssign.setSource("MANAGER");
                 reqAssign.setOverrideReason(buildHandoverNote(reqStr, targetStr, swap));
                 assignmentRepository.save(reqAssign);
             }
