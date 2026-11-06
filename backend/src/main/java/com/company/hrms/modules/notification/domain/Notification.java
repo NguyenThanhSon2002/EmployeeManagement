@@ -12,8 +12,11 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "recipient_employee_id", nullable = false)
+    @Column(name = "recipient_employee_id", nullable = true)
     private Long recipientEmployeeId;
+
+    @Column(name = "recipient_user_id")
+    private Long recipientUserId;
 
     @Column(name = "branch_id")
     private Long branchId;
@@ -49,6 +52,8 @@ public class Notification {
     public void setId(Long id) { this.id = id; }
     public Long getRecipientEmployeeId() { return recipientEmployeeId; }
     public void setRecipientEmployeeId(Long recipientEmployeeId) { this.recipientEmployeeId = recipientEmployeeId; }
+    public Long getRecipientUserId() { return recipientUserId; }
+    public void setRecipientUserId(Long recipientUserId) { this.recipientUserId = recipientUserId; }
     public Long getBranchId() { return branchId; }
     public void setBranchId(Long branchId) { this.branchId = branchId; }
     public String getType() { return type; }

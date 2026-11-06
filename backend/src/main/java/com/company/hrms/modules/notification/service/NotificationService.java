@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class NotificationService {
@@ -27,12 +29,15 @@ public class NotificationService {
         this.employeeRepository = employeeRepository;
     }
 
-    // ---------- GỬI THÔNG BÁO (transaction riêng, không ảnh hưởng nghiệp vụ gọi nó) ----------
+    // ---------- GỬI THEO NHÂN SỰ (đổi ca / nhường ca) ----------
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void send(Long recipientEmployeeId, Long branchId, String type,
                      String title, String message, Long swapId) {
-        saveOne(recipientEmployeeId, branchId, type, title, message, swapId);
+        if (recipientEmployeeId == null) {
+            return;
+        }
+        saveOne(recipientEmployeeId, null, branchId, type, title, message, "SWAP", swapId);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -44,22 +49,34 @@ public class NotificationService {
         employeeRepository.findAllByBranchIdAndPositionIdAndDeletedAtIsNull(branchId, MANAGER_POSITION_ID)
                 .stream()
                 .filter(m -> !"RESIGNED".equals(m.getEmploymentStatus()))
-                .forEach(m -> saveOne(m.getId(), branchId, type, title, message, swapId));
+                .forEach(m -> saveOne(m.getId(), null, branchId, type, title, message, "SWAP", swapId));
     }
 
-    private void saveOne(Long recipientEmployeeId, Long branchId, String type,
-                         String title, String message, Long swapId) {
-        if (recipientEmployeeId == null) {
+    // ---------- GỬI THEO TÀI KHOẢN (nghỉ phép, và các thông báo mới) ----------
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void sendToUsers(Collection<Long> userIds, Long branchId, String type,
+                            String title, String message, String refType, Long refId) {
+        if (userIds == null) {
             return;
         }
+        userIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(uid -> saveOne(null, uid, branchId, type, title, message, refType, refId));
+    }
+
+    private void saveOne(Long employeeId, Long userId, Long branchId, String type,
+                         String title, String message, String refType, Long refId) {
         Notification n = new Notification();
-        n.setRecipientEmployeeId(recipientEmployeeId);
+        n.setRecipientEmployeeId(employeeId);
+        n.setRecipientUserId(userId);
         n.setBranchId(branchId);
         n.setType(type);
         n.setTitle(truncate(title, 150));
         n.setMessage(truncate(message, 500));
-        n.setRefType("SWAP");
-        n.setRefId(swapId);
+        n.setRefType(refType);
+        n.setRefId(refId);
         notificationRepository.save(n);
     }
 
@@ -84,26 +101,29 @@ public class NotificationService {
                 .orElse(null);
     }
 
+    /** Khóa -1 không khớp bản ghi nào, dùng khi người dùng không có id nhân sự / tài khoản. */
+    private static Long key(Long id) {
+        return id != null ? id : -1L;
+    }
+
     @Transactional(readOnly = true)
-    public List<NotificationDto> list(Long employeeId) {
-        if (employeeId == null) {
-            return List.of();
-        }
-        return notificationRepository.findTop50ByRecipientEmployeeIdOrderByCreatedAtDesc(employeeId)
+    public List<NotificationDto> list(Long userId, Long employeeId) {
+        return notificationRepository
+                .findTop50ByRecipientUserIdOrRecipientEmployeeIdOrderByCreatedAtDesc(key(userId), key(employeeId))
                 .stream()
                 .map(this::toDto)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public long countUnread(Long employeeId) {
-        return employeeId == null ? 0L : notificationRepository.countUnread(employeeId);
+    public long countUnread(Long userId, Long employeeId) {
+        return notificationRepository.countUnread(key(userId), key(employeeId));
     }
 
     @Transactional
-    public void markRead(Long notificationId, Long employeeId) {
+    public void markRead(Long notificationId, Long userId, Long employeeId) {
         Notification n = notificationRepository.findById(notificationId)
-                .filter(x -> x.getRecipientEmployeeId().equals(employeeId))
+                .filter(x -> isRecipient(x, userId, employeeId))
                 .orElseThrow(() -> new ResourceNotFoundException("Thông báo", notificationId));
         if (!Boolean.TRUE.equals(n.getIsRead())) {
             n.setIsRead(true);
@@ -113,10 +133,13 @@ public class NotificationService {
     }
 
     @Transactional
-    public void markAllRead(Long employeeId) {
-        if (employeeId != null) {
-            notificationRepository.markAllRead(employeeId, LocalDateTime.now());
-        }
+    public void markAllRead(Long userId, Long employeeId) {
+        notificationRepository.markAllRead(key(userId), key(employeeId), LocalDateTime.now());
+    }
+
+    private boolean isRecipient(Notification n, Long userId, Long employeeId) {
+        return (userId != null && userId.equals(n.getRecipientUserId()))
+                || (employeeId != null && employeeId.equals(n.getRecipientEmployeeId()));
     }
 
     private NotificationDto toDto(Notification n) {

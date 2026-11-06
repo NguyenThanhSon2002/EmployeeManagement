@@ -15,6 +15,8 @@ interface NotificationState {
     unreadCount: number;
     lastSeenId: number | null;
     pendingOpen: PendingSwapOpen | null;
+    leaveRefreshSignal: number;
+    bumpLeaveRefresh: () => void;
     requestOpenSwapInbox: (req: PendingSwapOpen) => void;
     consumePendingOpen: () => void;
 
@@ -29,6 +31,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     unreadCount: 0,
     lastSeenId: null,
     pendingOpen: null,
+    leaveRefreshSignal: 0,
+    bumpLeaveRefresh: () => set((state) => ({ leaveRefreshSignal: state.leaveRefreshSignal + 1 })),
     requestOpenSwapInbox: (req) => set({ pendingOpen: req }),
     consumePendingOpen: () => set({ pendingOpen: null }),
 
@@ -60,6 +64,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                         message: `Và ${fresh.length - 3} thông báo khác, bấm vào chuông để xem.`,
                         durationMs: 6000,
                     });
+                }
+                if (fresh.some((n) => n.type.startsWith('LEAVE_'))) {
+                    get().bumpLeaveRefresh();
                 }
             }
 

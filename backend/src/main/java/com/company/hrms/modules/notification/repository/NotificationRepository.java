@@ -13,13 +13,14 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    List<Notification> findTop50ByRecipientEmployeeIdOrderByCreatedAtDesc(Long recipientEmployeeId);
+    List<Notification> findTop50ByRecipientUserIdOrRecipientEmployeeIdOrderByCreatedAtDesc(Long userId, Long employeeId);
 
-    @Query("SELECT COUNT(n) FROM Notification n WHERE n.recipientEmployeeId = :empId AND n.isRead = false")
-    long countUnread(@Param("empId") Long empId);
+    @Query("SELECT COUNT(n) FROM Notification n " +
+            "WHERE (n.recipientUserId = :userId OR n.recipientEmployeeId = :empId) AND n.isRead = false")
+    long countUnread(@Param("userId") Long userId, @Param("empId") Long empId);
 
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true, n.readAt = :now " +
-            "WHERE n.recipientEmployeeId = :empId AND n.isRead = false")
-    int markAllRead(@Param("empId") Long empId, @Param("now") LocalDateTime now);
+            "WHERE (n.recipientUserId = :userId OR n.recipientEmployeeId = :empId) AND n.isRead = false")
+    int markAllRead(@Param("userId") Long userId, @Param("empId") Long empId, @Param("now") LocalDateTime now);
 }

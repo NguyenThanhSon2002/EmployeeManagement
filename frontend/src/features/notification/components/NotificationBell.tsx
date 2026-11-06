@@ -30,6 +30,7 @@ export const NotificationBell: React.FC = () => {
     const markAllRead = useNotificationStore((s) => s.markAllRead);
     const reset = useNotificationStore((s) => s.reset);
     const requestOpenSwapInbox = useNotificationStore((s) => s.requestOpenSwapInbox);
+    const bumpLeaveRefresh = useNotificationStore((s) => s.bumpLeaveRefresh);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -180,6 +181,9 @@ export const NotificationBell: React.FC = () => {
                                         if (!location.pathname.startsWith('/schedule')) {
                                             navigate('/schedule');
                                         }
+                                    } else if (n.refType === 'LEAVE') {
+                                        bumpLeaveRefresh();
+                                        navigate('/leaves');
                                     }
                                 }}
                                 style={{

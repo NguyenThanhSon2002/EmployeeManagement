@@ -31,16 +31,19 @@ public class LeaveService {
     private final LeaveBalanceRepository leaveBalanceRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final EmployeeRepository employeeRepository;
+    private final LeaveNotifier leaveNotifier;
 
     public LeaveService(
             LeaveTypeRepository leaveTypeRepository,
             LeaveBalanceRepository leaveBalanceRepository,
             LeaveRequestRepository leaveRequestRepository,
-            EmployeeRepository employeeRepository) {
+            EmployeeRepository employeeRepository,
+            LeaveNotifier leaveNotifier) {
         this.leaveTypeRepository = leaveTypeRepository;
         this.leaveBalanceRepository = leaveBalanceRepository;
         this.leaveRequestRepository = leaveRequestRepository;
         this.employeeRepository = employeeRepository;
+        this.leaveNotifier = leaveNotifier;
     }
 
     @Transactional(readOnly = true)
@@ -128,6 +131,7 @@ public class LeaveService {
         leaveRequest.setStatus("SUBMITTED");
 
         LeaveRequest saved = leaveRequestRepository.save(leaveRequest);
+        leaveNotifier.notifySubmitted(saved);
         return toDto(saved);
     }
 
@@ -163,6 +167,7 @@ public class LeaveService {
         leave.setTier1ReviewedBy(reviewerUserId != null ? reviewerUserId : 1L);
         leave.setTier1ReviewedAt(LocalDateTime.now());
         LeaveRequest saved = leaveRequestRepository.save(leave);
+        leaveNotifier.notifyReviewed(saved, "APPROVED".equals(saved.getStatus()), reviewerUserId);
         return toDto(saved);
     }
 

@@ -388,10 +388,10 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                             alignItems: 'center',
                             justifyContent: 'center',
                             padding: '10px 6px',
-                            border: '1px dashed #E2E8F0',
+                            border: '1px dashed #38BDF8',
                             borderRadius: '8px',
-                            backgroundColor: '#F8FAFC',
-                            color: '#94A3B8',
+                            backgroundColor: '#F0F9FF',
+                            color: '#0284C7',
                             cursor: 'pointer',
                             textAlign: 'center',
                             transition: 'all 0.15s ease',
@@ -399,8 +399,8 @@ export const ShiftGridCell: React.FC<ShiftGridCellProps> = React.memo(({
                         className="shift-claim-empty-btn"
                         title="Bấm để đăng ký nhận ca trống này"
                     >
-                        <Users size={15} style={{opacity: 0.6, marginBottom: 2}}/>
-                        <span style={{fontSize: '11px', fontWeight: 500}}>Chưa phân ca</span>
+                        <Plus size={16} strokeWidth={2.5} style={{marginBottom: 2}}/>
+                        <span style={{fontSize: '11px', fontWeight: 600}}>+ Đăng ký ca này</span>
                     </div>
                 ) : (
                     <div
