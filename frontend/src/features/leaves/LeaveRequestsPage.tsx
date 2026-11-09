@@ -3,6 +3,7 @@ import { useLeaveStore } from './store/useLeaveStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
+import { useNotificationStore } from '@/features/notification/store/useNotificationStore';
 import type { LeaveRequest } from '@/types/domain.types';
 import { LeaveRequestModal } from './components/LeaveRequestModal';
 import { LeaveApprovalModal } from './components/LeaveApprovalModal';
@@ -23,11 +24,12 @@ export const LeaveRequestsPage: React.FC = () => {
   const { employees } = useDirectoryStore();
 
   const isManagerOrAdmin = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_MANAGER';
+  const leaveRefreshSignal = useNotificationStore((s) => s.leaveRefreshSignal);
 
-  React.useEffect(() => {
-    fetchLeaves?.(isManagerOrAdmin ? undefined : currentUser.id);
-    fetchBalances?.(currentUser.id);
-  }, [fetchLeaves, fetchBalances, isManagerOrAdmin, currentUser.id]);
+    React.useEffect(() => {
+        fetchLeaves?.(isManagerOrAdmin ? undefined : currentUser.id);
+        fetchBalances?.(currentUser.id);
+    }, [fetchLeaves, fetchBalances, isManagerOrAdmin, currentUser.id, leaveRefreshSignal]);
 
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -232,7 +234,7 @@ export const LeaveRequestsPage: React.FC = () => {
                     </td>
                     <td>
                       <div style={{ fontSize: 12.5, fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-secondary)' }}>
-                        {leave.startDate} â†’ {leave.endDate}
+                          {leave.startDate} → {leave.endDate}
                       </div>
                     </td>
                     <td>

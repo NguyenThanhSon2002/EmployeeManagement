@@ -841,7 +841,17 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
       const currentMonStr = state.currentStartDate;
       const currentSunStr = format(currentSun, 'yyyy-MM-dd');
 
-      // 1. Lọc bỏ toàn bộ phân ca trong khoảng thời gian tuần hiện tại
+      // 1. Nếu có scheduleId thực tế, gọi API dọn dẹp toàn bộ phân ca trên server
+      if (state.scheduleId) {
+        try {
+          await scheduleService.resetWeeklySchedule(state.scheduleId, state.scheduleVersion);
+        } catch (err) {
+          console.error('Lỗi khi xóa phân ca tuần trên máy chủ:', err);
+          return false;
+        }
+      }
+
+      // 2. Lọc bỏ toàn bộ phân ca trong khoảng thời gian tuần hiện tại
       const updatedAssignments = { ...state.assignments };
       for (const [key, list] of Object.entries(updatedAssignments)) {
         const remaining = list.filter(
@@ -854,10 +864,10 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
         }
       }
 
-      // 2. Lưu lại vào cache trình duyệt
-      saveBranchScheduleToStorage(branchId, updatedAssignments, currentMonStr);
+      // 3. Dọn sạch cache tuần hiện tại trong LocalStorage
+      saveBranchScheduleToStorage(branchId, {}, currentMonStr);
 
-      // 3. Tính toán lại xung đột (conflicts sẽ trở về rỗng cho tuần này)
+      // 4. Tính toán lại xung đột (conflicts sẽ trở về rỗng cho tuần này)
       const updatedConflicts = computeAllConflicts(
           updatedAssignments,
           state.employees,
@@ -866,19 +876,18 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
           state.shiftTemplates
       );
 
-      // 4. Đồng bộ State
-      set({
+      // 5. Đồng bộ State với version mới
+      set((prev) => ({
         assignments: updatedAssignments,
         conflicts: updatedConflicts,
-      });
+        scheduleVersion: (prev.scheduleVersion || 1) + 1,
+      }));
 
-      // 5. Nếu có scheduleId thực tế, gọi API dọn dẹp các phân ca trên server
-      if (state.scheduleId) {
-        try {
-          await scheduleService.deleteAssignment(state.scheduleId, state.scheduleVersion);
-        } catch (err) {
-          console.warn('Lỗi khi xóa phân ca tuần trên máy chủ:', err);
-        }
+      // 6. Nạp lại lịch tuần từ máy chủ để đồng bộ tuyệt đối với Single Source of Truth
+      try {
+        await get().fetchWeeklySchedule(branchId, currentMonStr);
+      } catch (err) {
+        console.warn('Lỗi khi tải lại dữ liệu lịch sau reset:', err);
       }
 
       return true;

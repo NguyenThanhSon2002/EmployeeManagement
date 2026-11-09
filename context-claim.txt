@@ -1,0 +1,2863 @@
+﻿
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\modules\schedule\dto\ClaimShiftRequest.java =====
+
+package com.company.hrms.modules.schedule.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.LocalDate;
+
+public class ClaimShiftRequest {
+
+    @NotNull(message = "schedule_id không được để trống")
+    @JsonProperty("schedule_id")
+    private Long scheduleId;
+
+    @NotNull(message = "work_shift_id không được để trống")
+    @JsonProperty("work_shift_id")
+    private Long workShiftId;
+
+    @NotNull(message = "work_date không được để trống")
+    @JsonProperty("work_date")
+    private LocalDate workDate;
+
+    @JsonProperty("self_volunteered_confirm")
+    private Boolean selfVolunteeredConfirm = false;
+
+    public ClaimShiftRequest() {
+    }
+
+    public ClaimShiftRequest(Long scheduleId, Long workShiftId, LocalDate workDate, Boolean selfVolunteeredConfirm) {
+        this.scheduleId = scheduleId;
+        this.workShiftId = workShiftId;
+        this.workDate = workDate;
+        this.selfVolunteeredConfirm = selfVolunteeredConfirm;
+    }
+
+    public Long getScheduleId() {
+        return scheduleId;
+    }
+
+    public void setScheduleId(Long scheduleId) {
+        this.scheduleId = scheduleId;
+    }
+
+    public Long getWorkShiftId() {
+        return workShiftId;
+    }
+
+    public void setWorkShiftId(Long workShiftId) {
+        this.workShiftId = workShiftId;
+    }
+
+    public LocalDate getWorkDate() {
+        return workDate;
+    }
+
+    public void setWorkDate(LocalDate workDate) {
+        this.workDate = workDate;
+    }
+
+    public Boolean getSelfVolunteeredConfirm() {
+        return selfVolunteeredConfirm;
+    }
+
+    public void setSelfVolunteeredConfirm(Boolean selfVolunteeredConfirm) {
+        this.selfVolunteeredConfirm = selfVolunteeredConfirm;
+    }
+}
+
+
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\modules\schedule\dto\ConflictValidationResult.java =====
+
+package com.company.hrms.modules.schedule.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ConflictValidationResult {
+
+    @JsonProperty("is_valid")
+    private boolean isValid;
+
+    @JsonProperty("has_mandatory_errors")
+    private boolean hasMandatoryErrors;
+
+    @JsonProperty("has_warnings")
+    private boolean hasWarnings;
+
+    @JsonProperty("mandatory_errors")
+    private List<ScheduleConflictDto> mandatoryErrors = new ArrayList<>();
+
+    @JsonProperty("warnings")
+    private List<ScheduleConflictDto> warnings = new ArrayList<>();
+
+    public ConflictValidationResult() {
+        this.isValid = true;
+        this.hasMandatoryErrors = false;
+        this.hasWarnings = false;
+    }
+
+    public void addMandatoryError(ScheduleConflictDto error) {
+        this.mandatoryErrors.add(error);
+        this.hasMandatoryErrors = true;
+        this.isValid = false;
+    }
+
+    public void addWarning(ScheduleConflictDto warning) {
+        this.warnings.add(warning);
+        this.hasWarnings = true;
+    }
+
+    public boolean getIsValid() { return isValid; }
+    public void setIsValid(boolean valid) { isValid = valid; }
+    public boolean getHasMandatoryErrors() { return hasMandatoryErrors; }
+    public void setHasMandatoryErrors(boolean hasErrors) { this.hasMandatoryErrors = hasErrors; }
+    public boolean getHasWarnings() { return hasWarnings; }
+    public void setHasWarnings(boolean hasWarnings) { this.hasWarnings = hasWarnings; }
+    public List<ScheduleConflictDto> getMandatoryErrors() { return mandatoryErrors; }
+    public void setMandatoryErrors(List<ScheduleConflictDto> mandatoryErrors) { this.mandatoryErrors = mandatoryErrors; }
+    public List<ScheduleConflictDto> getWarnings() { return warnings; }
+    public void setWarnings(List<ScheduleConflictDto> warnings) { this.warnings = warnings; }
+}
+
+
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\modules\schedule\dto\ShiftAssignmentDto.java =====
+
+package com.company.hrms.modules.schedule.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+public class ShiftAssignmentDto {
+
+    private Long id;
+
+    @JsonProperty("schedule_id")
+    private Long scheduleId;
+
+    @JsonProperty("employee_id")
+    private Long employeeId;
+
+    @JsonProperty("work_shift_id")
+    private Long workShiftId;
+
+    @JsonProperty("work_date")
+    private LocalDate workDate;
+
+    @JsonProperty("shift_name")
+    private String shiftName;
+
+    @JsonProperty("start_time")
+    private LocalTime startTime;
+
+    @JsonProperty("end_time")
+    private LocalTime endTime;
+
+    @JsonProperty("break_minutes")
+    private Integer breakMinutes;
+
+    @JsonProperty("is_cross_midnight")
+    private Boolean isCrossMidnight;
+
+    @JsonProperty("color_code")
+    private String colorCode;
+
+    private String status;
+
+    @JsonProperty("override_rule")
+    private String overrideRule;
+
+    @JsonProperty("override_reason")
+    private String overrideReason;
+
+    @JsonProperty("branch_id")
+    private Long branchId;
+
+    @JsonProperty("branch_name")
+    private String branchName;
+
+    @JsonProperty("is_external")
+    private Boolean isExternal = false;
+
+    @JsonProperty("read_only")
+    private Boolean readOnly = false;
+
+    @JsonProperty("transferred_from_employee_id")
+    private Long transferredFromEmployeeId;
+
+    @JsonProperty("transferred_from_employee_name")
+    private String transferredFromEmployeeName;
+
+    @JsonProperty("transferred_from_employee_code")
+    private String transferredFromEmployeeCode;
+
+    private Integer version;
+
+    public ShiftAssignmentDto() {
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getScheduleId() { return scheduleId; }
+    public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
+    public Long getEmployeeId() { return employeeId; }
+    public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
+    public Long getWorkShiftId() { return workShiftId; }
+    public void setWorkShiftId(Long workShiftId) { this.workShiftId = workShiftId; }
+    public LocalDate getWorkDate() { return workDate; }
+    public void setWorkDate(LocalDate workDate) { this.workDate = workDate; }
+    public String getShiftName() { return shiftName; }
+    public void setShiftName(String shiftName) { this.shiftName = shiftName; }
+    public LocalTime getStartTime() { return startTime; }
+    public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
+    public LocalTime getEndTime() { return endTime; }
+    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
+    public Integer getBreakMinutes() { return breakMinutes; }
+    public void setBreakMinutes(Integer breakMinutes) { this.breakMinutes = breakMinutes; }
+    public Boolean getIsCrossMidnight() { return isCrossMidnight; }
+    public void setIsCrossMidnight(Boolean crossMidnight) { isCrossMidnight = crossMidnight; }
+    public String getColorCode() { return colorCode; }
+    public void setColorCode(String colorCode) { this.colorCode = colorCode; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public String getOverrideRule() { return overrideRule; }
+    public void setOverrideRule(String overrideRule) { this.overrideRule = overrideRule; }
+    public String getOverrideReason() { return overrideReason; }
+    public void setOverrideReason(String overrideReason) { this.overrideReason = overrideReason; }
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
+    public String getBranchName() { return branchName; }
+    public void setBranchName(String branchName) { this.branchName = branchName; }
+    public Boolean getIsExternal() { return isExternal; }
+    public void setIsExternal(Boolean isExternal) { this.isExternal = isExternal; }
+    public Boolean getReadOnly() { return readOnly; }
+    public void setReadOnly(Boolean readOnly) { this.readOnly = readOnly; }
+    public Long getTransferredFromEmployeeId() { return transferredFromEmployeeId; }
+    public void setTransferredFromEmployeeId(Long transferredFromEmployeeId) { this.transferredFromEmployeeId = transferredFromEmployeeId; }
+    public String getTransferredFromEmployeeName() { return transferredFromEmployeeName; }
+    public void setTransferredFromEmployeeName(String transferredFromEmployeeName) { this.transferredFromEmployeeName = transferredFromEmployeeName; }
+    public String getTransferredFromEmployeeCode() { return transferredFromEmployeeCode; }
+    public void setTransferredFromEmployeeCode(String transferredFromEmployeeCode) { this.transferredFromEmployeeCode = transferredFromEmployeeCode; }
+}
+
+
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\modules\schedule\repository\ScheduleRepository.java =====
+
+package com.company.hrms.modules.schedule.repository;
+
+import com.company.hrms.modules.schedule.domain.Schedule;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.util.Optional;
+
+@Repository
+public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
+
+    Optional<Schedule> findByBranchIdAndStartDate(Long branchId, LocalDate startDate);
+
+    boolean existsByBranchIdAndStartDate(Long branchId, LocalDate startDate);
+}
+
+
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\modules\schedule\service\ScheduleAssignmentService.java =====
+
+package com.company.hrms.modules.schedule.service;
+
+import com.company.hrms.common.exception.BusinessException;
+import com.company.hrms.common.exception.ResourceNotFoundException;
+import com.company.hrms.modules.branch.repository.BranchRepository;
+import com.company.hrms.modules.employee.domain.Employee;
+import com.company.hrms.modules.employee.repository.EmployeeRepository;
+import com.company.hrms.modules.employee.repository.EmployeeSecondaryBranchRepository;
+import com.company.hrms.modules.schedule.domain.Schedule;
+import com.company.hrms.modules.schedule.domain.ScheduleChangeHistory;
+import com.company.hrms.modules.schedule.domain.ShiftAssignment;
+import com.company.hrms.modules.schedule.dto.*;
+import com.company.hrms.modules.schedule.engine.ConflictDetectionEngine;
+import com.company.hrms.modules.schedule.repository.ScheduleChangeHistoryRepository;
+import com.company.hrms.modules.schedule.repository.ScheduleRepository;
+import com.company.hrms.modules.schedule.repository.ShiftAssignmentRepository;
+import com.company.hrms.modules.shift.domain.WorkShift;
+import com.company.hrms.modules.shift.repository.WorkShiftRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Service chuyên biệt chịu trách nhiệm quản lý các phân công ca làm việc (Shift Assignment).
+ * Bao gồm: gán ca đơn lẻ, nhân viên tự nhận ca, hủy nhận ca, gán hàng loạt, xóa ca và cập nhật giải trình vi phạm.
+ */
+@Service
+public class ScheduleAssignmentService {
+
+    private static final Logger log = LoggerFactory.getLogger(ScheduleAssignmentService.class);
+
+    private final ScheduleRepository scheduleRepository;
+    private final ShiftAssignmentRepository assignmentRepository;
+    private final ScheduleChangeHistoryRepository historyRepository;
+    private final BranchRepository branchRepository;
+    private final EmployeeRepository employeeRepository;
+    private final EmployeeSecondaryBranchRepository secondaryBranchRepository;
+    private final WorkShiftRepository workShiftRepository;
+    private final ConflictDetectionEngine conflictEngine;
+
+    public ScheduleAssignmentService(
+            ScheduleRepository scheduleRepository,
+            ShiftAssignmentRepository assignmentRepository,
+            ScheduleChangeHistoryRepository historyRepository,
+            BranchRepository branchRepository,
+            EmployeeRepository employeeRepository,
+            EmployeeSecondaryBranchRepository secondaryBranchRepository,
+            WorkShiftRepository workShiftRepository,
+            ConflictDetectionEngine conflictEngine) {
+        this.scheduleRepository = scheduleRepository;
+        this.assignmentRepository = assignmentRepository;
+        this.historyRepository = historyRepository;
+        this.branchRepository = branchRepository;
+        this.employeeRepository = employeeRepository;
+        this.secondaryBranchRepository = secondaryBranchRepository;
+        this.workShiftRepository = workShiftRepository;
+        this.conflictEngine = conflictEngine;
+    }
+
+    public void assertScheduleNotLocked(Schedule schedule) {
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            throw new BusinessException(
+                    "SCHEDULE_LOCKED",
+                    "Lịch làm việc đã được công bố chính thức và đang bị khóa. Chỉ Giám đốc hoặc Admin mới có quyền thu hồi về bản nháp để điều chỉnh.",
+                    HttpStatus.FORBIDDEN
+            );
+        }
+    }
+
+    @Transactional
+    public ShiftAssignmentDto assignSingleShift(AssignSingleShiftRequest request, Long currentUserId) {
+        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));
+
+        assertScheduleNotLocked(schedule);
+
+        if (request.getScheduleVersion() != null && !schedule.getVersion().equals(request.getScheduleVersion())) {
+            throw new ObjectOptimisticLockingFailureException(Schedule.class, schedule.getId());
+        }
+
+        if (currentUserId != null && currentUserId > 1L) {
+            Employee actor = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId).orElse(null);
+            if (actor != null && actor.getPositionId() != null && actor.getPositionId() == 2) { // ROLE_MANAGER
+                if (!schedule.getBranchId().equals(actor.getBranchId())) {
+                    throw new BusinessException("FORBIDDEN", "Quản lý không có quyền gán ca cho lịch làm việc thuộc cơ sở khác.", HttpStatus.FORBIDDEN);
+                }
+            }
+        }
+
+        WorkShift shift = workShiftRepository.findByIdAndDeletedAtIsNull(request.getWorkShiftId())
+                .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", request.getWorkShiftId()));
+
+        if (shift.getBranchId() != null && !shift.getBranchId().equals(schedule.getBranchId())) {
+            throw new BusinessException("BRANCH_SHIFT_MISMATCH", "Mẫu ca làm việc (" + shift.getShiftName() + ") không thuộc chi nhánh của lịch làm việc.", HttpStatus.BAD_REQUEST);
+        }
+
+        Employee targetEmp = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Nhân viên", request.getEmployeeId()));
+        if (targetEmp.getPositionId() != null && targetEmp.getPositionId() == 1L) {
+            throw new BusinessException("DIRECTOR_CANNOT_BE_SCHEDULED", "Không thể phân ca làm việc cho nhân sự có chức danh Giám đốc.", HttpStatus.BAD_REQUEST);
+        }
+
+        ConflictValidationResult validation = conflictEngine.validateAssignment(
+                request.getEmployeeId(),
+                request.getWorkShiftId(),
+                request.getWorkDate(),
+                null,
+                schedule.getId(),
+                schedule.getBranchId()
+        );
+
+        if (validation.getHasMandatoryErrors()) {
+            ScheduleConflictDto err = validation.getMandatoryErrors().get(0);
+            throw new BusinessException(err.getRuleCode(), err.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        String warningRule = null;
+        if (validation.getHasWarnings()) {
+            warningRule = validation.getWarnings().get(0).getRuleCode();
+        }
+
+        LocalDateTime[] times = ConflictDetectionEngine.calculatePlannedTimes(
+                request.getWorkDate(),
+                shift.getStartTime(),
+                shift.getEndTime(),
+                Boolean.TRUE.equals(shift.getIsCrossMidnight())
+        );
+
+        ShiftAssignment assignment = new ShiftAssignment();
+        assignment.setScheduleId(schedule.getId());
+        assignment.setEmployeeId(request.getEmployeeId());
+        assignment.setWorkShiftId(shift.getId());
+        assignment.setWorkDate(request.getWorkDate());
+        assignment.setSnapshotShiftName(shift.getShiftName());
+        assignment.setSnapshotStartTime(shift.getStartTime());
+        assignment.setSnapshotEndTime(shift.getEndTime());
+        assignment.setSnapshotBreakMinutes(shift.getBreakMinutes());
+        assignment.setSnapshotCrossMidnight(shift.getIsCrossMidnight());
+        assignment.setSnapshotColorCode(shift.getColorCode());
+        assignment.setPlannedStartTime(times[0]);
+        assignment.setPlannedEndTime(times[1]);
+        assignment.setStatus("ASSIGNED");
+        assignment.setOverrideRule(request.getOverrideRule() != null ? request.getOverrideRule() : warningRule);
+        assignment.setOverrideReason(request.getOverrideReason());
+
+        ShiftAssignment saved = assignmentRepository.save(assignment);
+
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            historyRepository.save(new ScheduleChangeHistory(
+                    schedule.getId(),
+                    saved.getId(),
+                    "CREATE",
+                    null,
+                    "Gán ca: " + shift.getShiftName(),
+                    request.getOverrideReason() != null ? request.getOverrideReason() : "Thêm ca sau công bố",
+                    currentUserId != null ? currentUserId : 1L
+            ));
+        }
+
+        return toDto(saved);
+    }
+
+    @Transactional
+    public ShiftAssignmentDto claimShift(ClaimShiftRequest request, Long currentUserId) {
+        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));
+
+        Employee emp = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId)
+                .orElseThrow(() -> new BusinessException("EMPLOYEE_NOT_FOUND", "Không tìm thấy hồ sơ nhân sự của bạn trong hệ thống.", HttpStatus.NOT_FOUND));
+
+        if (emp.getPositionId() != null && emp.getPositionId() == 1L) {
+            throw new BusinessException("DIRECTOR_CANNOT_BE_SCHEDULED", "Không thể phân ca làm việc cho Giám đốc.", HttpStatus.BAD_REQUEST);
+        }
+
+        boolean allowedInBranch = schedule.getBranchId().equals(emp.getBranchId())
+                || secondaryBranchRepository.existsByEmployeeIdAndBranchId(emp.getId(), schedule.getBranchId());
+        if (!allowedInBranch) {
+            throw new BusinessException("BRANCH_MISMATCH", "Bạn chỉ được đăng ký ca làm việc thuộc cơ sở của bạn phụ trách.", HttpStatus.FORBIDDEN);
+        }
+
+        WorkShift shift = workShiftRepository.findByIdAndDeletedAtIsNull(request.getWorkShiftId())
+                .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", request.getWorkShiftId()));
+
+        if (shift.getBranchId() != null && !shift.getBranchId().equals(schedule.getBranchId())) {
+            throw new BusinessException("BRANCH_SHIFT_MISMATCH", "Mẫu ca làm việc không thuộc chi nhánh của lịch làm việc.", HttpStatus.BAD_REQUEST);
+        }
+
+        List<ShiftAssignment> existingInShift = assignmentRepository.findAssignmentsByShiftAndDate(
+                schedule.getId(), shift.getId(), request.getWorkDate()
+        );
+
+        boolean alreadyAssigned = existingInShift.stream()
+                .anyMatch(a -> a.getEmployeeId().equals(emp.getId()));
+        if (alreadyAssigned) {
+            throw new BusinessException("ALREADY_ASSIGNED", "Bạn đã được phân công vào ca làm việc này rồi.", HttpStatus.BAD_REQUEST);
+        }
+
+        int maxCapacity = shift.getMaxStaffing() != null ? shift.getMaxStaffing() : (shift.getMinStaffing() != null ? shift.getMinStaffing() : 1);
+        if (existingInShift.size() >= maxCapacity) {
+            throw new BusinessException("SHIFT_FULL", "Ca làm việc đã đủ định biên nhân sự tối đa (" + existingInShift.size() + "/" + maxCapacity + " NV).", HttpStatus.BAD_REQUEST);
+        }
+
+        ConflictValidationResult validation = conflictEngine.validateAssignment(
+                emp.getId(),
+                shift.getId(),
+                request.getWorkDate(),
+                null,
+                schedule.getId(),
+                schedule.getBranchId()
+        );
+
+        if (validation.getHasMandatoryErrors()) {
+            ScheduleConflictDto err = validation.getMandatoryErrors().get(0);
+            throw new BusinessException(err.getRuleCode(), err.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        if (validation.getHasWarnings() && !Boolean.TRUE.equals(request.getSelfVolunteeredConfirm())) {
+            ScheduleConflictDto warn = validation.getWarnings().get(0);
+            throw new BusinessException("WARN_VOLUNTEER_CONFIRMATION_REQUIRED",
+                    warn.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+
+        LocalDateTime[] times = ConflictDetectionEngine.calculatePlannedTimes(
+                request.getWorkDate(),
+                shift.getStartTime(),
+                shift.getEndTime(),
+                Boolean.TRUE.equals(shift.getIsCrossMidnight())
+        );
+
+        ShiftAssignment assignment = new ShiftAssignment();
+        assignment.setScheduleId(schedule.getId());
+        assignment.setEmployeeId(emp.getId());
+        assignment.setWorkShiftId(shift.getId());
+        assignment.setWorkDate(request.getWorkDate());
+        assignment.setSnapshotShiftName(shift.getShiftName());
+        assignment.setSnapshotStartTime(shift.getStartTime());
+        assignment.setSnapshotEndTime(shift.getEndTime());
+        assignment.setSnapshotBreakMinutes(shift.getBreakMinutes());
+        assignment.setSnapshotCrossMidnight(shift.getIsCrossMidnight());
+        assignment.setSnapshotColorCode(shift.getColorCode());
+        assignment.setPlannedStartTime(times[0]);
+        assignment.setPlannedEndTime(times[1]);
+        assignment.setStatus("ASSIGNED");
+
+        String overrideRule = validation.getHasWarnings() ? validation.getWarnings().get(0).getRuleCode() : null;
+        String overrideReason = Boolean.TRUE.equals(request.getSelfVolunteeredConfirm())
+                ? "Nhân viên tự nguyện đăng ký nhận ca"
+                : "Nhân viên đăng ký nhận ca trống";
+
+        assignment.setOverrideRule(overrideRule);
+        assignment.setOverrideReason(overrideReason);
+
+        ShiftAssignment saved = assignmentRepository.save(assignment);
+
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            historyRepository.save(new ScheduleChangeHistory(
+                    schedule.getId(),
+                    saved.getId(),
+                    "CREATE",
+                    null,
+                    "Nhân viên tự nhận ca: " + shift.getShiftName(),
+                    overrideReason,
+                    currentUserId != null ? currentUserId : 1L
+            ));
+        }
+
+        return toDto(saved);
+    }
+
+    @Transactional
+    public void cancelClaimedShift(Long assignmentId, Long currentUserId) {
+        ShiftAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Phân ca", assignmentId));
+
+        Employee emp = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId)
+                .orElseThrow(() -> new BusinessException("EMPLOYEE_NOT_FOUND", "Không tìm thấy hồ sơ nhân sự của bạn trong hệ thống.", HttpStatus.NOT_FOUND));
+
+        if (!assignment.getEmployeeId().equals(emp.getId())) {
+            throw new BusinessException("FORBIDDEN", "Bạn chỉ được phép hủy ca làm việc do chính mình đã đăng ký.", HttpStatus.FORBIDDEN);
+        }
+
+        Schedule schedule = scheduleRepository.findById(assignment.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", assignment.getScheduleId()));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (assignment.getPlannedStartTime() != null && assignment.getPlannedStartTime().isBefore(now)) {
+            throw new BusinessException("PAST_SHIFT", "Không thể hủy ca làm việc đã diễn ra trong quá khứ.", HttpStatus.BAD_REQUEST);
+        }
+
+        assignmentRepository.delete(assignment);
+
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            historyRepository.save(new ScheduleChangeHistory(
+                    schedule.getId(),
+                    assignment.getId(),
+                    "DELETE",
+                    assignment.getSnapshotShiftName(),
+                    null,
+                    "Nhân viên tự hủy ca đã đăng ký",
+                    currentUserId != null ? currentUserId : 1L
+            ));
+        }
+    }
+
+    @Transactional
+    public List<ShiftAssignmentDto> bulkAssign(BulkAssignRequest request, Long currentUserId) {
+        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));
+
+        assertScheduleNotLocked(schedule);
+
+        if (request.getScheduleVersion() != null && !schedule.getVersion().equals(request.getScheduleVersion())) {
+            throw new ObjectOptimisticLockingFailureException(Schedule.class, schedule.getId());
+        }
+
+        WorkShift shift = workShiftRepository.findByIdAndDeletedAtIsNull(request.getWorkShiftId())
+                .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", request.getWorkShiftId()));
+
+        if (shift.getBranchId() != null && !shift.getBranchId().equals(schedule.getBranchId())) {
+            throw new BusinessException("BRANCH_SHIFT_MISMATCH", "Mẫu ca làm việc (" + shift.getShiftName() + ") không thuộc chi nhánh của lịch làm việc.", HttpStatus.BAD_REQUEST);
+        }
+
+        ConflictValidationResult validation = conflictEngine.validateBulk(
+                request.getEmployeeIds(),
+                request.getWorkShiftId(),
+                request.getFromDate(),
+                request.getToDate()
+        );
+
+        if (validation.getHasMandatoryErrors()) {
+            ScheduleConflictDto err = validation.getMandatoryErrors().get(0);
+            throw new BusinessException(err.getRuleCode(), err.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        List<ShiftAssignment> savedList = new ArrayList<>();
+        for (Long empId : request.getEmployeeIds()) {
+            LocalDate curr = request.getFromDate();
+            while (!curr.isAfter(request.getToDate())) {
+                LocalDateTime[] times = ConflictDetectionEngine.calculatePlannedTimes(
+                        curr,
+                        shift.getStartTime(),
+                        shift.getEndTime(),
+                        Boolean.TRUE.equals(shift.getIsCrossMidnight())
+                );
+
+                ShiftAssignment assignment = new ShiftAssignment();
+                assignment.setScheduleId(schedule.getId());
+                assignment.setEmployeeId(empId);
+                assignment.setWorkShiftId(shift.getId());
+                assignment.setWorkDate(curr);
+                assignment.setSnapshotShiftName(shift.getShiftName());
+                assignment.setSnapshotStartTime(shift.getStartTime());
+                assignment.setSnapshotEndTime(shift.getEndTime());
+                assignment.setSnapshotBreakMinutes(shift.getBreakMinutes());
+                assignment.setSnapshotCrossMidnight(shift.getIsCrossMidnight());
+                assignment.setSnapshotColorCode(shift.getColorCode());
+                assignment.setPlannedStartTime(times[0]);
+                assignment.setPlannedEndTime(times[1]);
+                assignment.setStatus("ASSIGNED");
+
+                savedList.add(assignmentRepository.save(assignment));
+                curr = curr.plusDays(1);
+            }
+        }
+
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            for (ShiftAssignment sa : savedList) {
+                historyRepository.save(new ScheduleChangeHistory(
+                        schedule.getId(),
+                        sa.getId(),
+                        "CREATE",
+                        null,
+                        "Gán ca hàng loạt: " + shift.getShiftName(),
+                        "Gán ca hàng loạt sau công bố",
+                        currentUserId != null ? currentUserId : 1L
+                ));
+            }
+        }
+
+        return savedList.stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<ShiftAssignmentDto> batchAssignShifts(BatchAssignItemsRequest request, Long currentUserId) {
+        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", request.getScheduleId()));
+
+        assertScheduleNotLocked(schedule);
+
+        if (request.getScheduleVersion() != null && !schedule.getVersion().equals(request.getScheduleVersion())) {
+            throw new ObjectOptimisticLockingFailureException(Schedule.class, schedule.getId());
+        }
+
+        boolean isReplaceAll = request.getMode() == null || "REPLACE_ALL".equalsIgnoreCase(request.getMode());
+
+        if (isReplaceAll) {
+            LocalDate start = request.getFromDate() != null ? request.getFromDate() : schedule.getStartDate();
+            LocalDate end = request.getToDate() != null ? request.getToDate() : schedule.getEndDate();
+            List<ShiftAssignment> inRange = assignmentRepository.findAllByScheduleId(schedule.getId()).stream()
+                    .filter(a -> a.getWorkDate() != null && !a.getWorkDate().isBefore(start) && !a.getWorkDate().isAfter(end))
+                    .toList();
+            if (!inRange.isEmpty()) {
+                assignmentRepository.deleteAll(inRange);
+            }
+        }
+
+        // Preload existing assignments for this schedule to avoid duplicates
+        List<ShiftAssignment> existingList = assignmentRepository.findAllByScheduleId(schedule.getId());
+        Map<String, ShiftAssignment> existingMap = new HashMap<>();
+        for (ShiftAssignment sa : existingList) {
+            if (!"CANCELLED".equalsIgnoreCase(sa.getStatus())) {
+                String key = sa.getEmployeeId() + "_" + sa.getWorkShiftId() + "_" + sa.getWorkDate();
+                existingMap.put(key, sa);
+            }
+        }
+
+        // Cache work shifts
+        Set<Long> shiftIds = request.getAssignments().stream()
+                .map(BatchAssignItemsRequest.AssignItem::getWorkShiftId)
+                .collect(Collectors.toSet());
+        Map<Long, WorkShift> shiftMap = workShiftRepository.findAllById(shiftIds).stream()
+                .collect(Collectors.toMap(WorkShift::getId, s -> s));
+
+        // Cache employees to exclude Director
+        Set<Long> empIds = request.getAssignments().stream()
+                .map(BatchAssignItemsRequest.AssignItem::getEmployeeId)
+                .collect(Collectors.toSet());
+        Map<Long, Employee> empMap = employeeRepository.findAllById(empIds).stream()
+                .collect(Collectors.toMap(Employee::getId, e -> e));
+
+        List<ShiftAssignment> toSave = new ArrayList<>();
+        for (BatchAssignItemsRequest.AssignItem item : request.getAssignments()) {
+            Employee emp = empMap.get(item.getEmployeeId());
+            if (emp != null && emp.getPositionId() != null && emp.getPositionId() == 1L) {
+                // Giám đốc không tham gia trực ca
+                continue;
+            }
+            WorkShift shift = shiftMap.get(item.getWorkShiftId());
+            if (shift == null) {
+                shift = workShiftRepository.findByIdAndDeletedAtIsNull(item.getWorkShiftId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Mẫu ca làm việc", item.getWorkShiftId()));
+                shiftMap.put(shift.getId(), shift);
+            }
+
+            if (shift.getBranchId() != null && !shift.getBranchId().equals(schedule.getBranchId())) {
+                throw new BusinessException("BRANCH_SHIFT_MISMATCH", "Mẫu ca làm việc (" + shift.getShiftName() + ") không thuộc chi nhánh của lịch làm việc.", HttpStatus.BAD_REQUEST);
+            }
+
+            String key = item.getEmployeeId() + "_" + item.getWorkShiftId() + "_" + item.getWorkDate();
+            ShiftAssignment target = existingMap.get(key);
+
+            LocalDateTime[] times = ConflictDetectionEngine.calculatePlannedTimes(
+                    item.getWorkDate(),
+                    shift.getStartTime(),
+                    shift.getEndTime(),
+                    Boolean.TRUE.equals(shift.getIsCrossMidnight())
+            );
+
+            if (target != null) {
+                // Update existing assignment
+                target.setSnapshotShiftName(shift.getShiftName());
+                target.setSnapshotStartTime(shift.getStartTime());
+                target.setSnapshotEndTime(shift.getEndTime());
+                target.setSnapshotBreakMinutes(shift.getBreakMinutes());
+                target.setSnapshotCrossMidnight(shift.getIsCrossMidnight());
+                target.setSnapshotColorCode(shift.getColorCode());
+                target.setPlannedStartTime(times[0]);
+                target.setPlannedEndTime(times[1]);
+                target.setStatus("ASSIGNED");
+                target.setOverrideRule(item.getOverrideRule());
+                target.setOverrideReason(item.getOverrideReason());
+                toSave.add(target);
+            } else {
+                // Create new assignment
+                ShiftAssignment assignment = new ShiftAssignment();
+                assignment.setScheduleId(schedule.getId());
+                assignment.setEmployeeId(item.getEmployeeId());
+                assignment.setWorkShiftId(shift.getId());
+                assignment.setWorkDate(item.getWorkDate());
+                assignment.setSnapshotShiftName(shift.getShiftName());
+                assignment.setSnapshotStartTime(shift.getStartTime());
+                assignment.setSnapshotEndTime(shift.getEndTime());
+                assignment.setSnapshotBreakMinutes(shift.getBreakMinutes());
+                assignment.setSnapshotCrossMidnight(shift.getIsCrossMidnight());
+                assignment.setSnapshotColorCode(shift.getColorCode());
+                assignment.setPlannedStartTime(times[0]);
+                assignment.setPlannedEndTime(times[1]);
+                assignment.setStatus("ASSIGNED");
+                assignment.setOverrideRule(item.getOverrideRule());
+                assignment.setOverrideReason(item.getOverrideReason());
+                toSave.add(assignment);
+                existingMap.put(key, assignment);
+            }
+        }
+
+        List<ShiftAssignment> saved = assignmentRepository.saveAll(toSave);
+
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            for (ShiftAssignment sa : saved) {
+                historyRepository.save(new ScheduleChangeHistory(
+                        schedule.getId(),
+                        sa.getId(),
+                        "CREATE",
+                        null,
+                        "Gán phân ca tự động hàng loạt: " + sa.getSnapshotShiftName(),
+                        "Xếp ca tự động",
+                        currentUserId != null ? currentUserId : 1L
+                ));
+            }
+        }
+
+        return saved.stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void deleteAssignment(Long id, Integer scheduleVersion, Long currentUserId) {
+        ShiftAssignment assignment = assignmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Phân ca", id));
+
+        Schedule schedule = scheduleRepository.findById(assignment.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", assignment.getScheduleId()));
+
+        assertScheduleNotLocked(schedule);
+
+        if (scheduleVersion != null && !schedule.getVersion().equals(scheduleVersion)) {
+            throw new ObjectOptimisticLockingFailureException(Schedule.class, schedule.getId());
+        }
+
+        // Kiểm tra quyền hạn quản lý: Quản lý không được xóa ca của cơ sở khác
+        if (currentUserId != null && currentUserId > 1L) {
+            Employee actor = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId).orElse(null);
+            if (actor != null && actor.getPositionId() != null && actor.getPositionId() == 2) { // ROLE_MANAGER
+                if (!schedule.getBranchId().equals(actor.getBranchId())) {
+                    throw new BusinessException("FORBIDDEN", "Quản lý không có quyền xóa ca làm việc thuộc cơ sở khác.", HttpStatus.FORBIDDEN);
+                }
+            }
+        }
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            historyRepository.save(new ScheduleChangeHistory(
+                    schedule.getId(),
+                    assignment.getId(),
+                    "DELETE",
+                    "Xóa ca: " + assignment.getSnapshotShiftName(),
+                    null,
+                    "Xóa ca sau công bố",
+                    currentUserId != null ? currentUserId : 1L
+            ));
+        }
+
+        assignmentRepository.delete(assignment);
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+    }
+
+    @Transactional
+    public ShiftAssignmentDto updateOverrideReason(Long id, UpdateOverrideReasonRequest request, Long currentUserId) {
+        ShiftAssignment assignment = assignmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Phân ca", id));
+
+        Schedule schedule = scheduleRepository.findById(assignment.getScheduleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", assignment.getScheduleId()));
+
+        assertScheduleNotLocked(schedule);
+
+        if (assignment.getTransferredFromEmployeeId() != null ||
+                (assignment.getOverrideReason() != null && assignment.getOverrideReason().contains("HANDOVER-"))) {
+            throw new BusinessException("IMMUTABLE_OVERRIDE", "Không thể chỉnh sửa giải trình của ca đã được chuyển nhượng hoặc đổi qua hệ thống.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (request.getScheduleVersion() != null && !schedule.getVersion().equals(request.getScheduleVersion())) {
+            log.warn("Schedule version mismatch on override update for assignment {}: client={}, server={}",
+                    id, request.getScheduleVersion(), schedule.getVersion());
+        }
+
+        // Kiểm tra quyền hạn quản lý: Quản lý không được sửa ca của cơ sở khác
+        if (currentUserId != null && currentUserId > 1L) {
+            Employee actor = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId).orElse(null);
+            if (actor != null && actor.getPositionId() != null && actor.getPositionId() == 2) { // ROLE_MANAGER
+                if (!schedule.getBranchId().equals(actor.getBranchId())) {
+                    throw new BusinessException("FORBIDDEN", "Quản lý không có quyền cập nhật ca làm việc thuộc cơ sở khác.", HttpStatus.FORBIDDEN);
+                }
+            }
+        }
+
+        String rawReason = request.getOverrideReason();
+        String cleanedReason = (rawReason != null && !rawReason.trim().isEmpty()) ? rawReason.trim() : null;
+        assignment.setOverrideReason(cleanedReason);
+
+        if (request.getOverrideRule() != null) {
+            assignment.setOverrideRule(request.getOverrideRule().trim().isEmpty() ? null : request.getOverrideRule().trim());
+        }
+
+        ShiftAssignment saved = assignmentRepository.save(assignment);
+
+        if ("PUBLISHED".equalsIgnoreCase(schedule.getStatus())) {
+            historyRepository.save(new ScheduleChangeHistory(
+                    schedule.getId(),
+                    saved.getId(),
+                    "UPDATE_OVERRIDE",
+                    null,
+                    cleanedReason != null ? ("Cập nhật giải trình ca: " + assignment.getSnapshotShiftName()) : ("Xóa giải trình ca: " + assignment.getSnapshotShiftName()),
+                    cleanedReason,
+                    currentUserId != null ? currentUserId : 1L
+            ));
+        }
+
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+
+        return toDto(saved);
+    }
+
+    public ShiftAssignmentDto toDto(ShiftAssignment a) {
+        ShiftAssignmentDto dto = new ShiftAssignmentDto();
+        dto.setId(a.getId());
+        dto.setScheduleId(a.getScheduleId());
+        dto.setEmployeeId(a.getEmployeeId());
+        dto.setWorkShiftId(a.getWorkShiftId());
+        dto.setWorkDate(a.getWorkDate());
+        dto.setShiftName(a.getSnapshotShiftName());
+        dto.setStartTime(a.getSnapshotStartTime());
+        dto.setEndTime(a.getSnapshotEndTime());
+        dto.setBreakMinutes(a.getSnapshotBreakMinutes());
+        dto.setIsCrossMidnight(a.getSnapshotCrossMidnight());
+        dto.setColorCode(a.getSnapshotColorCode());
+        dto.setStatus(a.getStatus());
+        dto.setOverrideRule(a.getOverrideRule());
+        dto.setOverrideReason(a.getOverrideReason());
+        dto.setVersion(a.getVersion());
+        dto.setTransferredFromEmployeeId(a.getTransferredFromEmployeeId());
+
+        if (a.getTransferredFromEmployeeId() != null) {
+            employeeRepository.findById(a.getTransferredFromEmployeeId()).ifPresent(emp -> {
+                dto.setTransferredFromEmployeeName(emp.getFullName());
+                dto.setTransferredFromEmployeeCode(emp.getEmployeeCode());
+            });
+        }
+
+        if (a.getScheduleId() != null) {
+            scheduleRepository.findById(a.getScheduleId()).ifPresent(s -> {
+                dto.setBranchId(s.getBranchId());
+                if (s.getBranchId() != null) {
+                    branchRepository.findByIdAndDeletedAtIsNull(s.getBranchId())
+                            .ifPresent(b -> dto.setBranchName(b.getBranchName()));
+                }
+            });
+        }
+        return dto;
+    }
+}
+
+
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\modules\schedule\engine\rule\ConflictRule.java =====
+
+package com.company.hrms.modules.schedule.engine.rule;
+
+import com.company.hrms.modules.schedule.dto.ConflictValidationResult;
+import com.company.hrms.modules.schedule.engine.ConflictDetectionContext;
+
+public interface ConflictRule {
+
+    void evaluate(ConflictDetectionContext context, ConflictValidationResult result);
+}
+
+
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\modules\schedule\engine\rule\HolidayAssignmentRule.java =====
+
+package com.company.hrms.modules.schedule.engine.rule;
+
+import com.company.hrms.modules.schedule.domain.CompanyHoliday;
+import com.company.hrms.modules.schedule.dto.ConflictValidationResult;
+import com.company.hrms.modules.schedule.dto.ScheduleConflictDto;
+import com.company.hrms.modules.schedule.engine.ConflictDetectionContext;
+import org.springframework.stereotype.Component;
+
+@Component
+public class HolidayAssignmentRule implements ConflictRule {
+
+    @Override
+    public void evaluate(ConflictDetectionContext context, ConflictValidationResult result) {
+        if (context.getHolidays() == null || context.getHolidays().isEmpty()) {
+            return;
+        }
+
+        for (CompanyHoliday holiday : context.getHolidays()) {
+            if (context.getWorkDate().equals(holiday.getHolidayDate())) {
+                String empName = context.getEmployee() != null ? context.getEmployee().getFullName() : "Nhân viên #" + context.getEmployeeId();
+                String msg = String.format("Ngày %s là ngày nghỉ lễ (%s). Ca làm việc này sẽ áp dụng chính sách làm thêm ngày lễ theo quy định.",
+                        context.getWorkDate(), holiday.getHolidayName());
+
+                result.addWarning(new ScheduleConflictDto(
+                        "WARN_HOLIDAY_ASSIGNMENT",
+                        "WARNING",
+                        context.getEmployeeId(),
+                        empName,
+                        context.getWorkDate(),
+                        context.getWorkShiftId(),
+                        msg
+                ));
+                break;
+            }
+        }
+    }
+}
+
+
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\modules\schedule\engine\rule\StaffingCapacityRule.java =====
+
+package com.company.hrms.modules.schedule.engine.rule;
+
+import com.company.hrms.modules.schedule.domain.ShiftAssignment;
+import com.company.hrms.modules.schedule.dto.ConflictValidationResult;
+import com.company.hrms.modules.schedule.dto.ScheduleConflictDto;
+import com.company.hrms.modules.schedule.engine.ConflictDetectionContext;
+import com.company.hrms.modules.shift.domain.WorkShift;
+import org.springframework.stereotype.Component;
+
+@Component
+public class StaffingCapacityRule implements ConflictRule {
+
+    @Override
+    public void evaluate(ConflictDetectionContext context, ConflictValidationResult result) {
+        WorkShift shift = context.getWorkShift();
+        if (shift == null || shift.getMinStaffing() == null || shift.getMaxStaffing() == null) {
+            return;
+        }
+
+        // Count assignments on the same workDate for this shift
+        int count = 1; // including the candidate
+        for (ShiftAssignment existing : context.getExistingAssignments()) {
+            if ("CANCELLED".equalsIgnoreCase(existing.getStatus())) {
+                continue;
+            }
+            if (context.getExcludeAssignmentId() != null && context.getExcludeAssignmentId().equals(existing.getId())) {
+                continue;
+            }
+            if (context.getWorkDate().equals(existing.getWorkDate()) &&
+                    context.getWorkShiftId().equals(existing.getWorkShiftId()) &&
+                    !context.getEmployeeId().equals(existing.getEmployeeId())) {
+                count++;
+            }
+        }
+
+        String empName = context.getEmployee() != null ? context.getEmployee().getFullName() : "Nhân viên #" + context.getEmployeeId();
+
+        if (count > shift.getMaxStaffing()) {
+            String msg = String.format("%s ngày %s đã vượt định biên tối đa (%d NV). Bổ sung nhân sự cần ghi nhận lý do tăng cường.",
+                    shift.getShiftName(), context.getWorkDate(), shift.getMaxStaffing());
+
+            result.addWarning(new ScheduleConflictDto(
+                    "WARN_STAFFING_CAPACITY",
+                    "WARNING",
+                    context.getEmployeeId(),
+                    empName,
+                    context.getWorkDate(),
+                    context.getWorkShiftId(),
+                    msg
+            ));
+        }
+    }
+}
+
+
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\modules\schedule\engine\rule\WeeklyMaxHoursRule.java =====
+
+package com.company.hrms.modules.schedule.engine.rule;
+
+import com.company.hrms.modules.schedule.domain.ShiftAssignment;
+import com.company.hrms.modules.schedule.dto.ConflictValidationResult;
+import com.company.hrms.modules.schedule.dto.ScheduleConflictDto;
+import com.company.hrms.modules.schedule.engine.ConflictDetectionContext;
+import com.company.hrms.modules.schedule.engine.rule.IntervalMergeUtils.Interval;
+import static com.company.hrms.modules.schedule.engine.rule.IntervalMergeUtils.calculateDeduplicatedMinutes;
+
+import org.springframework.stereotype.Component;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+@Component
+public class WeeklyMaxHoursRule implements ConflictRule {
+
+    @Override
+    public void evaluate(ConflictDetectionContext context, ConflictValidationResult result) {
+        if (context.getPlannedStartTime() == null || context.getPlannedEndTime() == null) {
+            return;
+        }
+
+        LocalDate monday = context.getWorkDate().with(DayOfWeek.MONDAY);
+        LocalDate sunday = context.getWorkDate().with(DayOfWeek.SUNDAY);
+
+        List<Interval> intervals = new ArrayList<>();
+
+        // 1. Candidate shift hours
+        int candidateBreak = context.getWorkShift() != null && context.getWorkShift().getBreakMinutes() != null
+                ? context.getWorkShift().getBreakMinutes()
+                : 0;
+        intervals.add(new Interval(context.getPlannedStartTime(), context.getPlannedEndTime(), candidateBreak));
+
+        // 2. Existing assignments in this week for this employee
+        for (ShiftAssignment existing : context.getExistingAssignments()) {
+            if ("CANCELLED".equalsIgnoreCase(existing.getStatus())) {
+                continue;
+            }
+            if (context.getExcludeAssignmentId() != null && context.getExcludeAssignmentId().equals(existing.getId())) {
+                continue;
+            }
+            if (!context.getEmployeeId().equals(existing.getEmployeeId())) {
+                continue;
+            }
+
+            LocalDate existingDate = existing.getWorkDate();
+            if (!existingDate.isBefore(monday) && !existingDate.isAfter(sunday)) {
+                int existBreak = existing.getSnapshotBreakMinutes() != null ? existing.getSnapshotBreakMinutes() : 0;
+                intervals.add(new Interval(existing.getPlannedStartTime(), existing.getPlannedEndTime(), existBreak));
+            }
+        }
+
+        long totalMinutes = calculateDeduplicatedMinutes(intervals);
+        double totalHours = totalMinutes / 60.0;
+        if (totalHours > context.getMaxWeeklyHours()) {
+            String empName = context.getEmployee() != null ? context.getEmployee().getFullName() : "Nhân viên #" + context.getEmployeeId();
+            String msg = String.format("Tổng giờ làm trong tuần (từ %s đến %s) của nhân viên %s là %.1f giờ (vượt giới hạn quy định %.1f giờ/tuần).",
+                    monday, sunday, empName, totalHours, context.getMaxWeeklyHours());
+
+            result.addWarning(new ScheduleConflictDto(
+                    "WARN_WEEKLY_HOURS_EXCEEDED",
+                    "WARNING",
+                    context.getEmployeeId(),
+                    empName,
+                    context.getWorkDate(),
+                    context.getWorkShiftId(),
+                    msg
+            ));
+        }
+    }
+}
+
+
+===== D:\Project\Employee Management\backend\src\main\java\com\company\hrms\security\service\UserPrincipal.java =====
+
+package com.company.hrms.security.service;
+
+import com.company.hrms.modules.auth.domain.User;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class UserPrincipal implements UserDetails {
+
+    private final Long id;
+    private final Long employeeId;
+    private final String username;
+    private final String email;
+    private final String password;
+    private final boolean isActive;
+    private final Collection<? extends GrantedAuthority> authorities;
+
+    public UserPrincipal(Long id, Long employeeId, String username, String email, String password, boolean isActive, Collection<? extends GrantedAuthority> authorities) {
+        this.id = id;
+        this.employeeId = employeeId;
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.isActive = isActive;
+        this.authorities = authorities;
+    }
+
+    public static UserPrincipal create(User user, Long employeeId) {
+        List<GrantedAuthority> authorities = user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.getRoleCode()))
+                .collect(Collectors.toList());
+
+        return new UserPrincipal(
+                user.getId(),
+                employeeId,
+                user.getUsername(),
+                user.getEmail(),
+                user.getPasswordHash(),
+                user.getIsActive() && user.getDeletedAt() == null,
+                authorities
+        );
+    }
+
+    public static UserPrincipal create(User user) {
+        return create(user, null);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Long getEmployeeId() {
+        return employeeId;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return authorities;
+    }
+
+    @Override
+    public String getPassword() {
+        return password;
+    }
+
+    @Override
+    public String getUsername() {
+        return username;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return isActive;
+    }
+}
+
+
+===== D:\Project\Employee Management\frontend\src\features\schedule\api\scheduleService.ts =====
+
+import { api } from '@/shared/api/apiClient';
+
+export interface ShiftTemplate {
+  id: number;
+  shift_code: string;
+  shift_name: string;
+  start_time: string;
+  end_time: string;
+  break_minutes: number;
+  is_cross_midnight: boolean;
+  color_code?: string | null;
+  text_color?: string | null;
+  min_staffing: number;
+  max_staffing: number;
+}
+
+export interface ShiftAssignment {
+  id: number;
+  schedule_id: number;
+  employee_id: number;
+  work_shift_id: number;
+  work_date: string;
+  shift_name: string;
+  start_time: string;
+  end_time: string;
+  break_minutes?: number;
+  is_cross_midnight?: boolean;
+  color_code?: string | null;
+  status: string;
+  override_rule?: string;
+  override_reason?: string;
+  version?: number;
+  branch_id?: number;
+  branch_name?: string;
+  is_external?: boolean;
+  read_only?: boolean;
+  transferred_from_employee_id?: number;
+  transferred_from_employee_name?: string;
+  transferred_from_employee_code?: string;
+}
+
+export interface EmployeeSchedule {
+  employee_id: number;
+  employee_code: string;
+  full_name: string;
+  weekly_scheduled_hours: number;
+  assignments: ShiftAssignment[];
+  has_multi_branch?: boolean;
+  home_branch_id?: number;
+  home_branch_name?: string;
+  branch_hours?: number;
+  total_chain_hours?: number;
+}
+
+export interface WeeklyScheduleData {
+  schedule_id: number;
+  branch_id: number;
+  branch_name: string;
+  start_date: string;
+  end_date: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  version: number;
+  employees: EmployeeSchedule[];
+  holidays: Array<{ date: string; name: string }>;
+  shift_templates: ShiftTemplate[];
+}
+
+export interface ScheduleConflict {
+  rule_code: string;
+  severity: 'MANDATORY' | 'WARNING';
+  employee_id: number;
+  employee_name?: string;
+  work_date: string;
+  work_shift_id: number;
+  message: string;
+}
+
+export interface ConflictValidationResult {
+  is_valid: boolean;
+  has_mandatory_errors: boolean;
+  has_warnings: boolean;
+  mandatory_errors: ScheduleConflict[];
+  warnings: ScheduleConflict[];
+}
+
+export const scheduleService = {
+  async getWeeklySchedule(branchId: number, date: string): Promise<WeeklyScheduleData> {
+    return api.get<WeeklyScheduleData>(`/schedules/weekly?branch_id=${branchId}&start_date=${date}`);
+  },
+
+  async validateConflicts(branchId: number, assignments: Array<{ employee_id: number; work_shift_id: number; work_date: string }>): Promise<ConflictValidationResult> {
+    return api.post<ConflictValidationResult>('/schedules/validate-conflicts', {
+      branch_id: branchId,
+      assignments,
+    });
+  },
+
+  async assignSingleShift(data: {
+    schedule_id: number;
+    employee_id: number;
+    work_shift_id: number;
+    work_date: string;
+    override_rule?: string;
+    override_reason?: string;
+    schedule_version: number;
+  }): Promise<ShiftAssignment> {
+    return api.post<ShiftAssignment>('/schedules/assignments', data);
+  },
+
+  async claimShift(data: {
+    schedule_id: number;
+    work_shift_id: number;
+    work_date: string;
+    self_volunteered_confirm?: boolean;
+  }): Promise<ShiftAssignment> {
+    return api.post<ShiftAssignment>('/schedules/assignments/claim', data);
+  },
+
+  async cancelClaimedShift(assignmentId: number): Promise<void> {
+    return api.delete<void>(`/schedules/assignments/claim/${assignmentId}`);
+  },
+
+  async deleteAssignment(assignmentId: number, scheduleVersion?: number): Promise<void> {
+    const query = scheduleVersion !== undefined ? `?schedule_version=${scheduleVersion}` : '';
+    return api.delete<void>(`/schedules/assignments/${assignmentId}${query}`);
+  },
+
+  async updateAssignmentOverride(
+    assignmentId: number,
+    data: {
+      override_reason?: string | null;
+      override_rule?: string | null;
+      schedule_version?: number;
+    }
+  ): Promise<ShiftAssignment> {
+    return api.patch<ShiftAssignment>(`/schedules/assignments/${assignmentId}/override`, data);
+  },
+
+  async bulkAssign(data: {
+    schedule_id: number;
+    employee_ids: number[];
+    work_shift_id: number;
+    from_date: string;
+    to_date: string;
+    schedule_version: number;
+  }): Promise<ShiftAssignment[]> {
+    return api.post<ShiftAssignment[]>('/schedules/bulk-assign', data);
+  },
+
+  async publishSchedule(scheduleId: number, version: number): Promise<WeeklyScheduleData> {
+    return api.post<WeeklyScheduleData>(`/schedules/${scheduleId}/publish`, { version });
+  },
+
+  async unpublishSchedule(scheduleId: number): Promise<WeeklyScheduleData> {
+    return api.post<WeeklyScheduleData>(`/schedules/${scheduleId}/unpublish`);
+  },
+
+  async batchAssignShifts(data: {
+    schedule_id: number;
+    schedule_version?: number;
+    mode?: 'REPLACE_ALL' | 'FILL_MISSING';
+    from_date?: string;
+    to_date?: string;
+    assignments: Array<{
+      employee_id: number;
+      work_shift_id: number;
+      work_date: string;
+      override_rule?: string;
+      override_reason?: string;
+    }>;
+  }): Promise<ShiftAssignment[]> {
+    return api.post<ShiftAssignment[]>('/schedules/assignments/batch', data);
+  },
+
+  async copyScheduleWeek(data: {
+    branch_id: number;
+    source_start_date: string;
+    target_start_date: string;
+    mode: 'SKIP_OCCUPIED' | 'REPLACE_ALL';
+  }): Promise<{
+    copied_count: number;
+    skipped_count: number;
+    target_schedule_id: number;
+    message?: string;
+  }> {
+    return api.post('/schedules/copy-week', data);
+  },
+};
+
+
+===== D:\Project\Employee Management\frontend\src\features\schedule\dialogs\ClaimShiftModal.tsx =====
+
+import React, { useState } from 'react';
+import type { ShiftTemplate } from '@/types/domain.types';
+import { useModalFocusTrap } from '@/hooks/useModalFocusTrap';
+import { useAuthStore } from '@/shared/auth/useAuthStore';
+import {
+  Calendar,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  X,
+  Loader2,
+  UserCheck,
+} from 'lucide-react';
+
+export interface ClaimShiftModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  template: ShiftTemplate | null;
+  workDate: string;
+  onConfirm: (selfVolunteeredConfirm?: boolean) => Promise<{
+    success: boolean;
+    error?: string;
+    warningMessage?: string;
+    needsConfirm?: boolean;
+  }>;
+}
+
+export const ClaimShiftModal: React.FC<ClaimShiftModalProps> = ({
+  isOpen,
+  onClose,
+  template,
+  workDate,
+  onConfirm,
+}) => {
+  const modalRef = useModalFocusTrap({ isOpen, onClose });
+  const { currentUser } = useAuthStore();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [isVolunteered, setIsVolunteered] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setIsSubmitting(false);
+      setWarningMessage(null);
+      setIsVolunteered(false);
+      setErrorMessage(null);
+    }
+  }, [isOpen, template, workDate]);
+
+  if (!isOpen || !template) return null;
+
+  const handleClaim = async (volunteeredConfirm: boolean) => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const res = await onConfirm(volunteeredConfirm);
+      if (res.success) {
+        onClose();
+      } else if (res.needsConfirm) {
+        setWarningMessage(
+          res.warningMessage ||
+            'Khoảng cách nghỉ giữa ca làm việc này và ca liền kề dưới mức tiêu chuẩn. Bạn có đồng ý tự nguyện nhận ca không?'
+        );
+      } else if (res.error) {
+        setErrorMessage(res.error);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="drawer-backdrop"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        zIndex: 1100,
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      role="presentation"
+    >
+      <div
+        ref={modalRef}
+        className="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="claim-modal-title"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          top: 'auto',
+          left: 'auto',
+          transform: 'none',
+          width: 500,
+          maxWidth: 'calc(100vw - 32px)',
+          backgroundColor: '#FFFFFF',
+          borderRadius: 16,
+          boxShadow: '0 20px 25px -5px rgba(15, 23, 42, 0.15)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '16px 20px',
+            borderBottom: '1px solid #E2E8F0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: '#F0F9FF',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                backgroundColor: '#E0F2FE',
+                color: '#0284C7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <UserCheck size={20} />
+            </div>
+            <div>
+              <h3
+                id="claim-modal-title"
+                style={{ fontSize: 16, fontWeight: 700, color: '#0369A1', margin: 0 }}
+              >
+                Đăng Ký Nhận Ca Trống
+              </h3>
+              <p style={{ fontSize: 12, color: '#64748B', margin: '2px 0 0' }}>
+                Tự thêm lịch làm việc của bạn vào ca còn thiếu định biên.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94A3B8',
+              cursor: 'pointer',
+              padding: 4,
+              borderRadius: 6,
+            }}
+            aria-label="Đóng"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Shift Details Card */}
+          <div
+            style={{
+              padding: '14px 16px',
+              backgroundColor: '#F8FAFC',
+              borderRadius: 12,
+              border: '1px solid #E2E8F0',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#0F172A' }}>
+                {template.shiftName}
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  backgroundColor: '#EFF6FF',
+                  color: '#2563EB',
+                  border: '1px solid #BFDBFE',
+                }}
+              >
+                Định biên: {template.minStaffing} - {template.maxStaffing || template.minStaffing} NV
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 16,
+                marginTop: 10,
+                fontSize: 13,
+                color: '#475569',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Calendar size={15} color="#0284C7" />
+                <span>Ngày: <strong>{workDate}</strong></span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Clock size={15} color="#0284C7" />
+                <span>
+                  Giờ làm: <strong>{template.startTime} - {template.endTime}</strong>
+                  {template.isCrossMidnight && ' (+1 ngày)'}
+                </span>
+              </div>
+            </div>
+
+            {currentUser && (
+              <div
+                style={{
+                  marginTop: 12,
+                  paddingTop: 10,
+                  borderTop: '1px dashed #CBD5E1',
+                  fontSize: 12,
+                  color: '#64748B',
+                }}
+              >
+                Nhân sự đăng ký: <strong style={{ color: '#0F172A' }}>{currentUser.fullName}</strong> ({currentUser.employeeCode || 'NV'})
+              </div>
+            )}
+          </div>
+
+          {/* Hard Error Banner */}
+          {errorMessage && (
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: 10,
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#DC2626',
+                fontSize: 13,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+              }}
+            >
+              <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <strong style={{ display: 'block', marginBottom: 2 }}>Không thể nhận ca</strong>
+                <span>{errorMessage}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Voluntary Confirmation Warning Banner */}
+          {warningMessage && (
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: 12,
+                backgroundColor: '#FFFBEB',
+                border: '1px solid #FDE68A',
+                color: '#B45309',
+                fontSize: 13,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <AlertTriangle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <strong style={{ display: 'block', color: '#92400E', marginBottom: 2 }}>
+                    Cảnh báo thời gian nghỉ giữa 2 ca
+                  </strong>
+                  <span>{warningMessage}</span>
+                </div>
+              </div>
+
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  color: '#78350F',
+                  cursor: 'pointer',
+                  paddingTop: 6,
+                  borderTop: '1px dashed #FCD34D',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isVolunteered}
+                  onChange={(e) => setIsVolunteered(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                Tôi xác nhận tự nguyện đăng ký ca làm này và đảm bảo sức khỏe.
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div
+          style={{
+            padding: '14px 20px',
+            borderTop: '1px solid #E2E8F0',
+            backgroundColor: '#F8FAFC',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 10,
+          }}
+        >
+          <button
+            type="button"
+            className="btn btn-default"
+            onClick={onClose}
+            disabled={isSubmitting}
+            style={{ height: 36, padding: '0 16px', fontSize: 13, borderRadius: 8 }}
+          >
+            Hủy
+          </button>
+
+          {warningMessage ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!isVolunteered || isSubmitting}
+              onClick={() => handleClaim(true)}
+              style={{
+                height: 36,
+                padding: '0 16px',
+                fontSize: 13,
+                borderRadius: 8,
+                backgroundColor: isVolunteered ? '#D97706' : '#CBD5E1',
+                borderColor: isVolunteered ? '#B45309' : '#CBD5E1',
+                cursor: isVolunteered && !isSubmitting ? 'pointer' : 'not-allowed',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={14} className="spin" />
+                  Đang ghi nhận...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={15} />
+                  Xác nhận tự nguyện nhận ca
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={isSubmitting}
+              onClick={() => handleClaim(false)}
+              style={{
+                height: 36,
+                padding: '0 18px',
+                fontSize: 13,
+                borderRadius: 8,
+                backgroundColor: '#0284C7',
+                borderColor: '#0369A1',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={14} className="spin" />
+                  Đang đăng ký...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={15} />
+                  Đăng ký ca này
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+===== D:\Project\Employee Management\frontend\src\features\schedule\store\useScheduleStore.ts =====
+
+import { create } from 'zustand';
+import { format, addDays, parseISO } from 'date-fns';
+import type {
+  ShiftAssignment,
+  ScheduleConflict,
+  ChangeHistoryEntry,
+  ScheduleStatus,
+  Employee,
+  ShiftTemplate,
+  LeaveRequest,
+  CompanyHoliday,
+  RoleType,
+} from '@/types/domain.types';
+import type { ScheduleFilterOptions } from '@/types/schedule.types';
+import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
+import { getShiftAbsoluteTimeRange } from '@/utils/conflict-detector.utils';
+import { scheduleService } from '../api/scheduleService';
+import { workShiftService } from '@/features/shifts/api/workShiftService';
+import {
+  STORAGE_PREFIX,
+  loadBranchScheduleFromStorage,
+  saveBranchScheduleToStorage,
+} from '../utils/scheduleStorage';
+import { computeAllConflicts } from '../utils/scheduleConflictComputer';
+
+
+
+export interface AssignShiftPayload {
+  assignmentId?: number; // Optional ID for updating an existing shift
+  employeeId: number;
+  workShiftId: number;
+  workDate: string;
+  overrideRule?: string | null;
+  overrideReason?: string | null;
+  changeReason?: string;
+  actorRole: RoleType;
+}
+
+interface ScheduleState {
+  currentStartDate: string; // YYYY-MM-DD (Monday)
+  scheduleId: number;
+  scheduleStatus: ScheduleStatus;
+  scheduleVersion: number;
+  publishedAt: string | null;
+
+  assignments: Record<string, ShiftAssignment[]>; // Key: `${employeeId}_${workDate}`
+  conflicts: Record<string, ScheduleConflict[]>;
+  changeHistory: ChangeHistoryEntry[];
+
+  viewMode: 'WEEK' | 'MONTH';
+  filterOptions: ScheduleFilterOptions;
+
+  employees: Employee[];
+  shiftTemplates: ShiftTemplate[];
+  approvedLeaves: LeaveRequest[];
+  holidays: CompanyHoliday[];
+  isFetchingSchedule: boolean;
+
+  // Actions
+  fetchWeeklySchedule: (branchId: number, startDate: string) => Promise<void>;
+  setWeek: (mondayDateStr: string) => void;
+  setViewMode: (mode: 'WEEK' | 'MONTH') => void;
+  setFilters: (filters: Partial<ScheduleFilterOptions>) => void;
+
+  assignShift: (payload: AssignShiftPayload) => { success: boolean; error?: string };
+  deleteAssignment: (assignmentId: number, changeReason?: string, actorRole?: RoleType) => void;
+  applyAutoAssignments: (
+    newAssignments: ShiftAssignment[],
+    mode?: 'REPLACE_ALL' | 'FILL_MISSING',
+    fromDate?: string,
+    toDate?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  copyWeek: (mode: 'SKIP_OCCUPIED' | 'REPLACE_ALL') => Promise<{ copiedCount: number; skippedCount: number }>;
+  publishSchedule: () => void;
+  unpublishSchedule: () => void;
+  recomputeAllConflicts: () => void;
+  resetDemoData: () => void;
+
+  /** Xóa toàn bộ phân ca trong tuần hiện tại đang chọn */
+  resetCurrentWeekSchedule: () => Promise<boolean>;
+
+  /** Cập nhật giải trình đặc cách cho ca phân công (hỗ trợ null để xóa giải trình) */
+  updateAssignmentOverride: (assignmentId: number, overrideReason: string | null, overrideRule?: string) => Promise<boolean>;
+
+  /** Nhân viên tự đăng ký ca trống */
+  claimShift: (data: {
+    workShiftId: number;
+    workDate: string;
+    selfVolunteeredConfirm?: boolean;
+  }) => Promise<{ success: boolean; error?: string; warningMessage?: string; needsConfirm?: boolean }>;
+
+  /** Nhân viên tự hủy ca đã đăng ký */
+  cancelClaimedShift: (assignmentId: number) => Promise<{ success: boolean; error?: string }>;
+
+  fetchShiftTemplates: (branchId?: number) => Promise<void>;
+  addShiftTemplate: (template: Omit<ShiftTemplate, 'id'>) => Promise<ShiftTemplate> | ShiftTemplate;
+  updateShiftTemplate: (id: number, data: Partial<ShiftTemplate>) => Promise<void> | void;
+  deleteShiftTemplate: (id: number) => Promise<{ success: boolean; error?: string }> | { success: boolean; error?: string };
+  addApprovedLeave: (leave: LeaveRequest) => void;
+  removeApprovedLeave: (leaveId: number) => void;
+}
+
+function initializeStateFromSeed(branchId: number = 1) {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = addDays(today, diffToMonday);
+  const currentMondayStr = format(monday, 'yyyy-MM-dd');
+
+  // Attempt initial load from localStorage
+  const cachedAssignments = loadBranchScheduleFromStorage(branchId, currentMondayStr);
+
+  return {
+    currentStartDate: currentMondayStr,
+    scheduleId: 0,
+    scheduleStatus: 'DRAFT' as ScheduleStatus,
+    scheduleVersion: 1,
+    publishedAt: null as string | null,
+    assignments: cachedAssignments,
+    conflicts: {} as Record<string, ScheduleConflict[]>,
+    changeHistory: [] as ChangeHistoryEntry[],
+    viewMode: 'WEEK' as const,
+    filterOptions: {
+      branchId,
+      searchTerm: '',
+      shiftCodeFilter: '',
+      onlyShowConflicts: false,
+      onlyShowUnderstaffed: false,
+    },
+    employees: useDirectoryStore.getState().employees.filter((e) => e.branchId === branchId),
+    shiftTemplates: [] as ShiftTemplate[],
+    approvedLeaves: [] as LeaveRequest[],
+    holidays: [] as CompanyHoliday[],
+    isFetchingSchedule: false,
+  };
+}
+
+export const useScheduleStore = create<ScheduleState>((set, get) => {
+  const initial = initializeStateFromSeed(1);
+  const initialConflicts = computeAllConflicts(
+      initial.assignments,
+      initial.employees,
+      initial.approvedLeaves,
+      initial.holidays,
+      initial.shiftTemplates
+  );
+
+  return {
+    ...initial,
+    conflicts: initialConflicts,
+
+    fetchWeeklySchedule: async (branchId: number, startDate: string) => {
+      set({ isFetchingSchedule: true });
+
+      // 1. Immediately load cached data from localStorage so there's 0ms blank state
+      const localCache = loadBranchScheduleFromStorage(branchId, startDate);
+      if (Object.keys(localCache).length > 0) {
+        set((state) => ({
+          assignments: {
+            ...state.assignments,
+            ...localCache,
+          },
+        }));
+      }
+
+      try {
+        const data = await scheduleService.getWeeklySchedule(branchId, startDate);
+        if (!data) {
+          set({ isFetchingSchedule: false });
+          return;
+        }
+
+        const currentMon = parseISO(startDate);
+        const currentSun = addDays(currentMon, 6);
+        const monStr = startDate;
+        const sunStr = format(currentSun, 'yyyy-MM-dd');
+
+        // Retain assignments from other weeks, but clear this week so backend is the Single Source of Truth
+        const mergedAssignments: Record<string, ShiftAssignment[]> = {};
+        for (const [key, list] of Object.entries(get().assignments)) {
+          const filtered = list.filter((a) => a.workDate < monStr || a.workDate > sunStr);
+          if (filtered.length > 0) {
+            mergedAssignments[key] = filtered;
+          }
+        }
+
+        const backendEmployees: Employee[] = [];
+        const thisWeekOnlyAssignments: Record<string, ShiftAssignment[]> = {};
+
+        for (const empSchedule of data.employees || []) {
+          const dirEmp = useDirectoryStore.getState().getEmployeeById(empSchedule.employee_id);
+          const resolvedStatus = (empSchedule as any).employment_status || (empSchedule as any).employmentStatus || dirEmp?.employmentStatus || 'OFFICIAL';
+          const resolvedIsActive = (empSchedule as any).is_active !== undefined
+              ? (empSchedule as any).is_active
+              : ((empSchedule as any).isActive !== undefined ? (empSchedule as any).isActive : (dirEmp?.isActive !== undefined ? dirEmp.isActive : resolvedStatus !== 'RESIGNED'));
+
+          backendEmployees.push({
+            id: empSchedule.employee_id,
+            employeeCode: empSchedule.employee_code,
+            fullName: empSchedule.full_name,
+            email: `${empSchedule.employee_code.toLowerCase()}@example.com`,
+            phoneNumber: dirEmp?.phoneNumber || '',
+            branchId: (empSchedule as any).home_branch_id || dirEmp?.branchId || data.branch_id || branchId,
+            positionId: dirEmp?.positionId || 3,
+            managerId: dirEmp?.managerId || null,
+            employmentStatus: resolvedStatus,
+            employmentType: dirEmp?.employmentType || 'FULL_TIME',
+            hireDate: dirEmp?.hireDate || '2026-01-01',
+            isActive: resolvedIsActive,
+            hasMultiBranch: Boolean((empSchedule as any).has_multi_branch),
+            homeBranchId: (empSchedule as any).home_branch_id,
+            homeBranchName: (empSchedule as any).home_branch_name,
+            branchHours: (empSchedule as any).branch_hours,
+            totalChainHours: (empSchedule as any).total_chain_hours,
+          });
+
+          for (const a of empSchedule.assignments || []) {
+            const key = `${a.employee_id}_${a.work_date}`;
+            const mappedAssignment: ShiftAssignment = {
+              id: a.id,
+              scheduleId: a.schedule_id,
+              employeeId: a.employee_id,
+              workShiftId: a.work_shift_id,
+              workDate: a.work_date,
+              snapshotShiftName: a.shift_name,
+              snapshotStartTime: a.start_time,
+              snapshotEndTime: a.end_time,
+              snapshotBreakMinutes: a.break_minutes || 0,
+              snapshotCrossMidnight: a.is_cross_midnight || false,
+              snapshotColorCode: a.color_code ?? null,
+              plannedStartTime: `${a.work_date}T${a.start_time}`,
+              plannedEndTime: `${a.work_date}T${a.end_time}`,
+              status: (a.status as any) || 'ASSIGNED',
+              overrideRule: a.override_rule ?? null,
+              overrideReason: a.override_reason ?? null,
+              version: a.version || 1,
+              branchId: a.branch_id || data.branch_id || branchId,
+              branchName: a.branch_name || data.branch_name,
+              isExternal: Boolean(a.is_external),
+              readOnly: Boolean(a.read_only),
+              transferredFromEmployeeId: a.transferred_from_employee_id,
+              transferredFromEmployeeName: a.transferred_from_employee_name,
+              transferredFromEmployeeCode: a.transferred_from_employee_code,
+            };
+
+            const existingList = mergedAssignments[key] ? [...mergedAssignments[key]] : [];
+            const idx = existingList.findIndex((item) => item.id === a.id);
+            if (idx >= 0) {
+              existingList[idx] = mappedAssignment;
+            } else {
+              existingList.push(mappedAssignment);
+            }
+            mergedAssignments[key] = existingList;
+
+            const weekList = thisWeekOnlyAssignments[key] ? [...thisWeekOnlyAssignments[key]] : [];
+            weekList.push(mappedAssignment);
+            thisWeekOnlyAssignments[key] = weekList;
+          }
+        }
+
+        saveBranchScheduleToStorage(branchId, thisWeekOnlyAssignments, startDate);
+
+        const templates: ShiftTemplate[] = (data.shift_templates || []).map((t: any) => ({
+          id: t.id,
+          shiftCode: t.shift_code || t.shiftCode,
+          shiftName: t.shift_name || t.shiftName,
+          startTime: t.start_time || t.startTime,
+          endTime: t.end_time || t.endTime,
+          breakMinutes: t.break_minutes || t.breakMinutes || 0,
+          isCrossMidnight: t.is_cross_midnight || t.isCrossMidnight || false,
+          colorCode: t.color_code ?? t.colorCode ?? null,
+          textColor: t.text_color ?? t.textColor ?? null,
+          minStaffing: t.min_staffing || t.minStaffing || 1,
+          maxStaffing: t.max_staffing || t.maxStaffing || 10,
+          applicableDays: t.applicable_days || t.applicableDays || '1,2,3,4,5,6,7',
+          isActive: true,
+        }));
+
+        const fallbackEmployees = useDirectoryStore.getState().employees.filter((e) => e.branchId === branchId);
+
+        // Người dùng đã đổi sang chi nhánh khác trong lúc chờ phản hồi: bỏ kết quả cũ
+        if ((get().filterOptions.branchId || 1) !== branchId) return;
+
+        set({
+          scheduleId: data.schedule_id,
+          scheduleStatus: (data.status as ScheduleStatus) || 'DRAFT',
+          scheduleVersion: data.version !== undefined ? data.version : 0,
+          employees: backendEmployees.length > 0 ? backendEmployees : fallbackEmployees,
+          shiftTemplates: templates.length > 0 ? templates : get().shiftTemplates,
+          assignments: mergedAssignments,
+          isFetchingSchedule: false,
+        });
+
+        get().recomputeAllConflicts();
+      } catch (err) {
+        console.warn('Could not fetch weekly schedule from API, using fallback:', err);
+        set({ isFetchingSchedule: false });
+      }
+    },
+
+    setWeek: (mondayDateStr) => {
+      set({ currentStartDate: mondayDateStr });
+      const branchId = get().filterOptions.branchId || 1;
+      const cached = loadBranchScheduleFromStorage(branchId, mondayDateStr);
+      if (Object.keys(cached).length > 0) {
+        set((state) => ({
+          assignments: {
+            ...state.assignments,
+            ...cached,
+          },
+        }));
+      }
+      get().recomputeAllConflicts();
+    },
+
+    setViewMode: (viewMode) => set({ viewMode }),
+
+    setFilters: (newFilters) => {
+      const prevBranchId = get().filterOptions.branchId;
+      const branchChanged =
+          Boolean(newFilters.branchId) && newFilters.branchId !== prevBranchId;
+
+      set((state) => {
+        const updatedFilters = { ...state.filterOptions, ...newFilters };
+        let updatedAssignments = state.assignments;
+        let updatedEmployees = state.employees;
+
+        if (branchChanged && newFilters.branchId) {
+          const currentMon = parseISO(state.currentStartDate);
+          const currentSun = addDays(currentMon, 6);
+          const monStr = state.currentStartDate;
+          const sunStr = format(currentSun, 'yyyy-MM-dd');
+
+          // Giữ lại phân ca các tuần khác, làm sạch tuần hiện tại của chi nhánh cũ để không bị nhấp nháy chồng lấn
+          const nonCurrentWeekAssignments: Record<string, ShiftAssignment[]> = {};
+          for (const [key, list] of Object.entries(state.assignments)) {
+            const filtered = list.filter((a) => a.workDate < monStr || a.workDate > sunStr);
+            if (filtered.length > 0) {
+              nonCurrentWeekAssignments[key] = filtered;
+            }
+          }
+
+          // Nạp cache của chi nhánh mới được chọn
+          const branchCache = loadBranchScheduleFromStorage(newFilters.branchId, state.currentStartDate);
+          updatedAssignments = { ...nonCurrentWeekAssignments, ...branchCache };
+
+          // Nhân sự chuyển ngay sang danh sách của chi nhánh mới
+          updatedEmployees = useDirectoryStore
+              .getState()
+              .employees.filter((e) => e.branchId === newFilters.branchId);
+        }
+
+        return {
+          filterOptions: updatedFilters,
+          assignments: updatedAssignments,
+          employees: updatedEmployees,
+          isFetchingSchedule: branchChanged ? true : state.isFetchingSchedule,
+        };
+      });
+
+      if (branchChanged) {
+        get().recomputeAllConflicts();
+      }
+    },
+
+    assignShift: (payload) => {
+      const state = get();
+      if (state.scheduleStatus === 'PUBLISHED') {
+        return {
+          success: false,
+          error: 'Lịch tuần đã công bố chính thức và đang bị khóa. Chỉ Giám đốc hoặc Admin mới có quyền thu hồi về bản nháp để điều chỉnh.',
+        };
+      }
+
+      const emp = state.employees.find((e) => Number(e.id) === Number(payload.employeeId));
+      const template = state.shiftTemplates.find((t) => Number(t.id) === Number(payload.workShiftId));
+
+      if (!emp || !template) {
+        return { success: false, error: 'Nhân viên hoặc Ca làm việc không tồn tại' };
+      }
+
+      if (!emp.isActive || emp.employmentStatus === 'RESIGNED') {
+        return {
+          success: false,
+          error: 'Nhân viên đã thôi việc hoặc đang bị vô hiệu hóa, không được phân ca.',
+        };
+      }
+
+      const key = `${payload.employeeId}_${payload.workDate}`;
+      const existingList = state.assignments[key] ? [...state.assignments[key]] : [];
+
+      const { startMs, endMs } = getShiftAbsoluteTimeRange(
+          payload.workDate,
+          template.startTime,
+          template.endTime,
+          template.isCrossMidnight
+      );
+
+      // Determine if updating an existing assignment or adding a new one
+      const existingIndex = payload.assignmentId !== undefined
+          ? existingList.findIndex((a) => a.id === payload.assignmentId)
+          : -1;
+
+      const existingAssignment = existingIndex >= 0 ? existingList[existingIndex] : null;
+
+      const newAssignment: ShiftAssignment = {
+        id: existingAssignment ? existingAssignment.id : (Date.now() + Math.floor(Math.random() * 10000)),
+        scheduleId: state.scheduleId,
+        employeeId: emp.id,
+        workShiftId: template.id,
+        workDate: payload.workDate,
+        snapshotShiftName: template.shiftName,
+        snapshotStartTime: template.startTime,
+        snapshotEndTime: template.endTime,
+        snapshotBreakMinutes: template.breakMinutes,
+        snapshotCrossMidnight: template.isCrossMidnight,
+        snapshotColorCode: template.colorCode,
+        plannedStartTime: new Date(startMs).toISOString(),
+        plannedEndTime: new Date(endMs).toISOString(),
+        status: 'ASSIGNED',
+        overrideRule: payload.overrideRule ?? null,
+        overrideReason: payload.overrideReason ?? null,
+        version: existingAssignment ? existingAssignment.version + 1 : 1,
+      };
+
+      if (existingIndex >= 0) {
+        existingList[existingIndex] = newAssignment;
+      } else {
+        existingList.push(newAssignment);
+      }
+
+      const updatedAssignments = {
+        ...state.assignments,
+        [key]: existingList,
+      };
+
+      // Persist to localStorage immediately (offline-first)
+      saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments, state.currentStartDate);
+
+      const updatedConflicts = computeAllConflicts(
+          updatedAssignments,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays,
+          state.shiftTemplates
+      );
+
+      set({
+        assignments: updatedAssignments,
+        conflicts: updatedConflicts,
+        changeHistory: state.changeHistory,
+      });
+
+      scheduleService
+          .assignSingleShift({
+            schedule_id: state.scheduleId,
+            employee_id: payload.employeeId,
+            work_shift_id: payload.workShiftId,
+            work_date: payload.workDate,
+            override_rule: payload.overrideRule || undefined,
+            override_reason: payload.overrideReason || undefined,
+            schedule_version: state.scheduleVersion,
+          })
+          .then((saved) => {
+            if (saved && saved.id) {
+              set((prev) => {
+                const currentList = prev.assignments[key] || [];
+                const updatedList = currentList.map((item) =>
+                    item.id === newAssignment.id ? { ...item, id: saved.id, version: saved.version || item.version } : item
+                );
+                const newAssignmentsMap = {
+                  ...prev.assignments,
+                  [key]: updatedList,
+                };
+                saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, newAssignmentsMap, prev.currentStartDate);
+                const recomputedConflicts = computeAllConflicts(
+                  newAssignmentsMap,
+                  prev.employees,
+                  prev.approvedLeaves,
+                  prev.holidays,
+                  prev.shiftTemplates
+                );
+                return {
+                  assignments: newAssignmentsMap,
+                  conflicts: recomputedConflicts,
+                  scheduleVersion: (prev.scheduleVersion || 1) + 1,
+                };
+              });
+            }
+          })
+          .catch((err) => {
+            console.warn('Failed to persist shift assignment to backend:', err);
+          });
+
+      return { success: true };
+    },
+
+    deleteAssignment: (assignmentId, _changeReason, _actorRole = 'ROLE_DIRECTOR') => {
+      const state = get();
+      if (state.scheduleStatus === 'PUBLISHED') {
+        console.warn('Cannot delete shift assignment on a PUBLISHED schedule without reverting to DRAFT.');
+        return;
+      }
+
+      let targetKey: string | null = null;
+      let targetAssignment: ShiftAssignment | null = null;
+
+      for (const [key, list] of Object.entries(state.assignments)) {
+        const found = list.find((a) => a.id === assignmentId);
+        if (found) {
+          targetKey = key;
+          targetAssignment = found;
+          break;
+        }
+      }
+
+      if (!targetKey || !targetAssignment) return;
+
+      // Bảo vệ: Không cho phép xóa ca làm việc ngoại vi (chỉ đọc)
+      if (targetAssignment.readOnly || targetAssignment.isExternal) {
+        console.warn('Cannot delete external read-only assignment:', targetAssignment);
+        return;
+      }
+
+      scheduleService.deleteAssignment(assignmentId, state.scheduleVersion).catch((err) => {
+        console.warn('Failed to delete assignment on backend:', err);
+      });
+
+      const updatedAssignments = { ...state.assignments };
+      const filteredList = (updatedAssignments[targetKey] || []).filter((a) => a.id !== assignmentId);
+      if (filteredList.length > 0) {
+        updatedAssignments[targetKey] = filteredList;
+      } else {
+        delete updatedAssignments[targetKey];
+      }
+
+      saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments, state.currentStartDate);
+
+      const updatedConflicts = computeAllConflicts(
+          updatedAssignments,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays,
+          state.shiftTemplates
+      );
+
+      set({
+        assignments: updatedAssignments,
+        conflicts: updatedConflicts,
+        changeHistory: state.changeHistory,
+      });
+    },
+
+    updateAssignmentOverride: async (assignmentId: number, overrideReason: string | null, overrideRule?: string) => {
+      const state = get();
+      if (state.scheduleStatus === 'PUBLISHED') {
+        return false;
+      }
+
+      const normalizedReason = overrideReason && overrideReason.trim().length > 0 ? overrideReason.trim() : null;
+
+      let found = false;
+      let targetKey: string | null = null;
+      const updatedAssignments: Record<string, ShiftAssignment[]> = { ...state.assignments };
+
+      for (const key of Object.keys(updatedAssignments)) {
+        const list = updatedAssignments[key];
+        const idx = list.findIndex((a) => Number(a.id) === Number(assignmentId));
+        if (idx >= 0) {
+          const updatedItem: ShiftAssignment = {
+            ...list[idx],
+            overrideReason: normalizedReason,
+            overrideRule: normalizedReason ? (overrideRule || list[idx].overrideRule || 'WARN_STAFFING_CAPACITY') : null,
+          };
+          updatedAssignments[key] = [
+            ...list.slice(0, idx),
+            updatedItem,
+            ...list.slice(idx + 1),
+          ];
+          found = true;
+          targetKey = key;
+          break;
+        }
+      }
+
+      if (!found) return false;
+
+      saveBranchScheduleToStorage(state.filterOptions.branchId || 1, updatedAssignments, state.currentStartDate);
+      const updatedConflicts = computeAllConflicts(
+        updatedAssignments,
+        state.employees,
+        state.approvedLeaves,
+        state.holidays,
+        state.shiftTemplates
+      );
+
+      set({
+        assignments: updatedAssignments,
+        conflicts: updatedConflicts,
+      });
+
+      try {
+        const saved = await scheduleService.updateAssignmentOverride(assignmentId, {
+          override_reason: normalizedReason,
+          override_rule: normalizedReason ? overrideRule : null,
+          schedule_version: state.scheduleVersion,
+        });
+
+        if (saved && targetKey) {
+          set((prev) => {
+            const currentList = prev.assignments[targetKey!] || [];
+            const nextList = currentList.map((item) =>
+              Number(item.id) === Number(assignmentId)
+                ? {
+                    ...item,
+                    overrideReason: saved.override_reason !== undefined ? saved.override_reason : normalizedReason,
+                    overrideRule: saved.override_rule !== undefined ? saved.override_rule : (normalizedReason ? item.overrideRule : null),
+                    version: saved.version || item.version,
+                  }
+                : item
+            );
+            const nextMap = {
+              ...prev.assignments,
+              [targetKey!]: nextList,
+            };
+            saveBranchScheduleToStorage(prev.filterOptions.branchId || 1, nextMap, prev.currentStartDate);
+            return {
+              assignments: nextMap,
+              scheduleVersion: (prev.scheduleVersion || 1) + 1,
+            };
+          });
+        }
+      } catch (err) {
+        console.error('Failed to update override reason to backend:', err);
+      }
+
+      return true;
+    },
+
+    claimShift: async (data) => {
+      const state = get();
+      const currentBranchId = state.filterOptions.branchId || 1;
+      try {
+        await scheduleService.claimShift({
+          schedule_id: state.scheduleId,
+          work_shift_id: data.workShiftId,
+          work_date: data.workDate,
+          self_volunteered_confirm: data.selfVolunteeredConfirm,
+        });
+
+        // Tải lại lịch từ backend để cập nhật toàn bộ trạng thái
+        await get().fetchWeeklySchedule(currentBranchId, state.currentStartDate);
+        return { success: true };
+      } catch (err: any) {
+        const errorData = err?.response?.data?.error || err?.response?.data || {};
+        const code = errorData.code || err?.code;
+        const message = errorData.message || err?.message || 'Không thể đăng ký ca làm việc';
+
+        if (code === 'WARN_VOLUNTEER_CONFIRMATION_REQUIRED') {
+          return {
+            success: false,
+            needsConfirm: true,
+            warningMessage: message,
+          };
+        }
+
+        return {
+          success: false,
+          error: message,
+        };
+      }
+    },
+
+    cancelClaimedShift: async (assignmentId) => {
+      const state = get();
+      const currentBranchId = state.filterOptions.branchId || 1;
+      try {
+        await scheduleService.cancelClaimedShift(assignmentId);
+        await get().fetchWeeklySchedule(currentBranchId, state.currentStartDate);
+        return { success: true };
+      } catch (err: any) {
+        const message = err?.response?.data?.error?.message || err?.message || 'Không thể hủy ca làm việc';
+        return { success: false, error: message };
+      }
+    },
+
+    applyAutoAssignments: async (
+        newAssignments,
+        mode: 'REPLACE_ALL' | 'FILL_MISSING' = 'REPLACE_ALL',
+        fromDate?: string,
+        toDate?: string
+    ): Promise<{ success: boolean; error?: string }> => {
+      if (newAssignments.length === 0) return { success: true };
+      const state = get();
+      const branchId = state.filterOptions.branchId || 1;
+
+      // 1. Cập nhật optimistic lên UI để hiển thị phản hồi ngay lập tức
+      const updated: Record<string, ShiftAssignment[]> = {};
+
+      if (mode === 'REPLACE_ALL') {
+        const minDate = fromDate || newAssignments.reduce((min, a) => (a.workDate < min ? a.workDate : min), newAssignments[0].workDate);
+        const maxDate = toDate || newAssignments.reduce((max, a) => (a.workDate > max ? a.workDate : max), newAssignments[0].workDate);
+
+        for (const [key, list] of Object.entries(state.assignments)) {
+          const preserved = list.filter((a) => a.workDate < minDate || a.workDate > maxDate);
+          if (preserved.length > 0) {
+            updated[key] = preserved;
+          }
+        }
+      } else {
+        for (const [key, list] of Object.entries(state.assignments)) {
+          updated[key] = [...list];
+        }
+      }
+
+      for (const a of newAssignments) {
+        const key = `${a.employeeId}_${a.workDate}`;
+        const list = updated[key] ? [...updated[key]] : [];
+        const alreadyHasShift = list.some(
+            (x) => x.workShiftId === a.workShiftId && x.status !== 'CANCELLED'
+        );
+        if (alreadyHasShift) continue;
+
+        list.push(a);
+        updated[key] = list;
+      }
+
+      const updatedConflicts = computeAllConflicts(
+          updated,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays,
+          state.shiftTemplates
+      );
+
+      set({ assignments: updated, conflicts: updatedConflicts });
+
+      // 2. Đảm bảo có scheduleId hợp lệ từ backend trước khi lưu hàng loạt
+      let targetScheduleId = state.scheduleId;
+      let targetScheduleVersion = state.scheduleVersion;
+
+      if (!targetScheduleId) {
+        try {
+          const scheduleData = await scheduleService.getWeeklySchedule(branchId, state.currentStartDate);
+          if (scheduleData) {
+            targetScheduleId = scheduleData.schedule_id;
+            targetScheduleVersion = scheduleData.version !== undefined ? scheduleData.version : 0;
+          }
+        } catch (e) {
+          console.warn('Could not fetch schedule before batch persist:', e);
+        }
+      }
+
+      if (targetScheduleId) {
+        try {
+          await scheduleService.batchAssignShifts({
+            schedule_id: targetScheduleId,
+            schedule_version: targetScheduleVersion,
+            mode,
+            from_date: fromDate,
+            to_date: toDate,
+            assignments: newAssignments.map((a) => ({
+              employee_id: a.employeeId,
+              work_shift_id: a.workShiftId,
+              work_date: a.workDate,
+              override_rule: a.overrideRule || undefined,
+              override_reason: a.overrideReason || undefined,
+            })),
+          });
+
+          // Tải lại lịch từ máy chủ để nạp toàn bộ ID thực của MySQL vào store & storage
+          await get().fetchWeeklySchedule(branchId, state.currentStartDate);
+          return { success: true };
+        } catch (err: any) {
+          console.error('Failed to persist batch assignments to backend:', err);
+          // Rollback bằng cách nạp lại trạng thái máy chủ
+          await get().fetchWeeklySchedule(branchId, state.currentStartDate);
+          const msg = err?.response?.data?.error?.message || err?.message || 'Không thể lưu phân ca lên máy chủ';
+          return { success: false, error: msg };
+        }
+      }
+
+      return { success: false, error: 'Không tìm thấy thông tin lịch làm việc để lưu.' };
+    },
+
+    copyWeek: async (mode) => {
+      const state = get();
+      const currentMon = parseISO(state.currentStartDate);
+      const prevMon = addDays(currentMon, -7);
+      const prevMonStr = format(prevMon, 'yyyy-MM-dd');
+      const branchId = state.filterOptions.branchId || 1;
+
+      try {
+        const res = await scheduleService.copyScheduleWeek({
+          branch_id: branchId,
+          source_start_date: prevMonStr,
+          target_start_date: state.currentStartDate,
+          mode,
+        });
+
+        // Reload authoritative weekly schedule from backend Single Source of Truth
+        await get().fetchWeeklySchedule(branchId, state.currentStartDate);
+
+        return {
+          copiedCount: res.copied_count,
+          skippedCount: res.skipped_count,
+        };
+      } catch (err) {
+        console.error('Failed to copy schedule week via API:', err);
+        throw err;
+      }
+    },
+
+    publishSchedule: () => {
+      const state = get();
+      scheduleService.publishSchedule(state.scheduleId, state.scheduleVersion).catch((err) => {
+        console.warn('Failed to publish schedule on backend:', err);
+      });
+      set({
+        scheduleStatus: 'PUBLISHED',
+        publishedAt: new Date().toISOString(),
+      });
+    },
+
+    unpublishSchedule: () => {
+      const state = get();
+      scheduleService.unpublishSchedule(state.scheduleId).catch((err) => {
+        console.warn('Failed to unpublish schedule on backend:', err);
+      });
+      set({
+        scheduleStatus: 'DRAFT',
+      });
+    },
+
+    resetCurrentWeekSchedule: async () => {
+      const state = get();
+      const branchId = state.filterOptions.branchId || 1;
+      const currentMon = parseISO(state.currentStartDate);
+      const currentSun = addDays(currentMon, 6);
+      const currentMonStr = state.currentStartDate;
+      const currentSunStr = format(currentSun, 'yyyy-MM-dd');
+
+      // 1. Lọc bỏ toàn bộ phân ca trong khoảng thời gian tuần hiện tại
+      const updatedAssignments = { ...state.assignments };
+      for (const [key, list] of Object.entries(updatedAssignments)) {
+        const remaining = list.filter(
+            (a) => a.workDate < currentMonStr || a.workDate > currentSunStr
+        );
+        if (remaining.length > 0) {
+          updatedAssignments[key] = remaining;
+        } else {
+          delete updatedAssignments[key];
+        }
+      }
+
+      // 2. Lưu lại vào cache trình duyệt
+      saveBranchScheduleToStorage(branchId, updatedAssignments, currentMonStr);
+
+      // 3. Tính toán lại xung đột (conflicts sẽ trở về rỗng cho tuần này)
+      const updatedConflicts = computeAllConflicts(
+          updatedAssignments,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays,
+          state.shiftTemplates
+      );
+
+      // 4. Đồng bộ State
+      set({
+        assignments: updatedAssignments,
+        conflicts: updatedConflicts,
+      });
+
+      // 5. Nếu có scheduleId thực tế, gọi API dọn dẹp các phân ca trên server
+      if (state.scheduleId) {
+        try {
+          await scheduleService.deleteAssignment(state.scheduleId, state.scheduleVersion);
+        } catch (err) {
+          console.warn('Lỗi khi xóa phân ca tuần trên máy chủ:', err);
+        }
+      }
+
+      return true;
+    },
+
+    recomputeAllConflicts: () => {
+      const state = get();
+      const updatedConflicts = computeAllConflicts(
+          state.assignments,
+          state.employees,
+          state.approvedLeaves,
+          state.holidays,
+          state.shiftTemplates
+      );
+      set({ conflicts: updatedConflicts });
+    },
+
+    resetDemoData: () => {
+      const branchId = get().filterOptions.branchId || 1;
+      try {
+        localStorage.removeItem(`${STORAGE_PREFIX}${branchId}`);
+      } catch {
+        // Ignore
+      }
+      const initialReset = initializeStateFromSeed(branchId);
+      const conflictsReset = computeAllConflicts(
+          initialReset.assignments,
+          initialReset.employees,
+          initialReset.approvedLeaves,
+          initialReset.holidays,
+          initialReset.shiftTemplates
+      );
+      set({
+        ...initialReset,
+        conflicts: conflictsReset,
+      });
+    },
+
+    fetchShiftTemplates: async (branchId?: number) => {
+      if (import.meta.env.MODE === 'test') {
+        return;
+      }
+      try {
+        const list = await workShiftService.getAllWorkShifts(branchId);
+        if (list) {
+          set({ shiftTemplates: list });
+        }
+      } catch (err) {
+        console.warn('Failed to fetch shift templates from backend:', err);
+      }
+    },
+
+    addShiftTemplate: async (template) => {
+      const state = get();
+      const isTest = import.meta.env.MODE === 'test';
+      const tempId = Math.max(0, ...state.shiftTemplates.map((t) => t.id)) + 1;
+      const localTemplate: ShiftTemplate = { ...template, id: tempId };
+
+      if (isTest) {
+        set({ shiftTemplates: [...state.shiftTemplates, localTemplate] });
+        return localTemplate;
+      }
+
+      try {
+        const created = await workShiftService.createWorkShift(template);
+        set({ shiftTemplates: [...get().shiftTemplates, created] });
+        return created;
+      } catch (err) {
+        console.error('Failed to create shift template on backend:', err);
+        throw err;
+      }
+    },
+
+    updateShiftTemplate: async (id, data) => {
+      const state = get();
+      const prevTemplates = state.shiftTemplates;
+      const isTest = import.meta.env.MODE === 'test';
+
+      // Resolve branchName from directory store if not present
+      let branchName = data.branchName;
+      if (!branchName && data.branchId) {
+        const branch = useDirectoryStore.getState().branches.find((b) => b.id === data.branchId);
+        if (branch) {
+          branchName = branch.branchName;
+        }
+      }
+
+      const mergedData = branchName ? { ...data, branchName } : data;
+
+      // Optimistic update
+      set({
+        shiftTemplates: state.shiftTemplates.map((t) => (t.id === id ? { ...t, ...mergedData } : t)),
+      });
+
+      if (!isTest) {
+        try {
+          const updated = await workShiftService.updateWorkShift(id, data);
+          set({
+            shiftTemplates: get().shiftTemplates.map((t) => (t.id === id ? updated : t)),
+          });
+        } catch (err) {
+          console.error('Failed to update shift template on backend:', err);
+          // Rollback state on error
+          set({ shiftTemplates: prevTemplates });
+          throw err;
+        }
+      }
+    },
+
+    deleteShiftTemplate: async (id) => {
+      const state = get();
+      const allShifts: ShiftAssignment[] = Object.values(state.assignments).flat();
+      const isUsed = allShifts.some((a) => a.workShiftId === id && a.status === 'ASSIGNED');
+      if (isUsed) {
+        return { success: false, error: 'Không thể xóa mẫu ca đang có nhân viên được phân công làm việc.' };
+      }
+
+      const isTest = import.meta.env.MODE === 'test';
+      set({
+        shiftTemplates: state.shiftTemplates.filter((t) => t.id !== id),
+      });
+
+      if (!isTest) {
+        try {
+          await workShiftService.deleteWorkShift(id);
+        } catch (err) {
+          console.error('Failed to delete shift template on backend:', err);
+          set({ shiftTemplates: state.shiftTemplates });
+          return { success: false, error: 'Lỗi khi xóa mẫu ca trên máy chủ.' };
+        }
+      }
+      return { success: true };
+    },
+
+    addApprovedLeave: (leave) => {
+      const state = get();
+      const existing = state.approvedLeaves.filter((l) => l.id !== leave.id);
+      set({ approvedLeaves: [...existing, leave] });
+      get().recomputeAllConflicts();
+    },
+
+    removeApprovedLeave: (leaveId) => {
+      const state = get();
+      set({ approvedLeaves: state.approvedLeaves.filter((l) => l.id !== leaveId) });
+      get().recomputeAllConflicts();
+    },
+  };
+});

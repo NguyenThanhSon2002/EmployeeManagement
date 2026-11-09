@@ -6,7 +6,10 @@ export type NotificationType =
     | 'SWAP_PENDING_MANAGER'
     | 'SWAP_APPROVED'
     | 'SWAP_REJECTED'
-    | 'SWAP_CANCELLED';
+    | 'SWAP_CANCELLED'
+    | 'LEAVE_SUBMITTED'
+    | 'LEAVE_APPROVED'
+    | 'LEAVE_REJECTED';
 
 export interface AppNotification {
     id: number;

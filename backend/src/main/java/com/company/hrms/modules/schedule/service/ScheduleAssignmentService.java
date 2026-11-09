@@ -582,6 +582,32 @@ public class ScheduleAssignmentService {
     }
 
     @Transactional
+    public void resetWeeklySchedule(Long scheduleId, Integer scheduleVersion, Long currentUserId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lịch làm việc", scheduleId));
+
+        assertScheduleNotLocked(schedule);
+
+        if (scheduleVersion != null && !schedule.getVersion().equals(scheduleVersion)) {
+            throw new ObjectOptimisticLockingFailureException(Schedule.class, schedule.getId());
+        }
+
+        // Kiểm tra quyền hạn quản lý: Quản lý không được xóa lịch của cơ sở khác
+        if (currentUserId != null && currentUserId > 1L) {
+            Employee actor = employeeRepository.findByUserIdAndDeletedAtIsNull(currentUserId).orElse(null);
+            if (actor != null && actor.getPositionId() != null && actor.getPositionId() == 2) { // ROLE_MANAGER
+                if (!schedule.getBranchId().equals(actor.getBranchId())) {
+                    throw new BusinessException("FORBIDDEN", "Quản lý không có quyền xóa lịch làm việc thuộc cơ sở khác.", HttpStatus.FORBIDDEN);
+                }
+            }
+        }
+
+        assignmentRepository.deleteAllByScheduleId(schedule.getId());
+        schedule.setVersion(schedule.getVersion() + 1);
+        scheduleRepository.save(schedule);
+    }
+
+    @Transactional
     public ShiftAssignmentDto updateOverrideReason(Long id, UpdateOverrideReasonRequest request, Long currentUserId) {
         ShiftAssignment assignment = assignmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Phân ca", id));

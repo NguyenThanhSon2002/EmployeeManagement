@@ -101,6 +101,18 @@ public class ScheduleController {
         return ApiResponse.success(null);
     }
 
+    @DeleteMapping("/{id}/assignments")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
+    @Operation(summary = "Xóa toàn bộ phân ca của lịch tuần", description = "Reset lịch tuần về trạng thái rỗng")
+    public ApiResponse<Void> resetWeeklySchedule(
+            @PathVariable Long id,
+            @RequestParam(value = "schedule_version", required = false) Integer scheduleVersion,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Long userId = principal != null ? principal.getId() : 1L;
+        scheduleService.resetWeeklySchedule(id, scheduleVersion, userId);
+        return ApiResponse.success(null);
+    }
+
     @PatchMapping("/assignments/{id}/override")
     @PreAuthorize("hasAnyRole('DIRECTOR', 'MANAGER')")
     @Operation(summary = "Cập nhật giải trình đặc cách cho ca phân công", description = "Cập nhật override_reason và override_rule cho ca phân công")

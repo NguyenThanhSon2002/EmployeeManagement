@@ -86,7 +86,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{emp?.fullName}</div>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                {emp?.employeeCode} â€¢ {leaveRequest.leaveTypeName}
+                {emp?.employeeCode} {'\u2022'} {leaveRequest.leaveTypeName}
               </div>
             </div>
           </div>
@@ -95,7 +95,7 @@ export const LeaveApprovalModal: React.FC<LeaveApprovalModalProps> = ({
             <div style={{ padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
               <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Thời gian nghỉ</div>
               <div style={{ fontWeight: 600, fontSize: 14, marginTop: 4 }}>
-                {leaveRequest.startDate} ðŸ‘‰ {leaveRequest.endDate}
+                {leaveRequest.startDate} {'\u2192'} {leaveRequest.endDate}
               </div>
               <div style={{ fontSize: 12, color: 'var(--color-primary)', marginTop: 2 }}>
                 Tổng: {leaveRequest.totalDays} ngày

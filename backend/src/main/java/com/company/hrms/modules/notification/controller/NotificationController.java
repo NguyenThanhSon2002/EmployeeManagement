@@ -15,7 +15,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
-@Tag(name = "Notification", description = "Thông báo trong ứng dụng (đổi ca, nhường ca)")
+@Tag(name = "Notification", description = "Thông báo trong ứng dụng (đổi ca, nhường ca, nghỉ phép)")
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -24,7 +24,11 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
 
-    private Long currentEmployeeId(UserPrincipal principal) {
+    private Long userId(UserPrincipal principal) {
+        return principal == null ? null : principal.getId();
+    }
+
+    private Long employeeId(UserPrincipal principal) {
         return principal == null ? null
                 : notificationService.resolveEmployeeId(principal.getId(), principal.getEmployeeId());
     }
@@ -33,14 +37,15 @@ public class NotificationController {
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Danh sách thông báo của tôi", description = "50 thông báo mới nhất")
     public ApiResponse<List<NotificationDto>> list(@AuthenticationPrincipal UserPrincipal principal) {
-        return ApiResponse.success(notificationService.list(currentEmployeeId(principal)));
+        return ApiResponse.success(notificationService.list(userId(principal), employeeId(principal)));
     }
 
     @GetMapping("/unread-count")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Số thông báo chưa đọc")
     public ApiResponse<Map<String, Long>> unreadCount(@AuthenticationPrincipal UserPrincipal principal) {
-        return ApiResponse.success(Map.of("count", notificationService.countUnread(currentEmployeeId(principal))));
+        return ApiResponse.success(Map.of("count",
+                notificationService.countUnread(userId(principal), employeeId(principal))));
     }
 
     @PutMapping("/{id}/read")
@@ -48,7 +53,7 @@ public class NotificationController {
     @Operation(summary = "Đánh dấu một thông báo đã đọc")
     public ApiResponse<Void> markRead(@PathVariable Long id,
                                       @AuthenticationPrincipal UserPrincipal principal) {
-        notificationService.markRead(id, currentEmployeeId(principal));
+        notificationService.markRead(id, userId(principal), employeeId(principal));
         return ApiResponse.success(null);
     }
 
@@ -56,7 +61,7 @@ public class NotificationController {
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Đánh dấu tất cả đã đọc")
     public ApiResponse<Void> markAllRead(@AuthenticationPrincipal UserPrincipal principal) {
-        notificationService.markAllRead(currentEmployeeId(principal));
+        notificationService.markAllRead(userId(principal), employeeId(principal));
         return ApiResponse.success(null);
     }
 }

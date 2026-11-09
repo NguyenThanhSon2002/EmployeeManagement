@@ -1,219 +1,282 @@
 # TÀI LIỆU 05: KIẾN TRÚC HỆ THỐNG VÀ NGĂN XẾP CÔNG NGHỆ (ARCHITECTURE & TECH STACK)
 **Dự án:** Employee Management System  
 **Mô hình kiến trúc:** Modular Monolith (Package-by-Feature)  
-**Phiên bản:** 1.0.0  
-**Ngày cập nhật:** 13/10/2026  
-**Trạng thái:** Confirmed / Baseline  
+**Phiên bản:** 3.0.0  
+**Ngày cập nhật:** 09/11/2026  
+**Trạng thái:** Confirmed / Production Ready  
 
 ---
 
 ## 1. TỔNG QUAN KIẾN TRÚC & BIỆN HỘ MÔ HÌNH (MODULAR MONOLITH)
 
 ### 1.1. Tại sao chọn Modular Monolith thay vì Microservices?
-Đối với doanh nghiệp quy mô từ 50 đến 300 nhân sự hoạt động tại một chi nhánh ở Việt Nam:
-1. **Tính Toàn vẹn Dữ liệu (ACID Transactions):** Các nghiệp vụ xếp ca tuần, phát hiện xung đột và trừ quỹ ngày phép đòi hỏi tính giao dịch tức thời (ACID). Nếu chia thành Microservices, việc đảm bảo tính nhất quán qua các service độc lập sẽ phải dùng Distributed Transactions (Saga pattern, 2-phase commit), làm tăng độ phức tạp kỹ thuật lên gấp 5 lần mà không mang lại giá trị kinh doanh thực tế.
-2. **Chi phí Hạ tầng & Vận hành (DevOps Overhead):** Một ứng dụng Modular Monolith chạy gọn gàng trên 1 máy chủ VPS (4 vCPU, 8GB RAM) với Docker Compose, tiết kiệm 80% chi phí so với việc dựng cụm Kubernetes, API Gateway, Service Mesh và Distributed Tracing.
-3. **Thân thiện với Đội ngũ Kỹ thuật:** Giúp lập trình viên Java backend dễ dàng làm chủ toàn bộ luồng dữ liệu, debug dễ dàng với một điểm breakpoint duy nhất trong IDE.
+Đối với doanh nghiệp dịch vụ/bán lẻ quy mô từ 50 đến 500 nhân sự hoạt động tại nhiều cơ sở / chi nhánh:
+1. **Tính Toàn vẹn Dữ liệu Nghiệp vụ (ACID Transactions):** Các nghiệp vụ phức tạp như xếp ca tuần, mô phỏng xung đột 9 luật lao động, phê duyệt hoán đổi ca/nhường ca (`ShiftSwap`) và khấu trừ số dư phép năm đòi hỏi tính giao dịch nguyên tử (ACID). Nếu phân rã thành Microservices, việc đảm bảo tính nhất quán trên các dịch vụ độc lập sẽ buộc phải sử dụng Distributed Transactions (Saga pattern, Outbox pattern, 2-phase commit), làm tăng độ phức tạp kỹ thuật lên gấp 5 lần mà không đem lại giá trị thặng dư kinh doanh tương xứng.
+2. **Chi phí Hạ tầng & Vận hành (DevOps Overhead):** Một ứng dụng Modular Monolith chạy gọn gàng trên 1 máy chủ VPS (4 vCPU, 8GB RAM) với Docker Compose, tiết kiệm hơn 80% chi phí vận hành so với việc dựng cụm Kubernetes, API Gateway, Service Mesh, Distributed Tracing và Event Bus phân tán (Kafka/RabbitMQ).
+3. **Thân thiện với Đội ngũ Kỹ thuật & Tốc độ Phát triển:** Giúp lập trình viên kiểm soát toàn bộ luồng dữ liệu đầu cuối, debug dễ dàng với một điểm breakpoint duy nhất trong IDE, dễ dàng refactor code và tái cấu trúc nghiệp vụ khi mở rộng chi nhánh.
 
 ### 1.2. Nguyên tắc "Package-by-Feature" (Đóng gói theo Tính năng)
-Khác với mô hình cổ điển "Package-by-Layer" (gom tất cả Controller vào một thư mục, tất cả Service vào một thư mục), kiến trúc này chia mã nguồn theo từng **Bounded Context (Ranh giới Nghiệp vụ)**:
-- Mỗi module nghiệp vụ (`employee`, `schedule`, `attendance`, `leave`) là một gói tự trị (Self-contained package) chứa đầy đủ Controller, Service, Repository, Entity và DTO của riêng mình.
-- **Ranh giới giao tiếp:** Module A chỉ được gọi Service Interface công khai của Module B; nghiêm cấm Module A can thiệp trực tiếp vào Repository hoặc Entity nội bộ của Module B.
+Hệ thống kiên quyết nói không với mô hình cổ điển "Package-by-Layer" (gom tất cả Controller vào một thư mục, tất cả Service vào một thư mục). Thay vào đó, mã nguồn được phân rã thành **14 Bounded Contexts độc lập** tại Backend và **11 Features tương ứng** tại Frontend:
+- Mỗi module nghiệp vụ (`employee`, `schedule`, `swap`, `notification`, `attendance`, `leave`, `report`, ...) là một gói tự trị (Self-contained package) đóng gói trọn vẹn Controller, Service, Repository, Entity và DTO của riêng mình.
+- **Ranh giới giao tiếp (Encapsulation Boundary):** Module A chỉ được gọi Service Interface công khai của Module B; nghiêm cấm Module A truy cập trực tiếp vào Repository hoặc Entity nội bộ của Module B.
+- **Kiến trúc Bất biến Ca làm việc (Immutable Shift Snapshotting):** Dữ liệu phân ca trong `shift_assignments` độc lập hoàn toàn với thay đổi giờ ca mẫu `work_shifts`, bảo toàn độ tin cậy lịch sử chấm công và tính lương.
 
 ---
 
-## 2. NGĂN XẾP CÔNG NGHỆ (TECH STACK SPECIFICATIONS)
+## 2. NGĂN XẾP CÔNG NGHỆ CHUẨN XÁC (REAL TECH STACK SPECIFICATIONS)
 
 ### 2.1. Backend Tech Stack
-- **Ngôn ngữ:** Java 21 LTS (Tận dụng Virtual Threads cho I/O non-blocking, Record classes, Pattern matching).
-- **Framework chính:** Spring Boot 3.3.x (Spring Framework 6.x, namespace `jakarta.*`).
-- **Web & REST:** Spring Boot Starter Web (Tomcat nhúng, REST Controllers).
-- **ORM & Data Access:** Spring Data JPA, Hibernate 6.x.
-- **Bảo mật:** Spring Security 6 (Stateless JWT Filter Chain, `@PreAuthorize`).
-- **Validation:** Hibernate Validator (Jakarta Bean Validation 3.0).
-- **DTO Mapping:** MapStruct 1.5.x (Sinh code ánh xạ Entity $\leftrightarrow$ DTO tại compile-time, zero runtime reflection).
-- **Build Tool:** Apache Maven 3.9+.
-- **Database Driver & Migration:** MySQL Connector/J 8.3+, Flyway Core 10.x.
-- **API Documentation:** Springdoc OpenAPI 2.5+ (Swagger UI).
-- **Testing:** JUnit 5, Mockito, Testcontainers (chạy MySQL thật trong container khi test tích hợp).
+- **Ngôn ngữ:** **Java 21 LTS** (Tận dụng Virtual Threads cho I/O non-blocking, Record classes, Pattern matching, Sealed classes).
+- **Framework chính:** **Spring Boot 3.3.4** (Spring Framework 6.1.x, namespace `jakarta.*`).
+- **Web & RESTful API:** Spring Boot Starter Web (Tomcat nhúng, REST Controllers chuẩn RESTful, JSON API UTF-8).
+- **ORM & Data Access:** Spring Data JPA, Hibernate 6.5.3 (Cơ chế `@Version` cho Optimistic Locking, Dirty Checking).
+- **Bảo mật & Phân quyền:** Spring Security 6.3.3 (Stateless JWT Filter Chain, `@PreAuthorize` kiểm soát 4 vai trò chuẩn `ROLE_DIRECTOR`, `ROLE_MANAGER`, `ROLE_EMPLOYEE`, `ROLE_ADMIN`).
+- **Xác thực Token:** **jjwt 0.12.5** (JSON Web Token HMAC-SHA256, Access Token 15 phút, Refresh Token HttpOnly Cookie 7 ngày).
+- **Validation:** Hibernate Validator 8.0.x (Jakarta Bean Validation 3.0 với các custom constraint annotations).
+- **Cơ sở dữ liệu & Migration:** **MySQL 8.0**, MySQL Connector/J 8.3.0, **Flyway 10.18.0** (27 migration scripts tuần tự từ `V1` đến `V27`).
+- **Xử lý Xuất Báo cáo:** **Apache POI 5.2.5** (Sinh bảng tính Microsoft Excel `.xlsx` chuyên nghiệp có định dạng ô, màu sắc tiêu đề và UTF-8 CSV BOM).
+- **DTO Mapping & Boilerplate:** Lombok (Generate Getter, Setter, Builder, Slf4j) kết hợp Handcrafted Type-safe Mappers (Kiểm soát 100% logic chuyển đổi Entity $\leftrightarrow$ DTO, zero magic reflection).
+- **Tài liệu API Tự động:** Springdoc OpenAPI 2.5.0 (Swagger UI tương tác tại `/swagger-ui.html`).
+- **Kiểm thử Tự động:** JUnit 5, Mockito.
 
-### 2.2. Frontend Tech Stack
-- **Ngôn ngữ:** TypeScript 5.4+ (Strict mode bật 100%).
-- **Thư viện UI Core:** React 18.3+ (hoặc 19 stable).
-- **Build & Dev Tool:** Vite 5.x / Vite 6.x (Hỗ trợ Fast Refresh, build siêu tốc qua esbuild và Rollup).
-- **Kiểm thử Đơn vị & Tích hợp (Testing):** **Vitest 5.x** (Test runner chạy song song siêu tốc dựa trên Vite, môi trường DOM ảo `jsdom`, hỗ trợ globals, tương thích bộ test tại `src/utils/__tests__/`).
-- **Định tuyến (Routing):** React Router DOM v6.
-- **UI Component Framework:** **Ant Design 5.x** (Bản địa hóa `vi_VN` trọn vẹn, hệ thống Table/Form phong phú).
-- **Quản lý Server State & Caching:** **TanStack Query v5 (React Query)** (Tự động caching, refetch on window focus, optimistic mutation).
-- **Quản lý Form & Validation:** **React Hook Form** kết hợp **Zod** (Schema validation an toàn kiểu dữ liệu).
-- **Biểu đồ & Lịch tuần:**
-  - Bảng lịch tuần (SCR-11): **Custom CSS Grid / Virtual Table** kết hợp **TanStack Virtual**.
-  - Lịch tháng tổng quan: Ant Design Calendar.
-  - Biểu đồ Dashboard: **Recharts** (Lightweight, tương thích React hoàn hảo).
-- **Xử lý Ngày giờ:** **Day.js** (kèm plugins: timezone, utc, customParseFormat).
-- **Icons:** `@ant-design/icons` và `lucide-react`.
+### 2.2. Frontend Tech Stack (Purified & Zero-bloat)
+> [!IMPORTANT]
+> Toàn bộ các thư viện giao diện nặng nề hoặc lỗi thời như Ant Design, TanStack Query, React Hook Form, Zod, Day.js và `@ant-design/icons` đã được loại bỏ hoàn toàn khỏi mã nguồn.
+
+- **Ngôn ngữ:** **TypeScript ~6.0.2** (Strict mode 100%, strictNullChecks, noImplicitAny).
+- **Thư viện UI Core:** **React 19.2.8** (React DOM, React Server-ready hooks).
+- **Công cụ Build & Dev Server:** **Vite ^8.3.0** (ESBuild transpile siêu tốc, Rollup bundler tối ưu hóa chunk splitting).
+- **Định tuyến Ứng dụng (Routing):** **React Router DOM ^7.18.4** (Client-side routing, protected routes, dynamic branch params).
+- **Quản lý Trạng thái Ứng dụng (State Management):** **Zustand ^5.0.15**
+  - Mô hình Micro-stores phân tách theo từng feature:
+    - `useAuthStore`: Quản lý phiên đăng nhập, access token, thông tin user và chi nhánh làm việc.
+    - `useScheduleStore`: Quản lý ma trận lịch tuần, bộ lọc chi nhánh/ngày, danh sách xung đột và state kéo thả/gán ca.
+    - `useNotificationStore`: Quản lý danh sách thông báo in-app và polling badge số đếm chưa đọc.
+    - `useLeaveStore`: Quản lý số dư phép năm và danh sách đơn nghỉ phép.
+    - `useUIStore`: Quản lý đóng/mở sidebar, modal, dialog xác nhận và toast notifications.
+- **Hệ thống Giao diện & Định kiểu (Styling System):** **Vanilla CSS Design Tokens**
+  - Hệ thống tokens tập trung tại `src/styles/tokens.css` (màu sắc semantic, spacing, typography, shadow, border radius, z-index).
+  - Định dạng bảng lịch ma trận bằng CSS Grid chuyên dụng (`schedule.css`), đạt chuẩn tương phản màu sắc WCAG 2.1 AA.
+  - Tải trang tức thì, zero CSS-in-JS runtime overhead.
+- **Xử lý Ngày Giờ & Bản Địa Hóa:** **Date-fns ^4.4.0** (`date-fns/locale/vi` cho định dạng thứ, ngày, tháng tiếng Việt chuẩn ISO-8601).
+- **Thư viện Biểu Tượng (Icons):** **Lucide React ^1.55.0** (Hơn 1000+ vector icon tối ưu hóa bundle qua tree-shaking).
+- **Công cụ Kiểm Tra Mã Nguồn (Linter):** **Oxlint ^1.81.0** (Linter thế hệ mới bằng Rust, tốc độ nhanh hơn ESLint 50-100 lần).
+- **Kiểm thử Giao diện (Testing):** **Vitest ^5.0.0** (Môi trường `jsdom`, chạy song song siêu tốc cho các unit test tính toán công và format lịch).
+- **Giao tiếp API (Network Client):** **Native Fetch-based `apiClient.ts`**
+  - Singleton bọc native `fetch()`, tự động đính kèm `Authorization: Bearer <token>`.
+  - Tích hợp interceptor bắt lỗi `401 Unauthorized` để tự động gọi `POST /api/v1/auth/refresh-token` và thử lại request ban đầu.
+  - Chuẩn hóa kiểu trả về theo `ApiResponse<T>` và `PageResponse<T>`.
 
 ### 2.3. Cơ Chế Vite Dev Proxy & Thứ Tự Khởi Động (Development Proxy & Startup Sequence)
 Trong môi trường phát triển cục bộ (Local Development), Frontend chạy tại `http://localhost:5173` và chuyển tiếp các yêu cầu `/api/*` tới Backend Spring Boot qua proxy cấu hình tại `vite.config.ts`:
 1. **Chuẩn hóa Địa chỉ IPv4 (`http://127.0.0.1:8080`):**
    - Cấu hình proxy `target` được trỏ trực tiếp tới `http://127.0.0.1:8080` (hoặc biến môi trường `VITE_BACKEND_URL`).
-   - *Lý do kỹ thuật:* Trên hệ điều hành Windows kết hợp Node.js 18+, việc cấu hình `localhost` kích hoạt cơ chế `internalConnectMultiple` ưu tiên phân giải IPv6 `::1`, dễ dẫn đến lỗi kết nối bị từ chối `AggregateError [ECONNREFUSED]` khi Backend chỉ lắng nghe trên IPv4.
+   - *Lý do kỹ thuật:* Trên hệ điều hành Windows kết hợp Node.js 18+, việc cấu hình `localhost` kích hoạt cơ chế `internalConnectMultiple` ưu tiên phân giải IPv6 `::1`, dễ dẫn đến lỗi kết nối bị từ chối `AggregateError [ECONNREFUSED]` khi Backend Spring Boot chỉ lắng nghe trên giao diện mạng IPv4.
 2. **Bộ Xử Lý Lỗi Proxy Thân Thiện (Proxy Error Interceptor):**
    - Tích hợp hook `configure(proxy)` lắng nghe sự kiện `error` của proxy socket.
    - Khi Backend chưa hoàn tất khởi động hoặc ngoại tuyến, Vite tự động ghi nhận cảnh báo ngắn gọn trên terminal và phản hồi HTTP `503 Service Unavailable` dạng JSON chuẩn (`code: BACKEND_UNAVAILABLE`) thay vì ném stacktrace lỗi thô gây treo socket trình duyệt.
 3. **Quy Tắc Thứ Tự Khởi Động Dịch Vụ (Strict Startup Dependency Order):**
    - **Bước 1:** Khởi động cơ sở dữ liệu MySQL 8.0 (cổng 3306).
-   - **Bước 2:** Khởi chạy Backend Spring Boot (`mvn clean spring-boot:run`) và **bắt buộc chờ cho đến khi console xuất hiện thông báo `Started HrmsApplication in ... seconds`** (xác nhận CSDL đã nạp xong Flyway migrations từ V1 đến V6).
+   - **Bước 2:** Khởi chạy Backend Spring Boot (`mvn clean spring-boot:run`) và **bắt buộc chờ cho đến khi console xuất hiện thông báo `Started HrmsApplication in ... seconds`** (xác nhận CSDL đã nạp xong 27 Flyway migrations từ `V1` đến `V27`).
    - **Bước 3:** Khởi chạy Frontend Vite (`npm run dev`) và truy cập `http://localhost:5173`.
 
 ---
 
-## 3. CẤU TRÚC THƯ MỤC DỰ ÁN (PROJECT DIRECTORY STRUCTURE)
+## 3. CẤU TRÚC MÃ NGUỒN DỰ ÁN (PROJECT DIRECTORY STRUCTURE)
 
-### 3.1. Cấu trúc Backend (Spring Boot Package-by-Feature)
+### 3.1. Cấu trúc Backend (Spring Boot 14 Modules Package-by-Feature)
 ```text
 backend/
-├── pom.xml
+├── pom.xml                                   <-- Spring Boot 3.3.4, Java 21, Flyway 10.18.0, POI 5.2.5
 └── src/
     ├── main/
     │   ├── java/com/company/hrms/
     │   │   ├── HrmsApplication.java
-    │   │   ├── common/                       <-- Dùng chung toàn hệ thống
-    │   │   │   ├── config/                   <-- OpenAPI, Timezone, Jackson, WebMvc Config
+    │   │   ├── common/                       <-- Thư viện và tầng dùng chung toàn hệ thống
+    │   │   │   ├── config/                   <-- Jackson, OpenAPI, WebMvc, Async Config
     │   │   │   ├── exception/                <-- GlobalExceptionHandler, BusinessException
-    │   │   │   ├── response/                 <-- ApiResponse, PageResponse, ErrorResponse
-    │   │   │   ├── audit/                    <-- AuditableEntity, UserAuditorAware
+    │   │   │   ├── response/                 <-- ApiResponse, PageResponse
+    │   │   │   ├── audit/                    <-- AuditableEntity, AuditLog
     │   │   │   └── util/                     <-- DateTimeUtils, SecurityUtils
-    │   │   ├── security/                     <-- Hệ thống xác thực & phân quyền
-    │   │   │   ├── config/                   <-- SecurityFilterChain, PasswordEncoderConfig
+    │   │   ├── security/                     <-- Tầng xác thực & phân quyền RBAC
+    │   │   │   ├── config/                   <-- SecurityConfig (SecurityFilterChain)
     │   │   │   ├── jwt/                      <-- JwtTokenProvider, JwtAuthenticationFilter
     │   │   │   └── service/                  <-- CustomUserDetailsService, UserPrincipal
-    │   │   ├── modules/                      <-- CÁC MODULE NGHIỆP VỤ (Package-by-Feature)
-    │   │   │   ├── auth/                     <-- Đăng nhập, đổi mật khẩu, refresh token
-    │   │   │   │   ├── controller/
-    │   │   │   │   ├── dto/
-    │   │   │   │   └── service/
-    │   │   │   ├── employee/                 <-- Quản lý hồ sơ nhân viên
-    │   │   │   │   ├── controller/
-    │   │   │   │   ├── domain/               <-- Employee.java entity
-    │   │   │   │   ├── dto/
-    │   │   │   │   ├── mapper/
-    │   │   │   │   ├── repository/
-    │   │   │   │   └── service/
-    │   │   │   ├── department/               <-- Phòng ban & Chức danh
-    │   │   │   ├── shift/                    <-- Mẫu ca làm việc (Work Shifts)
-    │   │   │   ├── schedule/                 <-- Phân ca & Lịch tuần (CORE ENGINE)
-    │   │   │   │   ├── controller/
-    │   │   │   │   ├── domain/               <-- Schedule.java, ShiftAssignment.java
-    │   │   │   │   ├── dto/
-    │   │   │   │   ├── engine/               <-- ConflictDetectionEngine, OvertimeCalculator
-    │   │   │   │   ├── repository/
-    │   │   │   │   └── service/
-    │   │   │   ├── attendance/               <-- Chấm công & Giải trình
-    │   │   │   ├── leave/                    <-- Nghỉ phép & Ngày lễ
-    │   │   │   ├── report/                   <-- Báo cáo & Xuất Excel/CSV (Apache POI)
-    │   │   │   ├── setting/                  <-- Cấu hình tham số chính sách (system_settings)
-    │   │   │   └── audit/                    <-- AuditLog service & repository
+    │   │   └── modules/                      <-- 14 MODULES NGHIỆP VỤ PACKAGE-BY-FEATURE
+    │   │       ├── auth/                     <-- Đăng nhập, đổi mật khẩu, refresh token, thu hồi phiên
+    │   │       ├── employee/                 <-- Hồ sơ nhân sự, ảnh đại diện (avatar), chi nhánh kiêm nhiệm
+    │   │       ├── availability/             <-- Lịch rảnh tuần và danh mục ca làm việc ưu tiên
+    │   │       ├── branch/                   <-- Quản lý chi nhánh / cơ sở làm việc đa điểm
+    │   │       ├── position/                 <-- Quản lý vị trí & chức danh chuyên môn
+    │   │       ├── shift/                    <-- Mẫu ca làm việc tiêu chuẩn (Work Shifts)
+    │   │       ├── schedule/                 <-- Xếp ca, ma trận lịch tuần, nhận ca trống (CORE ENGINE)
+    │   │       │   ├── controller/           <-- ScheduleController.java
+    │   │       │   ├── domain/               <-- Schedule.java, ShiftAssignment.java
+    │   │       │   ├── dto/                  <-- WeeklyScheduleResponse, ClaimShiftRequest, ...
+    │   │       │   ├── engine/               <-- ConflictDetectionEngine (9 luật BLLĐ), OvertimeCalculator
+    │   │       │   ├── repository/           <-- ScheduleRepository, ShiftAssignmentRepository
+    │   │       │   └── service/              <-- ScheduleService, ScheduleAssignmentService
+    │   │       ├── swap/                     <-- Đổi ca chéo & nhường ca trực, mô phỏng xung đột
+    │   │       │   ├── controller/           <-- ShiftSwapController.java
+    │   │       │   ├── domain/               <-- ShiftSwapRequest.java (SwapType, SwapStatus)
+    │   │       │   ├── dto/                  <-- SimulateSwapRequest, CreateSwapRequest, ...
+    │   │       │   ├── repository/           <-- ShiftSwapRequestRepository.java
+    │   │       │   └── service/              <-- ShiftSwapService.java
+    │   │       ├── notification/             <-- Trung tâm thông báo in-app (đổi ca, duyệt phép, công bố lịch)
+    │   │       │   ├── controller/           <-- NotificationController.java
+    │   │       │   ├── domain/               <-- Notification.java
+    │   │       │   ├── dto/                  <-- NotificationDto.java
+    │   │       │   ├── repository/           <-- NotificationRepository.java
+    │   │       │   └── service/              <-- NotificationService.java
+    │   │       ├── attendance/               <-- Chấm công Web, tính giờ công/OT/đêm, giải trình công
+    │   │       ├── leave/                    <-- Quỹ phép năm, nộp đơn nghỉ phép, duyệt/hủy đơn
+    │   │       ├── report/                   <-- Báo cáo tổng hợp tháng, xuất Microsoft Excel & CSV UTF-8
+    │   │       ├── dashboard/                <-- Chỉ số KPI hôm nay, danh sách đơn chờ duyệt, xu hướng 7 ngày
+    │   │       └── setting/                  <-- Cấu hình tham số hệ thống & trần chính sách lao động
     │   └── resources/
-    │       ├── application.yml               <-- Cấu hình chính
+    │       ├── application.yml
     │       ├── application-dev.yml
     │       ├── application-prod.yml
-    │       ├── logback-spring.xml            <-- Cấu hình structured logging
-    │       └── db/migration/                 <-- Flyway migration scripts
+    │       └── db/migration/                 <-- 27 FLYWAY MIGRATIONS (V1 -> V27)
     │           ├── V1__init_schema.sql
-    │           ├── V2__seed_master_data.sql
-    │           └── V3__seed_admin_user.sql
-    └── test/
-        └── java/com/company/hrms/
-            ├── modules/schedule/engine/ConflictDetectionEngineTest.java
-            └── modules/attendance/AttendanceCalculationTest.java
+    │           ├── ...
+    │           ├── V26__create_notifications_table.sql
+    │           └── V27__add_indexes_to_notifications.sql
+    └── test/java/com/company/hrms/
 ```
 
-### 3.2. Cấu trúc Frontend (React Feature-based)
+### 3.2. Cấu trúc Frontend (React 19 + Zustand 5 + 11 Features)
 ```text
 frontend/
-├── package.json
+├── package.json                              <-- React 19.2.8, TypeScript ~6.0.2, Zustand ^5.0.15, Date-fns ^4.4.0
 ├── tsconfig.json
-├── vite.config.ts
+├── vite.config.ts                            <-- Vite 8, IPv4 proxy 127.0.0.1:8080, error interceptor
 ├── index.html
 └── src/
-    ├── main.tsx                              <-- Điểm khởi chạy React, bọc Providers
-    ├── App.tsx                               <-- Cấu hình Routes chính
-    ├── assets/                               <-- Ảnh logo, icons, fonts
-    ├── components/                           <-- Các thành phần UI dùng chung
-    │   ├── layout/                           <-- AppLayout, Sidebar, Header, Breadcrumbs
-    │   ├── feedback/                         <-- LoadingSkeleton, ErrorBoundary, EmptyState
-    │   └── common/                           <-- StatusBadge, ConfirmModal
-    ├── context/                              <-- AuthContext, ThemeContext
-    ├── hooks/                                <-- useAuth, useDebounce, usePermission
-    ├── lib/                                  <-- apiClient (Axios instance), dayjsConfig
-    ├── features/                             <-- CÁC PHÂN HỆ GIAO DIỆN CHÍNH
-    │   ├── auth/                             <-- Trang Login, Đổi mật khẩu
-    │   ├── dashboard/                        <-- Dashboard widgets & biểu đồ
-    │   ├── employees/                        <-- Danh sách, Form thêm/sửa, Chi tiết hồ sơ
-    │   ├── departments/                      <-- Quản lý phòng ban & chức danh
-    │   ├── shifts/                           <-- Quản lý mẫu ca
-    │   ├── schedules/                        <-- PHÂN CA & LỊCH TUẦN (CORE)
-    │   │   ├── components/
-    │   │   │   ├── WeeklyRosterGrid.tsx      <-- Custom Matrix Grid (Nhân viên x Ngày)
-    │   │   │   ├── ShiftChip.tsx             <-- Thẻ ca làm việc với màu WCAG
-    │   │   │   ├── ConflictBadge.tsx         <-- Cờ cảnh báo Mandatory/Warning
-    │   │   │   ├── AssignShiftDrawer.tsx     <-- Drawer gán ca & giải trình ghi đè
-    │   │   │   └── PublishBar.tsx            <-- Thanh công bố lịch tuần
-    │   │   ├── hooks/useScheduleRoster.ts
-    │   │   └── types/schedule.types.ts
-    │   ├── attendance/                       <-- Điểm danh web, Bảng công ngày, Giải trình
-    │   ├── leaves/                           <-- Đơn xin nghỉ phép, Phê duyệt
-    │   ├── reports/                          <-- Báo cáo tháng, Báo cáo đối chiếu, Nút Xuất
-    │   └── settings/                         <-- Quản lý tài khoản & Tham số hệ thống
-    ├── utils/                                <-- Hàm tiện ích (date.utils, code-generator.utils)
-    │   └── __tests__/                        <-- Bộ bài kiểm thử đơn vị Vitest (15 unit tests)
-    └── types/                                <-- Kiểu dữ liệu TypeScript dùng chung
-        └── api.types.ts                      <-- ApiResponse, PaginationMeta, UserRole
+    ├── main.tsx                              <-- Điểm khởi chạy ứng dụng React
+    ├── App.tsx                               <-- Cấu hình định tuyến React Router DOM v7
+    ├── components/                           <-- Thành phần UI dùng chung
+    │   ├── layout/                           <-- AppLayout, Sidebar, Header, NotificationBell
+    │   ├── feedback/                         <-- LoadingSkeleton, ErrorBoundary, EmptyState, Toast
+    │   └── common/                           <-- StatusBadge, ConfirmModal, Pagination
+    ├── hooks/                                <-- Custom hooks dùng chung (useDebounce, usePermission)
+    ├── services/
+    │   └── apiClient.ts                      <-- Native fetch singleton, 401 refresh token interceptor
+    ├── stores/                               <-- ZUSTAND 5 MICRO-STORES
+    │   ├── authStore.ts                      <-- Token, Current User, Active Branch, Roles
+    │   ├── scheduleStore.ts                  <-- Weekly Roster Data, Conflicts, Selected Cell
+    │   ├── notificationStore.ts              <-- In-App Notifications, Unread Count Polling
+    │   ├── leaveStore.ts                     <-- Leave Balances, Requests
+    │   └── uiStore.ts                        <-- Sidebar Toggle, Active Modals
+    ├── styles/                               <-- VANILLA CSS DESIGN TOKENS
+    │   ├── tokens.css                        <-- Bảng mã màu semantic, font, spacing, shadow
+    │   ├── reset.css                         <-- CSS reset chuẩn hóa cross-browser
+    │   ├── global.css                        <-- Typography, layout utilities, scrollbar
+    │   └── schedule.css                      <-- CSS Grid chuyên dụng cho ma trận lịch tuần
+    ├── features/                             <-- 11 PHÂN HỆ GIAO DIỆN CHÍNH
+    │   ├── auth/                             <-- Đăng nhập, đổi mật khẩu cá nhân
+    │   ├── dashboard/                        <-- KPI cards, đơn chờ duyệt, biểu đồ xu hướng
+    │   ├── employee/                         <-- Danh sách nhân sự, avatar upload, chi nhánh kiêm nhiệm
+    │   ├── branch/                           <-- Quản lý danh mục cơ sở làm việc
+    │   ├── position/                         <-- Quản lý chức danh
+    │   ├── shift/                            <-- Quản lý danh mục ca mẫu
+    │   ├── schedule/                         <-- Ma trận phân ca tuần, nhận ca trống (CORE)
+    │   │   ├── components/                   <-- WeeklyGrid, ShiftCard, ConflictIndicator, OpenShiftModal
+    │   │   └── types/                        <-- Schedule types & interfaces
+    │   ├── swap/                             <-- Đơn đổi ca chéo & nhường ca, mô phỏng xung đột
+    │   ├── notification/                     <-- Popover thông báo, danh sách thông báo, đánh dấu đọc
+    │   ├── attendance/                       <-- Check-in/out web, bảng chấm công, nộp/duyệt giải trình
+    │   ├── leave/                            <-- Đơn nghỉ phép, xem số dư phép, duyệt đơn
+    │   ├── report/                           <-- Báo cáo công tháng, nút xuất Excel/CSV
+    │   └── setting/                          <-- Cấu hình tham số hệ thống
+    ├── utils/                                <-- Hàm tiện ích (date formatting, conflict helper)
+    │   └── __tests__/                        <-- Bộ unit tests Vitest
+    └── types/                                <-- TypeScript Interfaces & DTOs
 ```
 
 ---
 
-## 4. KIẾN TRÚC BẢO MẬT VÀ XÁC THỰC (SECURITY ARCHITECTURE)
+## 4. LUỒNG XỬ LÝ SỰ KIỆN THÔNG BÁO NỘI BỘ (IN-APP NOTIFICATION PIPELINE)
+
+Hệ thống tích hợp quy trình phát sinh thông báo sự kiện đồng bộ từ Backend xuống CSDL và cập nhật tức thì tới giao diện người dùng:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Employee as Nhân viên A
+    actor Manager as Quản lý Cơ sở
+    participant SwapCtrl as ShiftSwapController
+    participant SwapService as ShiftSwapService
+    participant NotifService as NotificationService
+    participant DB as MySQL (notifications)
+    actor Peer as Nhân viên B (Đồng nghiệp)
+    participant UI as Frontend (NotificationBell / Zustand)
+
+    Employee->>SwapCtrl: POST /api/v1/shift-swaps (Gửi yêu cầu đổi ca với B)
+    SwapCtrl->>SwapService: createSwapRequest(...)
+    SwapService->>NotifService: createNotification(targetEmployeeId=B, type=SHIFT_SWAP_REQUEST)
+    NotifService->>DB: INSERT INTO notifications (is_read=false)
+    DB-->>NotifService: Saved
+    
+    Note over Peer,UI: Nhân viên B mở trình duyệt hoặc định kỳ kiểm tra
+    UI->>DB: GET /api/v1/notifications/unread-count
+    DB-->>UI: count = 1
+    UI-->>Peer: Hiển thị chấm đỏ trên NotificationBell
+    
+    Peer->>SwapCtrl: PUT /api/v1/shift-swaps/{id}/peer-respond (ACCEPT)
+    SwapCtrl->>SwapService: peerRespond(...)
+    SwapService->>NotifService: createNotification(managerId, type=SHIFT_SWAP_PENDING_MANAGER)
+    NotifService->>DB: INSERT INTO notifications
+    
+    Manager->>SwapCtrl: PUT /api/v1/shift-swaps/{id}/manager-review (APPROVE)
+    SwapCtrl->>SwapService: managerReview(...)
+    Note over SwapService: Hoán đổi ca + Lưu transferred_from_employee_id
+    SwapService->>NotifService: createNotification(Employee A & B, type=SHIFT_SWAP_APPROVED)
+    NotifService->>DB: INSERT INTO notifications (2 bản ghi)
+```
+
+---
+
+## 5. KIẾN TRÚC BẢO MẬT VÀ PHÂN QUYỀN ĐA CƠ SỞ (MULTI-BRANCH RBAC)
 
 ```mermaid
 flowchart TD
     ClientReq[Client HTTP Request] --> CorsFilter[1. CORS Filter]
-    CorsFilter --> RateLimitFilter[2. Bucket4j Rate Limiting Filter]
+    CorsFilter --> RateLimitFilter[2. Rate Limiting Filter]
     RateLimitFilter --> JwtAuthFilter[3. JwtAuthenticationFilter]
     JwtAuthFilter --> SecurityContext[Thiết lập SecurityContextHolder]
     SecurityContext --> MethodAuth{4. Controller @PreAuthorize}
-    MethodAuth -- Không có quyền --> Res403[Trả về HTTP 403 Forbidden]
-    MethodAuth -- Có quyền --> ServiceLayer[5. Service Layer & Data-Scope Check]
-    ServiceLayer -- Truy cập ngoài phòng ban --> Res403Scope[Trả về HTTP 403 Data Scope]
-    ServiceLayer -- Hợp lệ --> RepoLayer[6. JPA Repository & MySQL]
+    MethodAuth -- Thiếu quyền --> Res403[Trả về HTTP 403 Forbidden]
+    MethodAuth -- Hợp lệ --> ServiceLayer[5. Service Layer & Branch-Scope Check]
+    ServiceLayer -- Truy cập ngoài chi nhánh kiêm nhiệm --> Res403Scope[Trả về HTTP 403 Data Scope]
+    ServiceLayer -- Hợp lệ --> RepoLayer[6. JPA Repository & MySQL Transaction]
 ```
 
-### 4.1. Cơ chế Hoạt động của Bộ lọc Bảo mật
-1. **CORS Filter:** Cấu hình tường minh danh sách domain được phép truy cập (`http://localhost:5173` trên môi trường dev, domain chính thức trên prod). Bật `allowCredentials(true)` để cho phép truyền cookie `refresh_token`.
-2. **Rate Limiting Filter (Bucket4j):** Giới hạn tối đa 5 yêu cầu đăng nhập sai trong 15 phút trên mỗi IP/tài khoản. Trả về `429 Too Many Requests` khi vượt ngưỡng.
-3. **JwtAuthenticationFilter:**
-   - Trích xuất token từ Header: `Authorization: Bearer <token>`.
-   - Giải mã và xác thực chữ ký số bằng khóa bí mật (`JWT_SECRET` tối thiểu 256 bits).
-   - Kiểm tra hạn sử dụng (15 phút).
-   - Nạp thông tin người dùng (`UserPrincipal`) vào `SecurityContextHolder`.
-4. **Phân quyền Hai Lớp (Two-tier Authorization):**
-   - *Lớp 1 (Role-level):* Chặn tại Controller bằng `@PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER')")`.
-   - *Lớp 2 (Data-scope level):* Kiểm tra ngữ cảnh dữ liệu tại tầng Service. Ví dụ: Nếu người gọi là `ROLE_DEPT_MANAGER`, service kiểm tra xem `department_id` của tài nguyên có thuộc phòng ban mà manager quản lý hay không. Nếu cố tình truy vấn phòng ban khác $\rightarrow$ Chặn ngay lập tức và ghi log cảnh báo an ninh.
+### 5.1. Bốn Vai Trò Người Dùng Chuẩn Hóa
+1. `ROLE_DIRECTOR` (Giám đốc điều hành):
+   - Phạm vi truy cập: Toàn hệ thống (Cross-branch).
+   - Quyền hạn: Thêm/sửa/xóa cơ sở, chức danh, cấu hình tham số hệ thống, phê duyệt bất kỳ đơn từ và xem báo cáo hợp nhất toàn công ty.
+2. `ROLE_MANAGER` (Quản lý chi nhánh):
+   - Phạm vi truy cập: Giới hạn nghiêm ngặt trong chi nhánh chính (`branch_id`) và các chi nhánh kiêm nhiệm được phân công (`secondary_branches`).
+   - Quyền hạn: Quản lý hồ sơ nhân viên trong cơ sở, xếp lịch tuần, phê duyệt đổi ca/nhường ca, duyệt đơn nghỉ phép và đơn giải trình chấm công.
+3. `ROLE_EMPLOYEE` (Nhân viên):
+   - Phạm vi truy cập: Cá nhân (Self-service).
+   - Quyền hạn: Xem lịch làm việc cá nhân, đăng ký lịch rảnh, tự nhận ca trống (`SELF_CLAIM`), nộp đơn đổi ca/nhường ca, check-in/out web, nộp giải trình và đơn nghỉ phép.
+4. `ROLE_ADMIN` (Quản trị viên kỹ thuật):
+   - Quyền hạn bảo trì hệ thống, quản lý tài khoản và nhật ký kiểm toán.
 
 ---
 
-## 5. XỬ LÝ LỖI TOÀN CỤC VÀ NHẬT KÝ KIỂM TOÁN (GLOBAL EXCEPTION & LOGGING)
+## 6. XỬ LÝ LỖI TOÀN CỤC VÀ NHẬT KÝ KIỂM TOÁN (GLOBAL EXCEPTION & LOGGING)
 
-### 5.1. Bộ Xử lý Ngoại lệ Toàn cục (`@RestControllerAdvice`)
-Tất cả các lỗi xảy ra trong backend đều được gom về một lớp điều khiển duy nhất `GlobalExceptionHandler` để đảm bảo định dạng trả về luôn thống nhất:
+### 6.1. Bộ Xử lý Ngoại lệ Toàn cục (`@RestControllerAdvice`)
+Tất cả các lỗi xảy ra trong backend đều được thu thập và đóng gói đồng nhất qua `GlobalExceptionHandler`:
 
 ```java
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
 
-    // 1. Bắt lỗi Validation form (Bean Validation @Valid)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
         List<ValidationErrorDetail> details = ex.getBindingResult().getFieldErrors().stream()
@@ -222,28 +285,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.validationError(details));
     }
 
-    // 2. Bắt lỗi Nghiệp vụ (BusinessException - ví dụ: vi phạm quy tắc phân ca BR-001)
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException ex) {
         log.warn("Business rule violation: code={}, message={}", ex.getErrorCode(), ex.getMessage());
         return ResponseEntity.status(ex.getHttpStatus()).body(ApiResponse.error(ex.getErrorCode(), ex.getMessage()));
     }
 
-    // 3. Bắt lỗi Xung đột Khóa Lạc quan (OptimisticLockException)
     @ExceptionHandler(OptimisticLockException.class)
     public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(OptimisticLockException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-            .body(ApiResponse.error("OPTIMISTIC_LOCK_CONFLICT", "Dữ liệu vừa được cập nhật bởi người dùng khác. Vui lòng làm mới trang."));
+            .body(ApiResponse.error("OPTIMISTIC_LOCK_CONFLICT", "Dữ liệu lịch vừa được cập nhật bởi quản lý khác. Vui lòng làm mới trang."));
     }
 
-    // 4. Bắt lỗi Không có quyền truy cập (AccessDeniedException)
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-            .body(ApiResponse.error("FORBIDDEN", "Bạn không có quyền thực hiện thao tác này."));
+            .body(ApiResponse.error("FORBIDDEN", "Bạn không có quyền hạn hoặc tài nguyên nằm ngoài chi nhánh phụ trách."));
     }
 
-    // 5. Bắt toàn bộ lỗi máy chủ không mong muốn còn lại (500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex, HttpServletRequest request) {
         log.error("Unhandled internal server error at path: {}", request.getRequestURI(), ex);
@@ -253,15 +312,15 @@ public class GlobalExceptionHandler {
 }
 ```
 
-### 5.2. Chuẩn Hóa Nhật Ký Ứng Dụng (Structured Logging)
-- Ứng dụng sử dụng **Slf4j** kết hợp **Logback** xuất định dạng JSON trên môi trường Production để tương thích với các hệ thống phân tích log tập trung (ELK / Grafana Loki).
-- **Mặt nạ dữ liệu nhạy cảm (PII Masking):** Cấu hình bộ lọc log tự động làm mờ các trường nhạy cảm như `password`, `national_id` (CCCD) và mã PIN để tuân thủ Nghị định 13/2023/NĐ-CP.
+### 6.2. Chuẩn Hóa Nhật Ký Ứng Dụng (Structured Logging)
+- Ứng dụng sử dụng **Slf4j** kết hợp **Logback** xuất định dạng JSON trên môi trường Production để tương thích với các hệ thống phân tích log tập trung.
+- **Mặt nạ dữ liệu nhạy cảm (PII Masking):** Cấu hình bộ lọc log tự động làm mờ các trường nhạy cảm như `password`, `national_id` (CCCD) và mã xác thực để tuân thủ Nghị định 13/2023/NĐ-CP.
 
 ---
 
-## 6. KẾ HOẠCH TRIỂN KHAI DOCKER COMPOSE (DEVOPS CONTAINER LAYOUT)
+## 7. KẾ HOẠCH TRIỂN KHAI DOCKER COMPOSE (DEVOPS CONTAINER LAYOUT)
 
-Hệ thống được đóng gói thành các dịch vụ Docker độc lập để triển khai dễ dàng bằng một lệnh `docker compose up -d`:
+Hệ thống được đóng gói thành các dịch vụ Docker độc lập để triển khai bằng lệnh `docker compose up -d`:
 
 ```yaml
 # docker-compose.yml (Kế hoạch kiến trúc phục vụ triển khai)

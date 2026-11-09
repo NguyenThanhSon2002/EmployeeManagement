@@ -297,6 +297,11 @@ public class ScheduleService {
     }
 
     @Transactional
+    public void resetWeeklySchedule(Long scheduleId, Integer scheduleVersion, Long currentUserId) {
+        assignmentService.resetWeeklySchedule(scheduleId, scheduleVersion, currentUserId);
+    }
+
+    @Transactional
     public ShiftAssignmentDto updateOverrideReason(Long id, UpdateOverrideReasonRequest request, Long currentUserId) {
         return assignmentService.updateOverrideReason(id, request, currentUserId);
     }
