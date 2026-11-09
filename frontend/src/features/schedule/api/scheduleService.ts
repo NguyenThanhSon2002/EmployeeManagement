@@ -126,6 +126,11 @@ export const scheduleService = {
     return api.delete<void>(`/schedules/assignments/${assignmentId}${query}`);
   },
 
+  async resetWeeklySchedule(scheduleId: number, scheduleVersion?: number): Promise<void> {
+    const query = scheduleVersion !== undefined ? `?schedule_version=${scheduleVersion}` : '';
+    return api.delete<void>(`/schedules/${scheduleId}/assignments${query}`);
+  },
+
   async updateAssignmentOverride(
     assignmentId: number,
     data: {
