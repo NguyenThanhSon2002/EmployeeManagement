@@ -24,7 +24,7 @@ Hệ thống **HRMS (Employee Management & Shift Scheduling System)** được n
 
 ## 2. Main Features (Các Tính Năng Chính)
 
-Hệ thống gồm 8 phân hệ tính năng cốt lõi được đồng bộ hóa chặt chẽ giữa Backend và Frontend:
+Hệ thống gồm 9 phân hệ tính năng cốt lõi được đồng bộ hóa chặt chẽ giữa Backend và Frontend:
 
 ### 2.1. Ma Trận Xếp Ca Thông Minh (Smart Shift Scheduling Matrix)
 - **Giao diện ma trận 8 cột trực quan**: Hiển thị mẫu ca làm việc cột đầu tiên và 7 ngày trong tuần (Thứ Hai đến Chủ Nhật).
@@ -35,7 +35,7 @@ Hệ thống gồm 8 phân hệ tính năng cốt lõi được đồng bộ hó
   - Tự động gợi ý xếp ca dựa trên lịch khả dụng (Auto Assign Algorithm).
   - Sao chép toàn bộ lịch ca tuần trước (Copy Week).
   - Xuất bản lịch (`PUBLISHED`) và Thu hồi về bản nháp (`DRAFT`).
-  - Đăng ký nhận ca trống dành cho nhân viên (Open Shift Claiming).
+  - Đăng ký nhận ca trống dành cho nhân viên (Open Shift Claiming): Hỗ trợ nhân viên tự nguyện đăng ký nhận ca mở kèm cờ xác nhận `self_volunteered_confirm` và tự động gắn nhãn nguồn gốc phân ca (`source = 'CLAIMED'` so với ca do quản lý chỉ định `'ASSIGNED'`).
   - Khóa lạc quan (`@Version`) chống ghi đè dữ liệu khi nhiều quản lý thao tác cùng lúc.
   - Ghi nhật ký kiểm toán thay đổi phân ca (`schedule_change_history`).
 
@@ -43,6 +43,7 @@ Hệ thống gồm 8 phân hệ tính năng cốt lõi được đồng bộ hó
 - **2 phương thức hoán đổi**:
   - **Đổi ca chéo (2-Way Swap)**: Đổi ca của mình lấy ca của đồng nghiệp trong cùng chi nhánh.
   - **Nhường ca 1 chiều (1-Way Handover)**: Chuyển giao ca của mình cho một đồng nghiệp đủ điều kiện nhận.
+- **Truy vết bàn giao ca (Shift Handover Traceability)**: Khi duyệt nhường ca, bảo tồn tuyệt đối thông tin nhân sự được xếp ca ban đầu qua trường `transferred_from_employee_id`. Trên ô ca tuần (`ShiftGridCell`), hiển thị người nhận thay thực tế và cung cấp thanh thu gọn `▾ 1 NV đã nhường ca` để mở rộng xem nhân sự ban đầu (gạch ngang mờ) kèm lý do giải trình chi tiết, đảm bảo minh bạch và zero side-effects tới công thức tính giờ.
 - **Mô phỏng xung đột trước khi gửi (`/api/v1/shift-swaps/simulate`)**: Đảm bảo việc hoán đổi không gây vi phạm luật lao động cho cả 2 nhân sự.
 - **Quy trình phê duyệt 2 bước minh bạch**: Đồng nghiệp xác nhận (`PEER_ACCEPTED`) -> Quản lý cơ sở phê duyệt (`APPROVED`) -> Hệ thống tự động hoán đổi phân ca trên lịch tuần.
 
@@ -84,6 +85,14 @@ Hệ thống gồm 8 phân hệ tính năng cốt lõi được đồng bộ hó
 - Cấu hình thời gian ân hạn đi muộn (15 phút).
 - Cấu hình khoảng đệm di chuyển giữa các chi nhánh (30 phút).
 
+### 2.9. Trung Tâm Thông Báo Nội Bộ (In-App Notification Center)
+- **Chuông thông báo thời gian thực (`NotificationBell`)**: Tích hợp trên Top Navigation Bar, hiển thị huy hiệu đếm số lượng thông báo chưa đọc theo thời gian thực.
+- **Tự động phát sinh thông báo sự kiện (Event-driven Notifications)**:
+  - Thông báo đơn nghỉ phép: Tự động gửi thông báo tới cấp quản lý khi nhân viên nộp đơn và phản hồi kết quả tới nhân viên khi đơn được phê duyệt/từ chối (`LeaveNotifier`).
+  - Thông báo đổi/nhường ca: Thông báo cho đồng nghiệp được đề xuất khi có yêu cầu hoán đổi và thông báo kết quả phê duyệt từ quản lý chi nhánh.
+  - Thông báo nhận ca trống: Cập nhật ngay khi nhân viên hoàn tất đăng ký ca mở.
+- **Quản lý trạng thái thông báo**: Menu dropdown phân trang, hỗ trợ lọc thông báo chưa đọc, đánh dấu đã đọc từng thông báo hoặc đọc tất cả một chạm (`/api/v1/notifications/read-all`).
+
 ---
 
 ## 3. Technology Stack (Ngăn Xếp Công Nghệ)
@@ -95,7 +104,7 @@ Hệ thống gồm 8 phân hệ tính năng cốt lõi được đồng bộ hó
 | **Security** | Spring Security | 6.3.3 | Xác thực người dùng, bảo vệ endpoint và phân quyền phương thức `@PreAuthorize` |
 | **Token Authentication** | jjwt (`jjwt-api`, `jjwt-impl`, `jjwt-jackson`) | 0.12.5 | Cấp phát, xác minh và giải mã Stateless JWT Token với thuật toán HMAC-SHA512 |
 | **ORM / Persistence**| Spring Data JPA / Hibernate | 6.5.3 | Quản lý truy cập dữ liệu, ánh xạ Object-Relational, khóa lạc quan `@Version` |
-| **Database Migration**| Flyway Core & Flyway MySQL | 10.18.0 | Tự động hóa khởi tạo schema và kiểm soát phiên bản CSDL (23 migration scripts) |
+| **Database Migration**| Flyway Core & Flyway MySQL | 10.18.0 | Tự động hóa khởi tạo schema và kiểm soát phiên bản CSDL (27 migration scripts: V1 -> V27) |
 | **Connection Pool** | HikariCP | 5.1.0 | Quản lý kết nối CSDL hiệu năng cao với cấu hình 10 connection tối đa |
 | **Database** | MySQL Server | 8.0 | Hệ quản trị cơ sở dữ liệu quan hệ chính (InnoDB, utf8mb4_unicode_ci) |
 | **Office Export** | Apache POI (`poi-ooxml`) | 5.2.5 | Tạo và xuất báo cáo bảng công định dạng Microsoft Excel `.xlsx` chuẩn mực |
@@ -131,7 +140,7 @@ flowchart TB
     subgraph AppTier ["APPLICATION TIER: SPRING BOOT MODULAR MONOLITH"]
         SEC["Spring Security Filter Chain<br/>JwtAuthenticationFilter (HMAC-SHA512)"]
         
-        subgraph Modules ["13 Feature Modules (Package-by-Feature)"]
+        subgraph Modules ["14 Feature Modules (Package-by-Feature)"]
             MOD_AUTH["auth"]
             MOD_EMP["employee"]
             MOD_BRANCH["branch"]
@@ -139,6 +148,7 @@ flowchart TB
             MOD_ATT["attendance"]
             MOD_LEAVE["leave"]
             MOD_SWAP["swap"]
+            MOD_NOTIF["notification"]
             MOD_REP["report & poi"]
             MOD_OTHER["pos, shift, avail, set, dash"]
         end
@@ -148,7 +158,7 @@ flowchart TB
     end
 
     subgraph DataTier ["DATA & STORAGE TIER"]
-        DB[("MySQL 8.0 Database (hrms_db)<br/>21 Relational Tables • 23 Flyway Migrations")]
+        DB[("MySQL 8.0 Database (hrms_db)<br/>22 Relational Tables • 27 Flyway Migrations")]
         FS["Persistent File Storage<br/>./backend/uploads/ (Avatars)"]
     end
 
@@ -165,7 +175,7 @@ flowchart TB
 ```
 
 ### Luồng Xử Lý Một Request Điển Hình:
-1. **Client**: Người dùng thao tác trên giao diện React, Axios client đính kèm Header `Authorization: Bearer <JWT_TOKEN>`.
+1. **Client**: Người dùng thao tác trên giao diện React, native fetch client (`apiClient.ts`) đính kèm Header `Authorization: Bearer <JWT_TOKEN>`.
 2. **Reverse Proxy (Nginx)**: Tiếp nhận yêu cầu, chuyển tiếp các request `/api/v1/*` tới cổng `8080` của Backend.
 3. **Security Filter**: `JwtAuthenticationFilter` chặn request, giải mã token bằng khóa bí mật HMAC-SHA512, trích xuất `UserPrincipal` và nạp vào `SecurityContext`.
 4. **Controller**: Kiểm tra phân quyền method level (`@PreAuthorize("hasAnyRole(...)")`), kiểm tra dữ liệu đầu vào (`@Valid`).
@@ -201,7 +211,7 @@ D:\Project\Employee Management\
 │   │   │   │   │   ├── config/                # SecurityConfig (FilterChain, PasswordEncoder, CORS)
 │   │   │   │   │   ├── jwt/                   # JwtTokenProvider, JwtAuthenticationFilter
 │   │   │   │   │   └── service/               # CustomUserDetailsService, UserPrincipal
-│   │   │   │   └── modules/                   # 13 Module nghiệp vụ (Package-by-Feature)
+│   │   │   │   └── modules/                   # 14 Module nghiệp vụ (Package-by-Feature)
 │   │   │   │       ├── attendance/            # Điểm danh, tính giờ đêm, giải trình quẹt thẻ
 │   │   │   │       ├── auth/                  # Đăng nhập, đăng ký, đồng bộ quyền hạn
 │   │   │   │       ├── availability/          # Lịch khả dụng & ca làm mong muốn của nhân viên
@@ -209,6 +219,7 @@ D:\Project\Employee Management\
 │   │   │   │       ├── dashboard/             # Thống kê KPI vận hành tổng thể
 │   │   │   │       ├── employee/              # Hồ sơ nhân sự, chi nhánh kiêm nhiệm, avatar
 │   │   │   │       ├── leave/                 # Quản lý phép, sổ cái quỹ phép, duyệt đơn
+│   │   │   │       ├── notification/          # Trung tâm thông báo nội bộ (Leave, Swap, Claim)
 │   │   │   │       ├── position/              # 3 Chức danh chuẩn mực doanh nghiệp
 │   │   │   │       ├── report/                # Tổng hợp báo cáo, xuất Excel POI & CSV UTF-8
 │   │   │   │       ├── schedule/              # Xếp ca tuần & Conflict Detection Engine (9 rules)
@@ -218,7 +229,7 @@ D:\Project\Employee Management\
 │   │   │   └── resources/
 │   │   │       ├── application.yml            # Cấu hình JPA, Datasource, JWT, Port
 │   │   │       ├── application-dev.yml        # Cấu hình môi trường dev
-│   │   │       └── db/migration/              # 23 Flyway migration scripts (V1 -> V23)
+│   │   │       └── db/migration/              # 27 Flyway migration scripts (V1 -> V27)
 │   │   └── test/java/com/company/hrms/        # 5 Test suites kiểm thử tích hợp trọng điểm
 │   └── uploads/                               # Thư mục lưu trữ ảnh đại diện tải lên
 │
@@ -233,13 +244,14 @@ D:\Project\Employee Management\
 │       ├── App.tsx                  # Khởi tạo App, Auth bootstrap, Toast container
 │       ├── routes/                  # AppRoutes.tsx, route-paths.ts, RoleRoute.tsx
 │       ├── components/              # layout/ (AppLayout, Topbar, Sidebar), common/
-│       ├── features/                # 10 Module chức năng giao diện (Collocation Pattern)
+│       ├── features/                # 11 Module chức năng giao diện (Collocation Pattern)
 │       │   ├── attendance/          # Màn hình chấm công, lịch sử, modal giải trình
 │       │   ├── auth/                # Màn hình đăng nhập, quên mật khẩu, đăng ký
 │       │   ├── branches/            # Quản lý danh sách & form chi nhánh
 │       │   ├── dashboard/           # Dashboard KPI, biểu đồ xu hướng chấm công
 │       │   ├── employees/           # Danh sách nhân viên, hồ sơ chi tiết, đăng ký ca
 │       │   ├── leaves/              # Quản lý đơn xin nghỉ, thẻ số dư quỹ phép
+│       │   ├── notification/        # Chuông thông báo, menu dropdown, store
 │       │   ├── reports/             # 3 Bảng báo cáo, nút xuất Excel/CSV
 │       │   ├── schedule/            # Ma trận xếp ca 8 cột, drawer gán ca, swap ca
 │       │   ├── settings/            # Giao diện cấu hình tham số luật lao động
