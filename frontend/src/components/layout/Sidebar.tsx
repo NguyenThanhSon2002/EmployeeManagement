@@ -13,6 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  CircleDollarSign,
+  Receipt,
 } from 'lucide-react';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
@@ -50,6 +52,11 @@ const NAV_SECTIONS: NavSection[] = [
         label: 'Chấm Công',
         icon: <Clock size={18} />,
       },
+      {
+        path: ROUTE_PATHS.MY_PAYSLIP,
+        label: 'Phiếu Lương',
+        icon: <Receipt size={18} />,
+      },
     ],
   },
   {
@@ -80,6 +87,12 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'PHÂN TÍCH & THIẾT LẬP',
     items: [
+      {
+        path: ROUTE_PATHS.PAYROLL,
+        label: 'Bảng Lương',
+        icon: <CircleDollarSign size={18} />,
+        roles: ['ROLE_DIRECTOR', 'ROLE_MANAGER', 'ROLE_ADMIN'],
+      },
       {
         path: ROUTE_PATHS.REPORTS,
         label: 'Báo Cáo',

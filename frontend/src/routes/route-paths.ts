@@ -11,6 +11,8 @@ export const ROUTE_PATHS = {
   ATTENDANCE: '/attendance',
   SHIFTS: '/shifts',
   LEAVES: '/leaves',
+  PAYROLL: '/payroll',
+  MY_PAYSLIP: '/my-payslip',
   REPORTS: '/reports',
   SETTINGS: '/settings',
 } as const;

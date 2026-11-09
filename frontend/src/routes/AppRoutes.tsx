@@ -11,6 +11,8 @@ import { AttendanceOverviewPage } from '@/features/attendance/AttendanceOverview
 import { LeaveRequestsPage } from '@/features/leaves/LeaveRequestsPage';
 import { ReportsPage } from '@/features/reports/ReportsPage';
 import { BranchesPage } from '@/features/branches/BranchesPage';
+import { PayrollManagementPage } from '@/features/payroll/PayrollManagementPage';
+import { MyPayslipPage } from '@/features/payroll/MyPayslipPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { ROUTE_PATHS, getDefaultLandingRoute } from './route-paths';
@@ -137,6 +139,15 @@ export const AppRoutes: React.FC = () => {
         <Route path={ROUTE_PATHS.ATTENDANCE} element={<AttendanceOverviewPage />} />
         <Route path={ROUTE_PATHS.SHIFTS} element={<ShiftTemplatesPage />} />
         <Route path={ROUTE_PATHS.LEAVES} element={<LeaveRequestsPage />} />
+        <Route
+          path={ROUTE_PATHS.PAYROLL}
+          element={
+            <RoleRoute allowedRoles={['ROLE_DIRECTOR', 'ROLE_MANAGER', 'ROLE_ADMIN']}>
+              <PayrollManagementPage />
+            </RoleRoute>
+          }
+        />
+        <Route path={ROUTE_PATHS.MY_PAYSLIP} element={<MyPayslipPage />} />
         <Route
           path={ROUTE_PATHS.REPORTS}
           element={
