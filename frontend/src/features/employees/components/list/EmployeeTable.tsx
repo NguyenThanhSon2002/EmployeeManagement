@@ -65,6 +65,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             <th style={{ padding: '12px 16px' }}>Họ và Tên</th>
             <th style={{ padding: '12px 16px' }}>Chi Nhánh</th>
             <th style={{ padding: '12px 16px' }}>Chức Danh</th>
+            <th style={{ padding: '12px 16px' }}>Hình Thức</th>
             <th style={{ padding: '12px 16px' }}>Liên Hệ</th>
             <th style={{ padding: '12px 16px' }}>Trạng Thái</th>
             <th style={{ padding: '12px 16px' }}>Lịch Khả Dụng</th>
@@ -74,19 +75,19 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
         <tbody>
           {isLoading ? (
             <tr>
-              <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+              <td colSpan={9} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                 Đang tải danh sách nhân sự từ máy chủ...
               </td>
             </tr>
           ) : loadError ? (
             <tr>
-              <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-error)' }}>
+              <td colSpan={9} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-error)' }}>
                 {loadError}
               </td>
             </tr>
           ) : employees.length === 0 ? (
             <tr>
-              <td colSpan={8} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+              <td colSpan={9} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
                 Không tìm thấy nhân viên nào phù hợp với bộ lọc hiện tại.
               </td>
             </tr>
@@ -219,6 +220,43 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                     <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
                       {getPositionName(emp.positionId)}
                     </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      {emp.employmentType === 'PART_TIME' ? (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor: '#FEF3C7',
+                            color: '#B45309',
+                            border: '1px solid #FDE68A',
+                          }}
+                        >
+                          <Briefcase size={12} /> Part-time
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor: '#EFF6FF',
+                            color: '#1D4ED8',
+                            border: '1px solid #BFDBFE',
+                          }}
+                        >
+                          <Clock size={12} /> Full-time
+                        </span>
+                      )}
+                    </td>
                     <td style={{ padding: '12px 16px', color: 'var(--color-text-secondary)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
                         <Phone size={12} color="var(--color-text-muted)" />
@@ -345,7 +383,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                         borderBottom: '1px solid var(--color-border-subtle)',
                       }}
                     >
-                      <td colSpan={8} style={{ padding: '12px 24px 16px 48px' }}>
+                      <td colSpan={9} style={{ padding: '12px 24px 16px 48px' }}>
                         <div
                           style={{
                             padding: '14px 18px',

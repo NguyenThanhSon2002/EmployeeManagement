@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface PayrollRepository extends JpaRepository<Payroll, Long> {
 
     @Query("SELECT p FROM Payroll p WHERE p.periodMonth = :month AND p.periodYear = :year " +
-            "AND (:branchId IS NULL AND p.branchId IS NULL OR p.branchId = :branchId)")
+            "AND ((:branchId IS NULL AND p.branchId IS NULL) OR p.branchId = :branchId)")
     Optional<Payroll> findByPeriodAndBranch(
             @Param("month") Integer month,
             @Param("year") Integer year,

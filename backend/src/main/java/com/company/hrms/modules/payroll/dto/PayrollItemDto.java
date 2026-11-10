@@ -29,6 +29,9 @@ public class PayrollItemDto {
     @JsonProperty("employment_type")
     private String employmentType;
 
+    @JsonProperty("employment_status")
+    private String employmentStatus;
+
     @JsonProperty("salary_type")
     private String salaryType;
 
@@ -37,6 +40,9 @@ public class PayrollItemDto {
 
     @JsonProperty("actual_hours")
     private BigDecimal actualHours;
+
+    @JsonProperty("part_time_hours")
+    private BigDecimal partTimeHours;
 
     @JsonProperty("night_hours")
     private BigDecimal nightHours;
@@ -49,6 +55,9 @@ public class PayrollItemDto {
 
     @JsonProperty("base_pay")
     private BigDecimal basePay;
+
+    @JsonProperty("part_time_pay")
+    private BigDecimal partTimePay;
 
     @JsonProperty("night_pay")
     private BigDecimal nightPay;
@@ -80,6 +89,9 @@ public class PayrollItemDto {
     private String status;
     private String note;
 
+    @JsonProperty("adjustments_detail")
+    private String adjustmentsDetail;
+
     public PayrollItemDto() {}
 
     public Long getId() { return id; }
@@ -98,12 +110,16 @@ public class PayrollItemDto {
     public void setPositionTitle(String positionTitle) { this.positionTitle = positionTitle; }
     public String getEmploymentType() { return employmentType; }
     public void setEmploymentType(String employmentType) { this.employmentType = employmentType; }
+    public String getEmploymentStatus() { return employmentStatus; }
+    public void setEmploymentStatus(String employmentStatus) { this.employmentStatus = employmentStatus; }
     public String getSalaryType() { return salaryType; }
     public void setSalaryType(String salaryType) { this.salaryType = salaryType; }
     public BigDecimal getStandardHours() { return standardHours; }
     public void setStandardHours(BigDecimal standardHours) { this.standardHours = standardHours; }
     public BigDecimal getActualHours() { return actualHours; }
     public void setActualHours(BigDecimal actualHours) { this.actualHours = actualHours; }
+    public BigDecimal getPartTimeHours() { return partTimeHours; }
+    public void setPartTimeHours(BigDecimal partTimeHours) { this.partTimeHours = partTimeHours; }
     public BigDecimal getNightHours() { return nightHours; }
     public void setNightHours(BigDecimal nightHours) { this.nightHours = nightHours; }
     public Integer getLateMinutes() { return lateMinutes; }
@@ -112,6 +128,8 @@ public class PayrollItemDto {
     public void setUnpaidLeaveDays(BigDecimal unpaidLeaveDays) { this.unpaidLeaveDays = unpaidLeaveDays; }
     public BigDecimal getBasePay() { return basePay; }
     public void setBasePay(BigDecimal basePay) { this.basePay = basePay; }
+    public BigDecimal getPartTimePay() { return partTimePay; }
+    public void setPartTimePay(BigDecimal partTimePay) { this.partTimePay = partTimePay; }
     public BigDecimal getNightPay() { return nightPay; }
     public void setNightPay(BigDecimal nightPay) { this.nightPay = nightPay; }
     public BigDecimal getAttendanceBonus() { return attendanceBonus; }
@@ -134,4 +152,6 @@ public class PayrollItemDto {
     public void setStatus(String status) { this.status = status; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
+    public String getAdjustmentsDetail() { return adjustmentsDetail; }
+    public void setAdjustmentsDetail(String adjustmentsDetail) { this.adjustmentsDetail = adjustmentsDetail; }
 }

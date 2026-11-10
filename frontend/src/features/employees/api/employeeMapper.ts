@@ -57,7 +57,9 @@ export function mapDtoToEmployee(dto: any): Employee {
     managerId: dto.manager_id ?? dto.managerId ?? null,
     employmentStatus: (dto.employment_status ?? dto.employmentStatus ?? 'OFFICIAL') as EmploymentStatus,
     employmentType: dto.employment_type ?? dto.employmentType ?? 'FULL_TIME',
+    hourlyRate: dto.hourly_rate ?? dto.hourlyRate ?? (dto.employment_type === 'PART_TIME' || dto.employmentType === 'PART_TIME' ? 35000 : undefined),
     hireDate: dto.hire_date ?? dto.hireDate ?? '2026-01-01',
+    resignationDate: dto.resignation_date ?? dto.resignationDate ?? null,
     avatarUrl: dto.avatar_url ?? dto.avatarUrl ?? '',
     isActive: dto.is_active !== undefined ? dto.is_active : (dto.isActive !== undefined ? dto.isActive : true),
     version: dto.version ?? 1,
@@ -89,7 +91,9 @@ export function mapEmployeeToPayload(data: Partial<Employee>): Record<string, an
   if (data.managerId !== undefined) payload.manager_id = data.managerId;
   if (data.employmentStatus !== undefined) payload.employment_status = data.employmentStatus;
   if (data.employmentType !== undefined) payload.employment_type = data.employmentType;
+  if (data.hourlyRate !== undefined) payload.hourly_rate = data.hourlyRate;
   if (data.hireDate !== undefined) payload.hire_date = data.hireDate;
+  if (data.resignationDate !== undefined) payload.resignation_date = data.resignationDate;
   if (data.isActive !== undefined) payload.is_active = data.isActive;
   if (data.version !== undefined) payload.version = data.version;
 

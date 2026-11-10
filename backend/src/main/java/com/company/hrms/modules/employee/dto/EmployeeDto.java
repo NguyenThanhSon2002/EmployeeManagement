@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class EmployeeDto {
@@ -55,6 +56,9 @@ public class EmployeeDto {
 
     @JsonProperty("employment_type")
     private String employmentType;
+
+    @JsonProperty("hourly_rate")
+    private BigDecimal hourlyRate;
 
     @NotNull(message = "Ngày vào làm không được để trống")
     @JsonProperty("hire_date")
@@ -127,4 +131,6 @@ public class EmployeeDto {
     public void setResignationDate(LocalDate resignationDate) { this.resignationDate = resignationDate; }
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean active) { isActive = active; }
+    public BigDecimal getHourlyRate() { return hourlyRate; }
+    public void setHourlyRate(BigDecimal hourlyRate) { this.hourlyRate = hourlyRate; }
 }

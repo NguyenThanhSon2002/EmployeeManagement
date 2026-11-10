@@ -12,6 +12,10 @@ public class UpdatePayrollItemRequest {
     @DecimalMin(value = "0.0", message = "Số giờ công thực tế không được âm")
     private BigDecimal actualHours;
 
+    @JsonProperty("part_time_hours")
+    @DecimalMin(value = "0.0", message = "Số giờ công part-time không được âm")
+    private BigDecimal partTimeHours;
+
     @JsonProperty("night_hours")
     @DecimalMin(value = "0.0", message = "Số giờ ca đêm không được âm")
     private BigDecimal nightHours;
@@ -19,6 +23,14 @@ public class UpdatePayrollItemRequest {
     @JsonProperty("base_pay")
     @DecimalMin(value = "0.0", message = "Lương cơ bản theo công không được âm")
     private BigDecimal basePay;
+
+    @JsonProperty("part_time_pay")
+    @DecimalMin(value = "0.0", message = "Lương part-time không được âm")
+    private BigDecimal partTimePay;
+
+    @JsonProperty("night_pay")
+    @DecimalMin(value = "0.0", message = "Lương làm ca đêm không được âm")
+    private BigDecimal nightPay;
 
     @JsonProperty("attendance_bonus")
     @DecimalMin(value = "0.0", message = "Thưởng chuyên cần không được âm")
@@ -40,16 +52,28 @@ public class UpdatePayrollItemRequest {
     @JsonProperty("note")
     private String note;
 
+    @JsonProperty("adjustments_detail")
+    private String adjustmentsDetail;
+
     public UpdatePayrollItemRequest() {}
 
     public BigDecimal getActualHours() { return actualHours; }
     public void setActualHours(BigDecimal actualHours) { this.actualHours = actualHours; }
+
+    public BigDecimal getPartTimeHours() { return partTimeHours; }
+    public void setPartTimeHours(BigDecimal partTimeHours) { this.partTimeHours = partTimeHours; }
 
     public BigDecimal getNightHours() { return nightHours; }
     public void setNightHours(BigDecimal nightHours) { this.nightHours = nightHours; }
 
     public BigDecimal getBasePay() { return basePay; }
     public void setBasePay(BigDecimal basePay) { this.basePay = basePay; }
+
+    public BigDecimal getPartTimePay() { return partTimePay; }
+    public void setPartTimePay(BigDecimal partTimePay) { this.partTimePay = partTimePay; }
+
+    public BigDecimal getNightPay() { return nightPay; }
+    public void setNightPay(BigDecimal nightPay) { this.nightPay = nightPay; }
 
     public BigDecimal getAttendanceBonus() { return attendanceBonus; }
     public void setAttendanceBonus(BigDecimal attendanceBonus) { this.attendanceBonus = attendanceBonus; }
@@ -65,4 +89,7 @@ public class UpdatePayrollItemRequest {
 
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
+
+    public String getAdjustmentsDetail() { return adjustmentsDetail; }
+    public void setAdjustmentsDetail(String adjustmentsDetail) { this.adjustmentsDetail = adjustmentsDetail; }
 }

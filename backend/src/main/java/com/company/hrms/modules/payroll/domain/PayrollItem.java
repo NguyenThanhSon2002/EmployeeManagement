@@ -31,6 +31,9 @@ public class PayrollItem {
     @Column(name = "actual_hours", nullable = false, precision = 8, scale = 2)
     private BigDecimal actualHours = BigDecimal.ZERO;
 
+    @Column(name = "part_time_hours", nullable = false, precision = 8, scale = 2)
+    private BigDecimal partTimeHours = BigDecimal.ZERO;
+
     @Column(name = "night_hours", nullable = false, precision = 8, scale = 2)
     private BigDecimal nightHours = BigDecimal.ZERO;
 
@@ -42,6 +45,9 @@ public class PayrollItem {
 
     @Column(name = "base_pay", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePay = BigDecimal.ZERO;
+
+    @Column(name = "part_time_pay", nullable = false, precision = 15, scale = 2)
+    private BigDecimal partTimePay = BigDecimal.ZERO;
 
     @Column(name = "night_pay", nullable = false, precision = 15, scale = 2)
     private BigDecimal nightPay = BigDecimal.ZERO;
@@ -76,6 +82,9 @@ public class PayrollItem {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "adjustments_detail", columnDefinition = "JSON")
+    private String adjustmentsDetail;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -104,6 +113,8 @@ public class PayrollItem {
     public void setStandardHours(BigDecimal standardHours) { this.standardHours = standardHours; }
     public BigDecimal getActualHours() { return actualHours; }
     public void setActualHours(BigDecimal actualHours) { this.actualHours = actualHours; }
+    public BigDecimal getPartTimeHours() { return partTimeHours; }
+    public void setPartTimeHours(BigDecimal partTimeHours) { this.partTimeHours = partTimeHours; }
     public BigDecimal getNightHours() { return nightHours; }
     public void setNightHours(BigDecimal nightHours) { this.nightHours = nightHours; }
     public Integer getLateMinutes() { return lateMinutes; }
@@ -112,6 +123,8 @@ public class PayrollItem {
     public void setUnpaidLeaveDays(BigDecimal unpaidLeaveDays) { this.unpaidLeaveDays = unpaidLeaveDays; }
     public BigDecimal getBasePay() { return basePay; }
     public void setBasePay(BigDecimal basePay) { this.basePay = basePay; }
+    public BigDecimal getPartTimePay() { return partTimePay; }
+    public void setPartTimePay(BigDecimal partTimePay) { this.partTimePay = partTimePay; }
     public BigDecimal getNightPay() { return nightPay; }
     public void setNightPay(BigDecimal nightPay) { this.nightPay = nightPay; }
     public BigDecimal getAttendanceBonus() { return attendanceBonus; }
@@ -134,6 +147,8 @@ public class PayrollItem {
     public void setStatus(String status) { this.status = status; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
+    public String getAdjustmentsDetail() { return adjustmentsDetail; }
+    public void setAdjustmentsDetail(String adjustmentsDetail) { this.adjustmentsDetail = adjustmentsDetail; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

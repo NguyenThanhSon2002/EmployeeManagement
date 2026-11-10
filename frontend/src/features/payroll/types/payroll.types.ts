@@ -30,6 +30,18 @@ export interface PayrollSummary {
   created_at: string;
 }
 
+export interface AdjustmentDetailItem {
+  id: string;
+  name: string;
+  amount: number;
+}
+
+export interface AdjustmentsDetail {
+  allowances?: AdjustmentDetailItem[];
+  bonuses?: AdjustmentDetailItem[];
+  deductions?: AdjustmentDetailItem[];
+}
+
 export interface PayrollItem {
   id: number;
   payroll_id: number;
@@ -39,13 +51,16 @@ export interface PayrollItem {
   branch_name?: string;
   position_title?: string;
   employment_type: string;
+  employment_status?: string;
   salary_type: 'MONTHLY' | 'HOURLY';
   standard_hours: number;
   actual_hours: number;
+  part_time_hours?: number;
   night_hours: number;
   late_minutes: number;
   unpaid_leave_days: number;
   base_pay: number;
+  part_time_pay?: number;
   night_pay: number;
   attendance_bonus: number;
   allowances_total: number;
@@ -57,6 +72,7 @@ export interface PayrollItem {
   net_salary: number;
   status: string;
   note?: string;
+  adjustments_detail?: string | AdjustmentsDetail | null;
 }
 
 export interface PayrollDetail {
@@ -86,15 +102,18 @@ export interface MyPayslip {
   branch_name: string;
   position_title: string;
   employment_type: string;
+  employment_status?: string;
   salary_type: 'MONTHLY' | 'HOURLY';
   standard_hours: number;
   actual_hours: number;
+  part_time_hours?: number;
   night_hours: number;
   late_minutes: number;
   unpaid_leave_days: number;
 
   // Earnings
   base_pay: number;
+  part_time_pay?: number;
   night_pay: number;
   attendance_bonus: number;
   allowances_total: number;
@@ -110,16 +129,21 @@ export interface MyPayslip {
   // Net Take-Home
   net_salary: number;
   note?: string;
+  adjustments_detail?: string | AdjustmentsDetail | null;
   approved_at?: string | null;
 }
 
 export interface UpdatePayrollItemPayload {
   actual_hours?: number;
+  part_time_hours?: number;
   night_hours?: number;
   base_pay?: number;
+  part_time_pay?: number;
+  night_pay?: number;
   attendance_bonus?: number;
   allowances_total?: number;
   deduction_late?: number;
   deduction_unpaid_leave?: number;
+  adjustments_detail?: string;
   note: string;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Employee, Branch, Position, EmploymentStatus } from '@/types/domain.types';
+import type { Employee, Branch, Position, EmploymentStatus, EmploymentType } from '@/types/domain.types';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 
 export interface EmployeeFormData {
@@ -12,7 +12,10 @@ export interface EmployeeFormData {
   secondaryBranches: Array<{ branchId: number; positionId: number }>;
   positionId: number;
   employmentStatus: EmploymentStatus;
+  employmentType: EmploymentType;
+  hourlyRate?: number;
   hireDate: string;
+  resignationDate?: string;
 }
 
 interface UseEmployeeFormProps {
@@ -47,6 +50,8 @@ export function useEmployeeForm({
     secondaryBranches: [],
     positionId: 3,
     employmentStatus: 'OFFICIAL',
+    employmentType: 'FULL_TIME',
+    hourlyRate: 35000,
     hireDate: '2024-01-01',
   });
 
@@ -77,7 +82,10 @@ export function useEmployeeForm({
         secondaryBranches: secList,
         positionId: initialData.positionId || 3,
         employmentStatus: initialData.employmentStatus || 'OFFICIAL',
+        employmentType: (initialData.employmentType as EmploymentType) || 'FULL_TIME',
+        hourlyRate: initialData.hourlyRate ?? (initialData.employmentType === 'PART_TIME' ? 35000 : undefined),
         hireDate: initialData.hireDate || '2024-01-01',
+        resignationDate: initialData.resignationDate || '',
       });
     } else {
       setFormData({
@@ -90,7 +98,10 @@ export function useEmployeeForm({
         secondaryBranches: [],
         positionId: 3,
         employmentStatus: !isDirector ? 'PROBATION' : 'OFFICIAL',
+        employmentType: 'FULL_TIME',
+        hourlyRate: 35000,
         hireDate: new Date().toISOString().split('T')[0],
+        resignationDate: '',
       });
     }
     setErrors({});
@@ -172,6 +183,10 @@ export function useEmployeeForm({
         };
       });
 
+    const effectiveEmploymentType = isDirector
+      ? formData.employmentType
+      : (initialData?.employmentType as EmploymentType || 'FULL_TIME');
+
     onSubmit({
       ...(initialData ? { id: initialData.id } : {}),
       managerId: initialData?.managerId ?? null,
@@ -184,7 +199,12 @@ export function useEmployeeForm({
       secondaryBranches: validSecondaryBranches,
       positionId: formData.positionId,
       employmentStatus: effectiveStatus,
+      employmentType: effectiveEmploymentType,
+      hourlyRate: effectiveEmploymentType === 'PART_TIME' ? (formData.hourlyRate || 35000) : 0,
       hireDate: formData.hireDate,
+      resignationDate: effectiveStatus === 'RESIGNED'
+        ? (formData.resignationDate || new Date().toISOString().split('T')[0])
+        : undefined,
       isActive: isEmpActive,
     });
     onClose();

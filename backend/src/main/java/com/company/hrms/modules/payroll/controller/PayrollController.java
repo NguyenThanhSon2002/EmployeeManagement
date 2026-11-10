@@ -66,7 +66,7 @@ public class PayrollController {
     }
 
     @PutMapping("/items/{itemId}")
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'ADMIN', 'MANAGER', 'HR_MANAGER', 'DEPT_MANAGER')")
     @Operation(summary = "Điều chỉnh thông tin chi tiết phiếu lương nhân viên", description = "Chỉ Giám đốc / Admin có quyền điều chỉnh giờ công, phụ cấp, thưởng phạt và ghi chú; hệ thống tự động tính lại thuế và lương thực nhận")
     public ApiResponse<PayrollItemDto> updatePayrollItem(
             @PathVariable Long itemId,
