@@ -29,6 +29,9 @@ export interface Position {
 /** Employment Status */
 export type EmploymentStatus = 'PROBATION' | 'OFFICIAL' | 'ON_LEAVE' | 'RESIGNED';
 
+/** Employment Type */
+export type EmploymentType = 'FULL_TIME' | 'PART_TIME';
+
 export interface SecondaryBranchAssignment {
   branchId: number;
   positionId: number;
@@ -48,6 +51,7 @@ export interface Employee {
   managerId: number | null;
   employmentStatus: EmploymentStatus;
   hireDate: string; // YYYY-MM-DD
+  resignationDate?: string | null;
   avatarUrl?: string;
   isActive: boolean;
   version?: number;
@@ -55,7 +59,8 @@ export interface Employee {
   dateOfBirth?: string;
   gender?: string;
   address?: string;
-  employmentType?: string;
+  employmentType?: EmploymentType | string;
+  hourlyRate?: number;
   hasMultiBranch?: boolean;
   homeBranchId?: number;
   homeBranchName?: string;

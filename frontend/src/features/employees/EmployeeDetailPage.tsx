@@ -4,6 +4,7 @@ import type { Employee, Branch } from '@/types/domain.types';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { EmployeeAvailabilityTab } from './components/EmployeeAvailabilityTab';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
+import { EmployeeFormModal } from './components/EmployeeFormModal';
 import { EmployeeProfileTab } from './components/detail/EmployeeProfileTab';
 import { EmployeeScheduleTab } from './components/detail/EmployeeScheduleTab';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
@@ -11,7 +12,7 @@ import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { employeeService } from './api/employeeService';
-import { mapDtoToEmployee, mapDtoToBranch } from './api/employeeMapper';
+import { mapDtoToEmployee, mapDtoToBranch, mapEmployeeToPayload } from './api/employeeMapper';
 import { branchService } from '@/shared/branch/branchService';
 import { formatDateVi } from '@/utils/date.utils';
 import { UserAvatar } from '@/components/common/UserAvatar';
@@ -33,6 +34,7 @@ import {
   Camera,
   KeyRound,
   Loader2,
+  Edit2,
 } from 'lucide-react';
 
 export const EmployeeDetailPage: React.FC = () => {
@@ -86,9 +88,36 @@ export const EmployeeDetailPage: React.FC = () => {
 
   const isSelf = Boolean(currentUser && employee && currentUser.id === employee.id);
   const canManagePassword = isSelf || currentRole === 'ROLE_DIRECTOR';
+  const canManageStaff = currentRole === 'ROLE_DIRECTOR' || currentRole === 'ROLE_MANAGER';
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [branchesList, setBranchesList] = useState<Branch[]>(branches);
   const [isLoading, setIsLoading] = useState<boolean>(!cachedEmployee);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const handleSaveEmployee = async (data: Omit<Employee, 'id'> & { id?: number }) => {
+    if (!employee) return;
+    try {
+      const payload = mapEmployeeToPayload(data);
+      const updated = await employeeService.updateEmployee(employee.id, payload);
+      const updatedEmp = mapDtoToEmployee(updated);
+      setEmployee(updatedEmp);
+      useDirectoryStore.getState().upsertEmployeeInDirectory(updatedEmp);
+      addToast({
+        type: 'success',
+        title: 'Cập nhật thành công',
+        message: `Đã cập nhật hồ sơ nhân viên ${updatedEmp.fullName}.`,
+      });
+      setIsEditModalOpen(false);
+    } catch (err: any) {
+      console.error('Lỗi cập nhật nhân viên:', err);
+      const msg = err?.response?.data?.error?.message || err?.message || 'Không thể lưu thông tin nhân viên.';
+      addToast({
+        type: 'error',
+        title: 'Cập nhật thất bại',
+        message: msg,
+      });
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -471,6 +500,37 @@ export const EmployeeDetailPage: React.FC = () => {
               <h1 style={{ fontSize: 'var(--font-h2)', fontWeight: 700 }}>{employee.fullName}</h1>
               <span className="badge badge-info">{employee.employeeCode}</span>
               <EmploymentStatusBadge status={employee.employmentStatus} />
+              {employee.employmentType === 'PART_TIME' ? (
+                <span
+                  className="badge badge-warning"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  <Briefcase size={12} /> Part-time
+                </span>
+              ) : (
+                <span
+                  className="badge badge-info"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  <Clock size={12} /> Full-time
+                </span>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 'var(--font-caption)', color: 'var(--color-text-secondary)', flexWrap: 'wrap' }}>
@@ -491,6 +551,32 @@ export const EmployeeDetailPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Nút Chỉnh sửa thông tin hồ sơ & hợp đồng */}
+          {canManageStaff && (
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 14px',
+                backgroundColor: '#F8FAFC',
+                color: '#1E293B',
+                border: '1.5px solid #CBD5E1',
+                borderRadius: 'var(--radius-md, 6px)',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title="Chỉnh sửa thông tin lý lịch & hợp đồng lao động"
+            >
+              <Edit2 size={15} color="var(--color-primary, #2563EB)" />
+              Chỉnh Sửa Hồ Sơ
+            </button>
+          )}
+
           {/* Nút Cập nhật / Đổi mật khẩu */}
           {canManagePassword && (
             <button
@@ -811,6 +897,18 @@ export const EmployeeDetailPage: React.FC = () => {
           employeeName={employee.fullName}
           isSelf={isSelf}
           isDirectorReset={currentRole === 'ROLE_DIRECTOR'}
+        />
+      )}
+
+      {/* Edit Employee Form Modal */}
+      {employee && (
+        <EmployeeFormModal
+          isOpen={isEditModalOpen}
+          initialData={employee}
+          branches={branchesList.length > 0 ? branchesList : branches}
+          positions={positions}
+          onClose={() => setIsEditModalOpen(false)}
+          onSubmit={handleSaveEmployee}
         />
       )}
     </>

@@ -26,6 +26,16 @@ export const MyPayslipPage: React.FC = () => {
     fetchMyPayslip(selectedMonth, selectedYear);
   }, [selectedMonth, selectedYear, fetchMyPayslip]);
 
+  const parsedAdjustments = React.useMemo(() => {
+    if (!myPayslip?.adjustments_detail) return null;
+    if (typeof myPayslip.adjustments_detail === 'object') return myPayslip.adjustments_detail as any;
+    try {
+      return JSON.parse(myPayslip.adjustments_detail);
+    } catch {
+      return null;
+    }
+  }, [myPayslip?.adjustments_detail]);
+
   const formatVND = (amount?: number) => {
     if (amount === undefined || amount === null) return '0 ₫';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -223,8 +233,17 @@ export const MyPayslipPage: React.FC = () => {
                 </div>
               </div>
               <div>
-                <div style={{ opacity: 0.75, fontSize: '11px' }}>Chức vụ & Loại HĐ</div>
-                <div style={{ fontWeight: 600 }}>{myPayslip.position_title} ({myPayslip.employment_type})</div>
+                <div style={{ opacity: 0.75, fontSize: '11px' }}>Chức vụ & Trạng thái</div>
+                <div style={{ fontWeight: 600 }}>
+                  {myPayslip.position_title} •{' '}
+                  {myPayslip.employment_status === 'RESIGNED'
+                    ? 'Đã nghỉ việc'
+                    : myPayslip.employment_status === 'PROBATION'
+                    ? 'Thử việc'
+                    : myPayslip.employment_status === 'ON_LEAVE'
+                    ? 'Nghỉ chế độ'
+                    : 'Chính thức'} ({myPayslip.employment_type === 'PART_TIME' ? 'Part-time' : 'Full-time'})
+                </div>
               </div>
             </div>
           </div>
@@ -243,8 +262,14 @@ export const MyPayslipPage: React.FC = () => {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Clock size={15} color="var(--color-primary)" />
-              <span>Giờ công thực tế: <b>{myPayslip.actual_hours}h</b></span>
+              <span>Giờ công Full-time: <b>{myPayslip.actual_hours || 0}h</b></span>
             </div>
+            {myPayslip.part_time_hours !== undefined && myPayslip.part_time_hours > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#d97706' }}>
+                <Clock size={15} />
+                <span>Giờ công Part-time: <b>{myPayslip.part_time_hours}h</b></span>
+              </div>
+            )}
             {myPayslip.night_hours > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6366f1' }}>
                 <Sparkles size={15} />
@@ -295,9 +320,18 @@ export const MyPayslipPage: React.FC = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Lương cơ bản / Giờ công:</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Lương công Full-time:</span>
                   <span style={{ fontWeight: 600 }}>{formatVND(myPayslip.base_pay)}</span>
                 </div>
+
+                {myPayslip.part_time_pay !== undefined && myPayslip.part_time_pay > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#d97706', fontWeight: 500 }}>Lương Part-time theo giờ:</span>
+                    <span style={{ fontWeight: 600, color: '#d97706' }}>
+                      {formatVND(myPayslip.part_time_pay)}
+                    </span>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--color-text-muted)' }}>Phụ cấp ca đêm (+30%):</span>
@@ -306,17 +340,35 @@ export const MyPayslipPage: React.FC = () => {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Thưởng chuyên cần:</span>
-                  <span style={{ fontWeight: 600, color: myPayslip.attendance_bonus > 0 ? '#f59e0b' : 'inherit' }}>
-                    {formatVND(myPayslip.attendance_bonus)}
-                  </span>
-                </div>
+                {parsedAdjustments?.bonuses && parsedAdjustments.bonuses.length > 0 ? (
+                  parsedAdjustments.bonuses.map((b: any, idx: number) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>{b.name || 'Thưởng'}:</span>
+                      <span style={{ fontWeight: 600, color: '#f59e0b' }}>{formatVND(b.amount)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Thưởng chuyên cần:</span>
+                    <span style={{ fontWeight: 600, color: myPayslip.attendance_bonus > 0 ? '#f59e0b' : 'inherit' }}>
+                      {formatVND(myPayslip.attendance_bonus)}
+                    </span>
+                  </div>
+                )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Phụ cấp cố định (Ăn trưa, đi lại):</span>
-                  <span style={{ fontWeight: 600 }}>{formatVND(myPayslip.allowances_total)}</span>
-                </div>
+                {parsedAdjustments?.allowances && parsedAdjustments.allowances.length > 0 ? (
+                  parsedAdjustments.allowances.map((a: any, idx: number) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>{a.name || 'Phụ cấp'}:</span>
+                      <span style={{ fontWeight: 600, color: '#0d9488' }}>{formatVND(a.amount)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Phụ cấp cố định (Ăn trưa, đi lại):</span>
+                    <span style={{ fontWeight: 600 }}>{formatVND(myPayslip.allowances_total)}</span>
+                  </div>
+                )}
 
                 <div
                   style={{
@@ -369,19 +421,32 @@ export const MyPayslipPage: React.FC = () => {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Khấu trừ đi muộn:</span>
-                  <span style={{ fontWeight: 600, color: myPayslip.deduction_late > 0 ? '#ef4444' : 'inherit' }}>
-                    {myPayslip.deduction_late > 0 ? `-${formatVND(myPayslip.deduction_late)}` : '0 ₫'}
-                  </span>
-                </div>
+                {parsedAdjustments?.deductions && parsedAdjustments.deductions.length > 0 ? (
+                  parsedAdjustments.deductions.map((d: any, idx: number) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>{d.name || 'Khấu trừ'}:</span>
+                      <span style={{ fontWeight: 600, color: '#ef4444' }}>
+                        {d.amount > 0 ? `-${formatVND(d.amount)}` : '0 ₫'}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Khấu trừ đi muộn:</span>
+                      <span style={{ fontWeight: 600, color: myPayslip.deduction_late > 0 ? '#ef4444' : 'inherit' }}>
+                        {myPayslip.deduction_late > 0 ? `-${formatVND(myPayslip.deduction_late)}` : '0 ₫'}
+                      </span>
+                    </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Khấu trừ ngày nghỉ không lương:</span>
-                  <span style={{ fontWeight: 600, color: myPayslip.deduction_unpaid_leave > 0 ? '#ef4444' : 'inherit' }}>
-                    {myPayslip.deduction_unpaid_leave > 0 ? `-${formatVND(myPayslip.deduction_unpaid_leave)}` : '0 ₫'}
-                  </span>
-                </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Khấu trừ ngày nghỉ không lương:</span>
+                      <span style={{ fontWeight: 600, color: myPayslip.deduction_unpaid_leave > 0 ? '#ef4444' : 'inherit' }}>
+                        {myPayslip.deduction_unpaid_leave > 0 ? `-${formatVND(myPayslip.deduction_unpaid_leave)}` : '0 ₫'}
+                      </span>
+                    </div>
+                  </>
+                )}
 
                 <div
                   style={{

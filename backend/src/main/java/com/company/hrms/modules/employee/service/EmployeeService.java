@@ -29,9 +29,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.company.hrms.modules.employee.domain.EmployeeSecondaryBranch;
 import com.company.hrms.modules.employee.dto.SecondaryBranchAssignmentDto;
 import com.company.hrms.modules.employee.repository.EmployeeSecondaryBranchRepository;
+import com.company.hrms.modules.payroll.domain.SalaryContract;
+import com.company.hrms.modules.payroll.repository.SalaryContractRepository;
 import com.company.hrms.modules.position.domain.Position;
 import com.company.hrms.modules.position.repository.PositionRepository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -52,6 +55,7 @@ public class EmployeeService {
     private final EmployeeSecondaryBranchRepository secondaryBranchRepository;
     private final com.company.hrms.common.service.FileStorageService fileStorageService;
     private final EmployeeBranchMigrationService branchMigrationService;
+    private final SalaryContractRepository salaryContractRepository;
 
     public EmployeeService(
             EmployeeRepository employeeRepository,
@@ -63,7 +67,8 @@ public class EmployeeService {
             PasswordEncoder passwordEncoder,
             EmployeeSecondaryBranchRepository secondaryBranchRepository,
             com.company.hrms.common.service.FileStorageService fileStorageService,
-            EmployeeBranchMigrationService branchMigrationService) {
+            EmployeeBranchMigrationService branchMigrationService,
+            SalaryContractRepository salaryContractRepository) {
         this.employeeRepository = employeeRepository;
         this.branchRepository = branchRepository;
         this.positionRepository = positionRepository;
@@ -74,6 +79,7 @@ public class EmployeeService {
         this.secondaryBranchRepository = secondaryBranchRepository;
         this.fileStorageService = fileStorageService;
         this.branchMigrationService = branchMigrationService;
+        this.salaryContractRepository = salaryContractRepository;
     }
 
     @Transactional(readOnly = true)
@@ -197,6 +203,8 @@ public class EmployeeService {
             }
         }
 
+        syncSalaryContract(saved, saved.getEmploymentType(), request.getHourlyRate());
+
         return toDto(saved);
     }
 
@@ -238,6 +246,18 @@ public class EmployeeService {
                 );
             }
         }
+
+        // Phân quyền: Chỉ Giám đốc (ROLE_DIRECTOR / ROLE_ADMIN) mới có quyền thay đổi hình thức làm việc Full-time / Part-time
+        if (request.getEmploymentType() != null && !request.getEmploymentType().equalsIgnoreCase(employee.getEmploymentType())) {
+            if (SecurityUtils.isAuthenticated() && !SecurityUtils.isDirectorOrAdmin()) {
+                throw new BusinessException(
+                        "FORBIDDEN_EMPLOYMENT_TYPE_CHANGE",
+                        "Chỉ Giám đốc hoặc Admin mới có quyền thay đổi hình thức làm việc (Full-time / Part-time).",
+                        HttpStatus.FORBIDDEN
+                );
+            }
+        }
+
         mapDtoToEntity(request, employee);
         Employee updated = employeeRepository.save(employee);
 
@@ -320,6 +340,8 @@ public class EmployeeService {
             }
         }
 
+        syncSalaryContract(updated, updated.getEmploymentType(), request.getHourlyRate());
+
         return toDto(updated);
     }
 
@@ -389,10 +411,18 @@ public class EmployeeService {
             entity.setEmploymentStatus(dto.getEmploymentStatus());
             if ("RESIGNED".equalsIgnoreCase(dto.getEmploymentStatus())) {
                 entity.setIsActive(false);
-            } else if (dto.getIsActive() != null) {
-                entity.setIsActive(dto.getIsActive());
+                if (dto.getResignationDate() != null) {
+                    entity.setResignationDate(dto.getResignationDate());
+                } else if (entity.getResignationDate() == null) {
+                    entity.setResignationDate(LocalDate.now());
+                }
             } else {
-                entity.setIsActive(true);
+                entity.setResignationDate(null);
+                if (dto.getIsActive() != null) {
+                    entity.setIsActive(dto.getIsActive());
+                } else {
+                    entity.setIsActive(true);
+                }
             }
         } else if (dto.getIsActive() != null) {
             entity.setIsActive(dto.getIsActive());
@@ -404,7 +434,9 @@ public class EmployeeService {
             entity.setAvatarUrl(dto.getAvatarUrl());
         }
         entity.setHireDate(dto.getHireDate());
-        entity.setResignationDate(dto.getResignationDate());
+        if (dto.getResignationDate() != null) {
+            entity.setResignationDate(dto.getResignationDate());
+        }
     }
 
     public EmployeeDto toDto(Employee entity) {
@@ -429,6 +461,16 @@ public class EmployeeService {
         dto.setResignationDate(entity.getResignationDate());
         dto.setIsActive(entity.getIsActive());
         dto.setVersion(entity.getVersion());
+
+        try {
+            salaryContractRepository.findByEmployeeIdAndIsActiveTrue(entity.getId()).ifPresent(c -> {
+                dto.setHourlyRate(c.getHourlyRate());
+            });
+        } catch (Exception ignored) {
+        }
+        if (dto.getHourlyRate() == null && "PART_TIME".equalsIgnoreCase(entity.getEmploymentType())) {
+            dto.setHourlyRate(new BigDecimal("35000"));
+        }
 
         List<EmployeeSecondaryBranch> secondaries = secondaryBranchRepository.findAllByEmployeeId(entity.getId());
         if (!secondaries.isEmpty()) {
@@ -541,5 +583,46 @@ public class EmployeeService {
      */
     public void migrateEmployeeAvailabilityToNewBranch(Long employeeId, Long oldBranchId, Long newBranchId) {
         branchMigrationService.migrateEmployeeAvailabilityToNewBranch(employeeId, oldBranchId, newBranchId);
+    }
+
+    private void syncSalaryContract(Employee employee, String employmentType, BigDecimal requestedHourlyRate) {
+        if (employee == null || employee.getId() == null) return;
+        boolean isPartTime = "PART_TIME".equalsIgnoreCase(employmentType);
+
+        SalaryContract contract = salaryContractRepository.findByEmployeeIdAndIsActiveTrue(employee.getId())
+                .orElse(null);
+
+        if (contract == null) {
+            contract = new SalaryContract();
+            contract.setEmployeeId(employee.getId());
+            contract.setEffectiveFrom(employee.getHireDate() != null ? employee.getHireDate() : LocalDate.now());
+            contract.setIsActive(true);
+            contract.setAllowanceLunch(BigDecimal.ZERO);
+            contract.setAllowanceTravel(BigDecimal.ZERO);
+            contract.setInsuranceSalary(BigDecimal.ZERO);
+            contract.setTaxDependents(0);
+        }
+
+        if (isPartTime) {
+            contract.setSalaryType("HOURLY");
+            BigDecimal rate = (requestedHourlyRate != null && requestedHourlyRate.compareTo(BigDecimal.ZERO) > 0)
+                    ? requestedHourlyRate
+                    : new BigDecimal("35000");
+            contract.setHourlyRate(rate);
+            contract.setBaseSalary(BigDecimal.ZERO);
+        } else {
+            contract.setSalaryType("MONTHLY");
+            contract.setHourlyRate(BigDecimal.ZERO);
+            // Nếu chưa có baseSalary hoặc baseSalary = 0 thì gán chuẩn theo chức danh
+            if (contract.getBaseSalary() == null || contract.getBaseSalary().compareTo(BigDecimal.ZERO) == 0) {
+                BigDecimal posSalary = new BigDecimal("8500000");
+                if (employee.getPositionId() != null) {
+                    if (employee.getPositionId() == 1L) posSalary = new BigDecimal("25000000");
+                    else if (employee.getPositionId() == 2L) posSalary = new BigDecimal("15000000");
+                }
+                contract.setBaseSalary(posSalary);
+            }
+        }
+        salaryContractRepository.save(contract);
     }
 }

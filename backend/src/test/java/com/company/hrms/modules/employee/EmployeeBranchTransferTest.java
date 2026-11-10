@@ -86,6 +86,9 @@ public class EmployeeBranchTransferTest {
     @Mock
     private com.company.hrms.modules.availability.repository.EmployeePreferredShiftRepository preferredShiftRepository;
 
+    @Mock
+    private com.company.hrms.modules.payroll.repository.SalaryContractRepository salaryContractRepository;
+
     private EmployeeBranchMigrationService branchMigrationService;
     private EmployeeService employeeService;
 
@@ -112,7 +115,8 @@ public class EmployeeBranchTransferTest {
                 passwordEncoder,
                 secondaryBranchRepository,
                 fileStorageService,
-                branchMigrationService
+                branchMigrationService,
+                salaryContractRepository
         );
     }
 

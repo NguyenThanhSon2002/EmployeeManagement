@@ -21,6 +21,8 @@ import com.company.hrms.modules.payroll.engine.PayrollCalculationEngine;
 import com.company.hrms.modules.payroll.repository.PayrollItemRepository;
 import com.company.hrms.modules.payroll.repository.PayrollRepository;
 import com.company.hrms.modules.payroll.repository.SalaryContractRepository;
+import com.company.hrms.modules.schedule.domain.ShiftAssignment;
+import com.company.hrms.modules.schedule.repository.ShiftAssignmentRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,7 @@ public class PayrollService {
     private final EmployeeRepository employeeRepository;
     private final BranchRepository branchRepository;
     private final AttendanceRecordRepository attendanceRecordRepository;
+    private final ShiftAssignmentRepository shiftAssignmentRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final PayrollCalculationEngine calculationEngine;
     private final UserRepository userRepository;
@@ -51,6 +54,7 @@ public class PayrollService {
             EmployeeRepository employeeRepository,
             BranchRepository branchRepository,
             AttendanceRecordRepository attendanceRecordRepository,
+            ShiftAssignmentRepository shiftAssignmentRepository,
             LeaveRequestRepository leaveRequestRepository,
             PayrollCalculationEngine calculationEngine,
             UserRepository userRepository
@@ -61,6 +65,7 @@ public class PayrollService {
         this.employeeRepository = employeeRepository;
         this.branchRepository = branchRepository;
         this.attendanceRecordRepository = attendanceRecordRepository;
+        this.shiftAssignmentRepository = shiftAssignmentRepository;
         this.leaveRequestRepository = leaveRequestRepository;
         this.calculationEngine = calculationEngine;
         this.userRepository = userRepository;
@@ -90,18 +95,50 @@ public class PayrollService {
             payroll = payrollRepository.save(payroll);
         } else {
             payrollItemRepository.deleteAllByPayrollId(payroll.getId());
-        }
-
-        // Lấy danh sách nhân viên cần tính lương
-        List<Employee> targetEmployees;
-        if (branchId != null) {
-            targetEmployees = employeeRepository.findAllByBranchIdAndDeletedAtIsNull(branchId);
-        } else {
-            targetEmployees = employeeRepository.findAllByDeletedAtIsNull();
+            payrollItemRepository.flush();
         }
 
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+
+        // Lấy danh sách nhân viên cần tính lương
+        List<Employee> rawEmployees;
+        if (branchId != null) {
+            rawEmployees = employeeRepository.findAllByBranchIdAndDeletedAtIsNull(branchId);
+        } else {
+            rawEmployees = employeeRepository.findAllByDeletedAtIsNull();
+        }
+
+        final LocalDate periodStart = startDate;
+        final LocalDate periodEnd = endDate;
+
+        List<Employee> targetEmployees = rawEmployees.stream().filter(emp -> {
+            // 1. Không tính lương nếu ngày vào làm sau kỳ lương này
+            if (emp.getHireDate() != null && emp.getHireDate().isAfter(periodEnd)) {
+                return false;
+            }
+
+            // 2. Xử lý nhân sự đã nghỉ việc (RESIGNED hoặc có ngày nghỉ việc)
+            if ("RESIGNED".equalsIgnoreCase(emp.getEmploymentStatus()) || emp.getResignationDate() != null) {
+                LocalDate resignDate = emp.getResignationDate();
+                if (resignDate != null) {
+                    // Nếu ngày nghỉ việc diễn ra trước kỳ lương này (trước ngày 01 của tháng), sang tháng mới bỏ hiển thị
+                    if (resignDate.isBefore(periodStart)) {
+                        return false;
+                    }
+                    // Nếu ngày nghỉ việc trong tháng này (periodStart <= resignDate <= periodEnd):
+                    // Hiển thị nốt tháng này để chốt công và quyết toán đợt cuối.
+                } else {
+                    // Nếu trạng thái RESIGNED nhưng chưa có ngày nghỉ việc cụ thể:
+                    // Chỉ hiển thị nốt tháng này nếu có phát sinh giờ công trong tháng.
+                    List<AttendanceRecord> acts = attendanceRecordRepository.findAllByEmployeeIdAndWorkDateBetween(emp.getId(), periodStart, periodEnd);
+                    if (acts.isEmpty()) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }).collect(Collectors.toList());
 
         List<PayrollItem> itemsToSave = new ArrayList<>();
         BigDecimal totalGross = BigDecimal.ZERO;
@@ -112,6 +149,7 @@ public class PayrollService {
             SalaryContract contract = !activeContracts.isEmpty() ? activeContracts.get(0) : null;
 
             List<AttendanceRecord> attendances = attendanceRecordRepository.findAllByEmployeeIdAndWorkDateBetween(emp.getId(), startDate, endDate);
+            List<ShiftAssignment> assignments = shiftAssignmentRepository.findAllByEmployeeIdAndWorkDateBetween(emp.getId(), startDate, endDate);
             List<LeaveRequest> leaves = leaveRequestRepository.findApprovedLeavesForEmployeesInDateRange(List.of(emp.getId()), startDate, endDate);
 
             PayrollItem item = calculationEngine.calculatePayrollItem(
@@ -119,6 +157,7 @@ public class PayrollService {
                     emp,
                     contract,
                     attendances,
+                    assignments,
                     leaves
             );
 
@@ -190,10 +229,29 @@ public class PayrollService {
         }
 
         Employee actor = getActorEmployee(actorUserId);
-        boolean isDirector = actor != null && actor.getPositionId() != null && actor.getPositionId() == 1;
-        boolean isAdmin = (actorUserId != null && actorUserId == 1L);
-        if (!isAdmin && !isDirector && !SecurityUtils.isDirectorOrAdmin()) {
-            throw new BusinessException("FORBIDDEN", "Chỉ Giám đốc hoặc Quản trị viên (Admin) mới có quyền chỉnh sửa phiếu lương.", HttpStatus.FORBIDDEN);
+        boolean isDirectorOrAdmin = (actorUserId != null && actorUserId == 1L)
+                || (actor != null && actor.getPositionId() != null && actor.getPositionId() == 1)
+                || SecurityUtils.isDirectorOrAdmin()
+                || SecurityUtils.hasAnyRole("ROLE_ADMIN", "ROLE_DIRECTOR");
+
+        boolean isManager = isManager(actor)
+                || SecurityUtils.isManager()
+                || SecurityUtils.hasAnyRole("ROLE_MANAGER", "ROLE_HR_MANAGER", "ROLE_DEPT_MANAGER");
+        if (!isDirectorOrAdmin && !isManager) {
+            throw new BusinessException("FORBIDDEN", "Chỉ Giám đốc, Quản trị viên hoặc Quản lý cơ sở mới có quyền chỉnh sửa phiếu lương.", HttpStatus.FORBIDDEN);
+        }
+
+        // Quản lý cơ sở chỉ được chỉnh sửa phiếu lương thuộc chi nhánh của mình
+        if (isManager && !isDirectorOrAdmin) {
+            if (payroll.getBranchId() != null && actor != null && actor.getBranchId() != null && !payroll.getBranchId().equals(actor.getBranchId())) {
+                throw new BusinessException("FORBIDDEN", "Quản lý cơ sở không có quyền chỉnh sửa bảng lương của chi nhánh khác.", HttpStatus.FORBIDDEN);
+            }
+            // QUẢN LÝ / NHÂN VIÊN KHÔNG ĐƯỢC PHÉP THAY ĐỔI GIỜ LÀM VÀ LƯƠNG CỨNG:
+            // Chỉ Giám đốc và Admin mới có quyền điều chỉnh giờ làm việc và lương cứng.
+            request.setActualHours(item.getActualHours());
+            request.setPartTimeHours(item.getPartTimeHours());
+            request.setNightHours(item.getNightHours());
+            request.setBasePay(item.getBasePay());
         }
 
         Employee employee = employeeRepository.findByIdAndDeletedAtIsNull(item.getEmployeeId())
@@ -230,6 +288,7 @@ public class PayrollService {
                     .ifPresent(b -> dto.setBranchName(b.getBranchName()));
         }
         dto.setPositionTitle(getPositionTitle(employee.getPositionId()));
+        dto.setEmploymentStatus(employee.getEmploymentStatus() != null ? employee.getEmploymentStatus() : "OFFICIAL");
         return dto;
     }
 
@@ -259,6 +318,9 @@ public class PayrollService {
                 dto.setFullName(emp.getFullName());
                 dto.setBranchName(branchNameMap.get(emp.getBranchId()));
                 dto.setPositionTitle(getPositionTitle(emp.getPositionId()));
+                dto.setEmploymentStatus(emp.getEmploymentStatus() != null ? emp.getEmploymentStatus() : "OFFICIAL");
+            } else {
+                dto.setEmploymentStatus("OFFICIAL");
             }
             return dto;
         }).collect(Collectors.toList());
@@ -322,15 +384,18 @@ public class PayrollService {
         res.setBranchName(branch != null ? branch.getBranchName() : "");
         res.setPositionTitle(getPositionTitle(employee.getPositionId()));
         res.setEmploymentType(item.getEmploymentType());
+        res.setEmploymentStatus(employee.getEmploymentStatus() != null ? employee.getEmploymentStatus() : "OFFICIAL");
         res.setSalaryType(item.getSalaryType());
 
         res.setStandardHours(item.getStandardHours());
         res.setActualHours(item.getActualHours());
+        res.setPartTimeHours(item.getPartTimeHours());
         res.setNightHours(item.getNightHours());
         res.setLateMinutes(item.getLateMinutes());
         res.setUnpaidLeaveDays(item.getUnpaidLeaveDays());
 
         res.setBasePay(item.getBasePay());
+        res.setPartTimePay(item.getPartTimePay());
         res.setNightPay(item.getNightPay());
         res.setAttendanceBonus(item.getAttendanceBonus());
         res.setAllowancesTotal(item.getAllowancesTotal());
@@ -347,6 +412,7 @@ public class PayrollService {
 
         res.setNetSalary(item.getNetSalary());
         res.setNote(item.getNote());
+        res.setAdjustmentsDetail(item.getAdjustmentsDetail());
 
         return res;
     }
@@ -448,10 +514,12 @@ public class PayrollService {
         dto.setSalaryType(item.getSalaryType());
         dto.setStandardHours(item.getStandardHours());
         dto.setActualHours(item.getActualHours());
+        dto.setPartTimeHours(item.getPartTimeHours());
         dto.setNightHours(item.getNightHours());
         dto.setLateMinutes(item.getLateMinutes());
         dto.setUnpaidLeaveDays(item.getUnpaidLeaveDays());
         dto.setBasePay(item.getBasePay());
+        dto.setPartTimePay(item.getPartTimePay());
         dto.setNightPay(item.getNightPay());
         dto.setAttendanceBonus(item.getAttendanceBonus());
         dto.setAllowancesTotal(item.getAllowancesTotal());
@@ -463,6 +531,7 @@ public class PayrollService {
         dto.setNetSalary(item.getNetSalary());
         dto.setStatus(item.getStatus());
         dto.setNote(item.getNote());
+        dto.setAdjustmentsDetail(item.getAdjustmentsDetail());
         return dto;
     }
 

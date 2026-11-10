@@ -611,7 +611,7 @@ export const PayrollManagementPage: React.FC = () => {
                 <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
                   <th style={{ padding: '12px 14px', fontWeight: 600 }}>Mã NV</th>
                   <th style={{ padding: '12px 14px', fontWeight: 600 }}>Họ Tên</th>
-                  <th style={{ padding: '12px 14px', fontWeight: 600 }}>Loại HĐ</th>
+                  <th style={{ padding: '12px 14px', fontWeight: 600 }}>Trạng Thái</th>
                   <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'right' }}>Giờ Công</th>
                   <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'right' }}>Giờ Đêm</th>
                   <th style={{ padding: '12px 14px', fontWeight: 600, textAlign: 'right' }}>Lương Cơ Bản/Giờ</th>
@@ -625,43 +625,69 @@ export const PayrollManagementPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.map((item) => (
-                  <tr
-                    key={item.id}
-                    style={{
-                      borderBottom: '1px solid var(--color-border)',
-                      transition: 'background 0.15s ease',
-                    }}
-                  >
-                    <td style={{ padding: '12px 14px', fontWeight: 600 }}>{item.employee_code}</td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontWeight: 600 }}>{item.full_name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                        {item.position_title} • {item.branch_name}
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontWeight: 500,
-                          background: item.employment_type === 'FULL_TIME' ? '#e0e7ff' : '#fef3c7',
-                          color: item.employment_type === 'FULL_TIME' ? '#3730a3' : '#92400e',
-                        }}
-                      >
-                        {item.employment_type}
-                      </span>
-                    </td>
+                {filteredItems.map((item) => {
+                  const isResigned = item.employment_status === 'RESIGNED';
+                  return (
+                    <tr
+                      key={item.id}
+                      style={{
+                        borderBottom: '1px solid var(--color-border)',
+                        transition: 'background 0.15s ease, opacity 0.15s ease',
+                        opacity: isResigned ? 0.6 : 1,
+                        backgroundColor: isResigned ? '#F8FAFC' : 'transparent',
+                      }}
+                    >
+                      <td style={{ padding: '12px 14px', fontWeight: 600, color: isResigned ? 'var(--color-text-muted)' : 'inherit' }}>
+                        {item.employee_code}
+                      </td>
+                      <td style={{ padding: '12px 14px' }}>
+                        <div style={{ fontWeight: 600, color: isResigned ? 'var(--color-text-secondary)' : 'inherit' }}>
+                          {item.full_name}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                          {item.position_title} • {item.branch_name}
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 14px' }}>
+                        {item.employment_status === 'PROBATION' ? (
+                          <span className="badge badge-warning">
+                            <span className="badge-dot" /> Thử việc
+                          </span>
+                        ) : item.employment_status === 'RESIGNED' ? (
+                          <span className="badge badge-error">
+                            <span className="badge-dot" /> Đã nghỉ việc
+                          </span>
+                        ) : item.employment_status === 'ON_LEAVE' ? (
+                          <span className="badge badge-info">
+                            <span className="badge-dot" /> Nghỉ chế độ
+                          </span>
+                        ) : (
+                          <span className="badge badge-success">
+                            <span className="badge-dot" /> Chính thức
+                          </span>
+                        )}
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px', fontWeight: 500 }}>
+                          {item.employment_type === 'PART_TIME' ? 'Part-time' : 'Full-time'}
+                        </div>
+                      </td>
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 500 }}>
-                      {item.actual_hours}h
+                      {((item.actual_hours || 0) + (item.part_time_hours || 0))}h
+                      {item.part_time_hours !== undefined && item.part_time_hours > 0 && item.actual_hours > 0 && (
+                        <div style={{ fontSize: '10.5px', color: '#64748B' }}>
+                          {item.actual_hours}h FT + {item.part_time_hours}h PT
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '12px 14px', textAlign: 'right', color: item.night_hours > 0 ? '#6366f1' : 'inherit' }}>
                       {item.night_hours > 0 ? `${item.night_hours}h` : '-'}
                     </td>
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                      {formatVND(item.base_pay)}
+                      {formatVND((item.base_pay || 0) + (item.part_time_pay || 0))}
+                      {item.part_time_pay !== undefined && item.part_time_pay > 0 && item.base_pay > 0 && (
+                        <div style={{ fontSize: '10.5px', color: '#D97706' }}>
+                          +{formatVND(item.part_time_pay)} PT
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '12px 14px', textAlign: 'right', color: item.night_pay > 0 ? '#6366f1' : 'inherit' }}>
                       {item.night_pay > 0 ? formatVND(item.night_pay) : '-'}
@@ -704,7 +730,8 @@ export const PayrollManagementPage: React.FC = () => {
                       </td>
                     )}
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
