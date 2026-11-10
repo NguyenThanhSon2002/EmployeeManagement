@@ -289,6 +289,10 @@ public class PayrollService {
         }
         dto.setPositionTitle(getPositionTitle(employee.getPositionId()));
         dto.setEmploymentStatus(employee.getEmploymentStatus() != null ? employee.getEmploymentStatus() : "OFFICIAL");
+        if (contract != null) {
+            dto.setBaseSalary(contract.getBaseSalary() != null ? contract.getBaseSalary() : BigDecimal.ZERO);
+            dto.setHourlyRate(contract.getHourlyRate() != null ? contract.getHourlyRate() : BigDecimal.ZERO);
+        }
         return dto;
     }
 
@@ -310,6 +314,15 @@ public class PayrollService {
         Map<Long, String> branchNameMap = branchRepository.findAll().stream()
                 .collect(Collectors.toMap(Branch::getId, Branch::getBranchName));
 
+        LocalDate periodEnd = LocalDate.of(payroll.getPeriodYear(), payroll.getPeriodMonth(), 1).plusMonths(1).minusDays(1);
+        Map<Long, SalaryContract> contractMap = new HashMap<>();
+        for (Long empId : empIds) {
+            List<SalaryContract> activeContracts = salaryContractRepository.findActiveContractByDate(empId, periodEnd);
+            if (!activeContracts.isEmpty()) {
+                contractMap.put(empId, activeContracts.get(0));
+            }
+        }
+
         List<PayrollItemDto> itemDtos = items.stream().map(item -> {
             Employee emp = empMap.get(item.getEmployeeId());
             PayrollItemDto dto = toItemDto(item);
@@ -321,6 +334,11 @@ public class PayrollService {
                 dto.setEmploymentStatus(emp.getEmploymentStatus() != null ? emp.getEmploymentStatus() : "OFFICIAL");
             } else {
                 dto.setEmploymentStatus("OFFICIAL");
+            }
+            SalaryContract sc = contractMap.get(item.getEmployeeId());
+            if (sc != null) {
+                dto.setBaseSalary(sc.getBaseSalary() != null ? sc.getBaseSalary() : BigDecimal.ZERO);
+                dto.setHourlyRate(sc.getHourlyRate() != null ? sc.getHourlyRate() : BigDecimal.ZERO);
             }
             return dto;
         }).collect(Collectors.toList());

@@ -53,6 +53,8 @@ export interface PayrollItem {
   employment_type: string;
   employment_status?: string;
   salary_type: 'MONTHLY' | 'HOURLY';
+  base_salary?: number;
+  hourly_rate?: number;
   standard_hours: number;
   actual_hours: number;
   part_time_hours?: number;

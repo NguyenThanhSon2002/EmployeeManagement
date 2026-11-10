@@ -671,10 +671,55 @@ export const PayrollManagementPage: React.FC = () => {
                         </div>
                       </td>
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 500 }}>
-                      {((item.actual_hours || 0) + (item.part_time_hours || 0))}h
-                      {item.part_time_hours !== undefined && item.part_time_hours > 0 && item.actual_hours > 0 && (
-                        <div style={{ fontSize: '10.5px', color: '#64748B' }}>
-                          {item.actual_hours}h FT + {item.part_time_hours}h PT
+                      {item.employment_type === 'PART_TIME' ? (
+                        <div>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                            <span style={{ fontWeight: 600, color: '#D97706' }}>
+                              {item.part_time_hours || 0}h
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                backgroundColor: '#FEF3C7',
+                                color: '#D97706',
+                                fontWeight: 700,
+                              }}
+                            >
+                              PT
+                            </span>
+                          </div>
+                          {item.actual_hours !== undefined && item.actual_hours > 0 && (
+                            <div style={{ fontSize: '10.5px', color: '#2563EB', marginTop: '2px' }}>
+                              +{item.actual_hours}h FT
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                            <span style={{ fontWeight: 600, color: '#0F172A' }}>
+                              {item.actual_hours || 0}h
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                backgroundColor: '#EFF6FF',
+                                color: '#2563EB',
+                                fontWeight: 700,
+                              }}
+                            >
+                              FT
+                            </span>
+                          </div>
+                          {item.part_time_hours !== undefined && item.part_time_hours > 0 && (
+                            <div style={{ fontSize: '10.5px', color: '#D97706', marginTop: '2px' }}>
+                              +{item.part_time_hours}h PT
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>
@@ -682,10 +727,32 @@ export const PayrollManagementPage: React.FC = () => {
                       {item.night_hours > 0 ? `${item.night_hours}h` : '-'}
                     </td>
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                      {formatVND((item.base_pay || 0) + (item.part_time_pay || 0))}
-                      {item.part_time_pay !== undefined && item.part_time_pay > 0 && item.base_pay > 0 && (
-                        <div style={{ fontSize: '10.5px', color: '#D97706' }}>
-                          +{formatVND(item.part_time_pay)} PT
+                      {item.employment_type === 'PART_TIME' ? (
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#D97706' }}>
+                            {formatVND(item.part_time_pay || 0)}
+                          </div>
+                          {item.part_time_hours !== undefined && item.part_time_hours > 0 && (
+                            <div style={{ fontSize: '10.5px', color: '#B45309', marginTop: '1px' }}>
+                              {item.part_time_hours}h × {formatVND(Math.round((item.part_time_pay || 0) / item.part_time_hours))}/h
+                            </div>
+                          )}
+                          {item.base_pay !== undefined && item.base_pay > 0 && (
+                            <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '1px' }}>
+                              +{formatVND(item.base_pay)} cứng
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#0F172A' }}>
+                            {formatVND(item.base_pay || 0)}
+                          </div>
+                          {item.part_time_pay !== undefined && item.part_time_pay > 0 && (
+                            <div style={{ fontSize: '10.5px', color: '#D97706', marginTop: '1px' }}>
+                              +{formatVND(item.part_time_pay)} PT
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>
