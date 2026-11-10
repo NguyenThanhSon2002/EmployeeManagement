@@ -260,11 +260,24 @@ export const MyPayslipPage: React.FC = () => {
               fontWeight: 500,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Clock size={15} color="var(--color-primary)" />
-              <span>Giờ công Full-time: <b>{myPayslip.actual_hours || 0}h</b></span>
-            </div>
-            {myPayslip.part_time_hours !== undefined && myPayslip.part_time_hours > 0 && (
+            {myPayslip.employment_type === 'PART_TIME' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#d97706' }}>
+                <Clock size={15} />
+                <span>Giờ công Part-time: <b>{myPayslip.part_time_hours || 0}h</b></span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Clock size={15} color="var(--color-primary)" />
+                <span>Giờ công Full-time: <b>{myPayslip.actual_hours || 0}h</b></span>
+              </div>
+            )}
+            {myPayslip.employment_type === 'PART_TIME' && myPayslip.actual_hours !== undefined && myPayslip.actual_hours > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)' }}>
+                <Clock size={15} />
+                <span>Giờ công Full-time: <b>{myPayslip.actual_hours}h</b></span>
+              </div>
+            )}
+            {myPayslip.employment_type !== 'PART_TIME' && myPayslip.part_time_hours !== undefined && myPayslip.part_time_hours > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#d97706' }}>
                 <Clock size={15} />
                 <span>Giờ công Part-time: <b>{myPayslip.part_time_hours}h</b></span>
@@ -319,18 +332,36 @@ export const MyPayslipPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Lương công Full-time:</span>
-                  <span style={{ fontWeight: 600 }}>{formatVND(myPayslip.base_pay)}</span>
-                </div>
-
-                {myPayslip.part_time_pay !== undefined && myPayslip.part_time_pay > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#d97706', fontWeight: 500 }}>Lương Part-time theo giờ:</span>
-                    <span style={{ fontWeight: 600, color: '#d97706' }}>
-                      {formatVND(myPayslip.part_time_pay)}
-                    </span>
-                  </div>
+                {myPayslip.employment_type === 'PART_TIME' ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#d97706', fontWeight: 500 }}>Lương Part-time theo giờ:</span>
+                      <span style={{ fontWeight: 600, color: '#d97706' }}>
+                        {formatVND(myPayslip.part_time_pay || 0)}
+                      </span>
+                    </div>
+                    {myPayslip.base_pay !== undefined && myPayslip.base_pay > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--color-text-muted)' }}>Lương cứng hỗ trợ:</span>
+                        <span style={{ fontWeight: 600 }}>{formatVND(myPayslip.base_pay)}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Lương công Full-time:</span>
+                      <span style={{ fontWeight: 600 }}>{formatVND(myPayslip.base_pay)}</span>
+                    </div>
+                    {myPayslip.part_time_pay !== undefined && myPayslip.part_time_pay > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#d97706', fontWeight: 500 }}>Lương Part-time theo giờ:</span>
+                        <span style={{ fontWeight: 600, color: '#d97706' }}>
+                          {formatVND(myPayslip.part_time_pay)}
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>

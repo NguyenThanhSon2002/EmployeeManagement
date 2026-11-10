@@ -35,6 +35,12 @@ public class PayrollItemDto {
     @JsonProperty("salary_type")
     private String salaryType;
 
+    @JsonProperty("base_salary")
+    private BigDecimal baseSalary = BigDecimal.ZERO;
+
+    @JsonProperty("hourly_rate")
+    private BigDecimal hourlyRate = BigDecimal.ZERO;
+
     @JsonProperty("standard_hours")
     private BigDecimal standardHours;
 
@@ -114,6 +120,10 @@ public class PayrollItemDto {
     public void setEmploymentStatus(String employmentStatus) { this.employmentStatus = employmentStatus; }
     public String getSalaryType() { return salaryType; }
     public void setSalaryType(String salaryType) { this.salaryType = salaryType; }
+    public BigDecimal getBaseSalary() { return baseSalary; }
+    public void setBaseSalary(BigDecimal baseSalary) { this.baseSalary = baseSalary; }
+    public BigDecimal getHourlyRate() { return hourlyRate; }
+    public void setHourlyRate(BigDecimal hourlyRate) { this.hourlyRate = hourlyRate; }
     public BigDecimal getStandardHours() { return standardHours; }
     public void setStandardHours(BigDecimal standardHours) { this.standardHours = standardHours; }
     public BigDecimal getActualHours() { return actualHours; }
