@@ -113,6 +113,11 @@ public class PayrollService {
         final LocalDate periodEnd = endDate;
 
         List<Employee> targetEmployees = rawEmployees.stream().filter(emp -> {
+            // 0. Bỏ hiển thị lương Giám đốc (Giám đốc hưởng chế độ riêng, không nằm trong bảng lương vận hành phân ca)
+            if (emp.getPositionId() != null && emp.getPositionId() == 1L) {
+                return false;
+            }
+
             // 1. Không tính lương nếu ngày vào làm sau kỳ lương này
             if (emp.getHireDate() != null && emp.getHireDate().isAfter(periodEnd)) {
                 return false;
