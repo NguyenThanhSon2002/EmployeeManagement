@@ -228,7 +228,8 @@ class PayrollCalculationEngineTest {
         // Having unpaid leave voids the attendance bonus
         assertEquals(BigDecimal.ZERO, item.getAttendanceBonus());
         // Standard hours defaults to 208 hours (8 hours/day * 26 days)
-        assertEquals(new BigDecimal("208.00"), item.getActualHours());
+        assertEquals(new BigDecimal("208.00"), item.getStandardHours());
+        assertEquals(BigDecimal.ZERO, item.getActualHours());
     }
 
     @Test
@@ -560,5 +561,42 @@ class PayrollCalculationEngineTest {
         // Gross = 420,000 + 42,000 = 462,000 VND
         assertEquals(new BigDecimal("462000"), item.getGrossSalary());
         assertEquals(new BigDecimal("462000"), item.getNetSalary());
+    }
+
+    @Test
+    void testFullTime_NoScheduleAssigned_HoursAndAttendanceBonusAreZero_BaseSalaryPreserved() {
+        Employee employee = new Employee();
+        employee.setId(101L);
+        employee.setEmploymentType("FULL_TIME");
+
+        SalaryContract contract = new SalaryContract();
+        contract.setSalaryType("MONTHLY");
+        contract.setBaseSalary(new BigDecimal("8500000.00"));
+        contract.setAllowanceLunch(new BigDecimal("730000.00"));
+        contract.setAllowanceTravel(new BigDecimal("300000.00"));
+
+        // Không có chấm công và không có lịch phân ca (tháng chưa phân ca)
+        List<AttendanceRecord> attendances = Collections.emptyList();
+        List<ShiftAssignment> assignments = Collections.emptyList();
+
+        PayrollItem item = engine.calculatePayrollItem(100L, employee, contract, attendances, assignments, Collections.emptyList());
+
+        assertNotNull(item);
+        // Giờ công phải là 0.00h (KHÔNG được tự gán 208h)
+        assertEquals(BigDecimal.ZERO, item.getActualHours());
+        assertEquals(BigDecimal.ZERO, item.getPartTimeHours());
+
+        // Lương cứng được bảo toàn theo hợp đồng
+        assertEquals(new BigDecimal("8500000"), item.getBasePay());
+
+        // Thưởng chuyên cần phải là 0 đ vì không phát sinh giờ làm
+        assertEquals(BigDecimal.ZERO, item.getAttendanceBonus());
+
+        // Phụ cấp đầy đủ theo hợp đồng
+        assertEquals(new BigDecimal("1030000"), item.getAllowancesTotal());
+
+        // Gross = 8,500,000 + 1,030,000 = 9,530,000 đ
+        assertEquals(new BigDecimal("9530000"), item.getGrossSalary());
+        assertEquals(new BigDecimal("9530000"), item.getNetSalary());
     }
 }

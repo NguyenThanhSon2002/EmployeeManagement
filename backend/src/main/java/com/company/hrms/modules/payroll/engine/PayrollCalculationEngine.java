@@ -164,10 +164,8 @@ public class PayrollCalculationEngine {
             hourlyRateEquivalent = BigDecimal.ZERO;
             nightPay = BigDecimal.ZERO;
         } else {
-            // Full-time: Lương cứng mặc định trọn vẹn theo hợp đồng, chuẩn 8h/ngày (208h/tháng)
-            fullTimeHours = (actualHours != null && actualHours.compareTo(BigDecimal.ZERO) > 0)
-                    ? actualHours
-                    : STANDARD_HOURS_PER_MONTH;
+            // Full-time: Lương cứng mặc định trọn vẹn theo hợp đồng, giờ công lấy đúng theo phân ca / chấm công thực tế
+            fullTimeHours = (actualHours != null) ? actualHours : BigDecimal.ZERO;
             basePay = baseSalary.setScale(0, RoundingMode.HALF_UP);
             deductionUnpaidLeave = BigDecimal.ZERO;
             hourlyRateEquivalent = baseSalary.compareTo(BigDecimal.ZERO) > 0
@@ -184,7 +182,7 @@ public class PayrollCalculationEngine {
         item.setNightPay(nightPay);
 
         // 5. Thưởng chuyên cần tự động
-        // Tiêu chí: Nhân viên chưa nghỉ việc, số lần đi muộn <= 1, tổng số phút đi muộn <= 15, không có ngày nghỉ không phép
+        // Tiêu chí: Nhân viên chưa nghỉ việc, có phát sinh giờ làm việc, số lần đi muộn <= 1, tổng số phút đi muộn <= 15, không có ngày nghỉ không phép
         BigDecimal attendanceBonus = BigDecimal.ZERO;
         if (!isResigned && lateCount <= 1 && totalLateMinutes <= 15 && unpaidLeaveDays.compareTo(BigDecimal.ZERO) == 0) {
             if (isPartTime) {
@@ -192,7 +190,10 @@ public class PayrollCalculationEngine {
                     attendanceBonus = ATTENDANCE_BONUS_PARTTIME;
                 }
             } else {
-                attendanceBonus = ATTENDANCE_BONUS_FULLTIME;
+                // Full-time: Chỉ thưởng chuyên cần khi có phát sinh giờ làm việc thực tế
+                if (actualHours != null && actualHours.compareTo(BigDecimal.ZERO) > 0) {
+                    attendanceBonus = ATTENDANCE_BONUS_FULLTIME;
+                }
             }
         }
         item.setAttendanceBonus(attendanceBonus.setScale(0, RoundingMode.HALF_UP));
