@@ -14,6 +14,10 @@ import com.company.hrms.modules.leave.domain.LeaveRequest;
 import com.company.hrms.modules.leave.domain.LeaveType;
 import com.company.hrms.modules.leave.repository.LeaveRequestRepository;
 import com.company.hrms.modules.leave.repository.LeaveTypeRepository;
+import com.company.hrms.modules.payroll.domain.SalaryContract;
+import com.company.hrms.modules.payroll.repository.SalaryContractRepository;
+import com.company.hrms.modules.schedule.domain.ShiftAssignment;
+import com.company.hrms.modules.schedule.repository.ShiftAssignmentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,18 +36,24 @@ public class DashboardServiceImpl implements DashboardService {
     private final AttendanceCorrectionRepository attendanceCorrectionRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final LeaveTypeRepository leaveTypeRepository;
+    private final SalaryContractRepository salaryContractRepository;
+    private final ShiftAssignmentRepository shiftAssignmentRepository;
 
     public DashboardServiceImpl(
             EmployeeRepository employeeRepository,
             AttendanceRecordRepository attendanceRecordRepository,
             AttendanceCorrectionRepository attendanceCorrectionRepository,
             LeaveRequestRepository leaveRequestRepository,
-            LeaveTypeRepository leaveTypeRepository) {
+            LeaveTypeRepository leaveTypeRepository,
+            SalaryContractRepository salaryContractRepository,
+            ShiftAssignmentRepository shiftAssignmentRepository) {
         this.employeeRepository = employeeRepository;
         this.attendanceRecordRepository = attendanceRecordRepository;
         this.attendanceCorrectionRepository = attendanceCorrectionRepository;
         this.leaveRequestRepository = leaveRequestRepository;
         this.leaveTypeRepository = leaveTypeRepository;
+        this.salaryContractRepository = salaryContractRepository;
+        this.shiftAssignmentRepository = shiftAssignmentRepository;
     }
 
     @Override
@@ -77,7 +87,19 @@ public class DashboardServiceImpl implements DashboardService {
             onLeaveCount = activeLeaves.stream().map(LeaveRequest::getEmployeeId).distinct().count();
         }
 
-        double activeContractRate = totalEmployees > 0 ? 100.0 : 0.0;
+        double activeContractRate = 0.0;
+        if (!empIds.isEmpty()) {
+            List<SalaryContract> activeContracts = salaryContractRepository.findAllByEmployeeIdInAndIsActiveTrue(new ArrayList<>(empIds));
+            long activeContractCount = activeContracts.stream()
+                    .filter(sc -> (sc.getEffectiveFrom() == null || !sc.getEffectiveFrom().isAfter(today))
+                               && (sc.getEffectiveTo() == null || !sc.getEffectiveTo().isBefore(today)))
+                    .map(SalaryContract::getEmployeeId)
+                    .distinct()
+                    .count();
+            activeContractRate = totalEmployees > 0
+                    ? Math.round(((double) activeContractCount / totalEmployees * 100.0) * 10.0) / 10.0
+                    : 0.0;
+        }
         double attendanceRate = totalEmployees > 0
                 ? Math.round(((double) presentCount / totalEmployees * 100.0) * 10.0) / 10.0
                 : 0.0;
@@ -164,7 +186,6 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public List<AttendanceTrendDto> getAttendanceTrends(Long branchId) {
         List<Employee> employees = getActiveEmployees(branchId);
-        long totalEmp = employees.size();
         Set<Long> empIds = employees.stream().map(Employee::getId).collect(Collectors.toSet());
 
         LocalDate today = LocalDate.now();
@@ -175,17 +196,29 @@ public class DashboardServiceImpl implements DashboardService {
                 .filter(r -> empIds.contains(r.getEmployeeId()))
                 .collect(Collectors.groupingBy(AttendanceRecord::getWorkDate));
 
+        List<ShiftAssignment> assignments = empIds.isEmpty() ? Collections.emptyList()
+                : shiftAssignmentRepository.findAllByEmployeeIdInAndWorkDateBetween(new ArrayList<>(empIds), startDate, today);
+        Map<LocalDate, Set<Long>> scheduledEmpsByDate = assignments.stream()
+                .filter(a -> a.getStatus() == null || !"CANCELLED".equalsIgnoreCase(a.getStatus()))
+                .collect(Collectors.groupingBy(
+                        ShiftAssignment::getWorkDate,
+                        Collectors.mapping(ShiftAssignment::getEmployeeId, Collectors.toSet())
+                ));
+
         List<AttendanceTrendDto> list = new ArrayList<>();
 
         for (int i = 6; i >= 0; i--) {
             LocalDate d = today.minusDays(i);
+            Set<Long> scheduledEmpIds = scheduledEmpsByDate.getOrDefault(d, Collections.emptySet());
+            int scheduledCount = scheduledEmpIds.size();
+
             List<AttendanceRecord> dayRecords = recordsByDate.getOrDefault(d, Collections.emptyList());
 
             int onTimeCount = 0;
             int lateCount = 0;
 
             for (AttendanceRecord r : dayRecords) {
-                if (r.getCheckInTime() != null) {
+                if (r.getCheckInTime() != null && scheduledEmpIds.contains(r.getEmployeeId())) {
                     if ((r.getLateMinutes() != null && r.getLateMinutes() > 0) || "LATE".equalsIgnoreCase(r.getStatus())) {
                         lateCount++;
                     } else {
@@ -194,11 +227,20 @@ public class DashboardServiceImpl implements DashboardService {
                 }
             }
 
-            int absentCount = Math.max(0, (int) totalEmp - (onTimeCount + lateCount));
+            int onTimePct;
+            int latePct;
+            int absentPct;
 
-            int onTimePct = totalEmp > 0 ? (int) Math.round((double) onTimeCount / totalEmp * 100.0) : 0;
-            int latePct = totalEmp > 0 ? (int) Math.round((double) lateCount / totalEmp * 100.0) : 0;
-            int absentPct = Math.max(0, 100 - onTimePct - latePct);
+            if (scheduledCount > 0) {
+                onTimePct = (int) Math.round((double) onTimeCount / scheduledCount * 100.0);
+                latePct = (int) Math.round((double) lateCount / scheduledCount * 100.0);
+                absentPct = Math.max(0, 100 - onTimePct - latePct);
+            } else {
+                // Ngày không có lịch xếp ca làm việc -> không tính vắng mặt
+                onTimePct = 100;
+                latePct = 0;
+                absentPct = 0;
+            }
 
             list.add(new AttendanceTrendDto(
                     d.toString(),

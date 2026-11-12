@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
+import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 import { dashboardService, type DashboardOverview } from './api/dashboardService';
 import { TrendBarChart } from '@/components/charts/TrendBarChart';
 import { QuickAttendanceCard } from './components/QuickAttendanceCard';
@@ -10,7 +11,8 @@ import { format, addDays } from 'date-fns';
 
 export const DashboardPage: React.FC = () => {
   const { currentUser, currentRole } = useAuthStore();
-  const { assignments } = useScheduleStore();
+  const { assignments, fetchWeeklySchedule } = useScheduleStore();
+  const { fetchRecords } = useAttendanceStore();
 
   const isEmployeeRole = currentRole === 'ROLE_EMPLOYEE';
   const isDirector = currentRole === 'ROLE_DIRECTOR';
@@ -26,7 +28,6 @@ export const DashboardPage: React.FC = () => {
   });
 
   useEffect(() => {
-
     let isMounted = true;
     dashboardService
       .getOverview(effectiveBranchId)
@@ -39,10 +40,21 @@ export const DashboardPage: React.FC = () => {
         console.warn('Could not fetch dashboard overview:', err);
       });
 
+    const todayDate = new Date();
+    const dayOfWeek = todayDate.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = addDays(todayDate, diffToMonday);
+    const mondayStr = format(monday, 'yyyy-MM-dd');
+    const todayStr = format(todayDate, 'yyyy-MM-dd');
+
+    const branchId = currentUser?.branchId || 1;
+    fetchWeeklySchedule(branchId, mondayStr);
+    fetchRecords(todayStr, branchId);
+
     return () => {
       isMounted = false;
     };
-  }, [effectiveBranchId]);
+  }, [effectiveBranchId, currentUser?.branchId, fetchWeeklySchedule, fetchRecords]);
 
   // Today & Tomorrow shifts for Employee
   const today = new Date();

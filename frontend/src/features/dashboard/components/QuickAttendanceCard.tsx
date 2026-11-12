@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
+import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
 import { LogIn, LogOut, CheckCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { UserAvatar } from '@/components/common/UserAvatar';
@@ -9,25 +10,46 @@ import { UserAvatar } from '@/components/common/UserAvatar';
 export const QuickAttendanceCard: React.FC = () => {
   const { currentUser } = useAuthStore();
   const { addToast } = useUIStore();
-  const { checkIn, checkOut, records } = useAttendanceStore();
+  const { checkIn, checkOut, records, fetchRecords } = useAttendanceStore();
+  const { assignments } = useScheduleStore();
 
   const today = format(new Date(), 'yyyy-MM-dd');
+
+  useEffect(() => {
+    fetchRecords?.(today, currentUser?.branchId || 1);
+  }, [today, currentUser?.branchId, fetchRecords]);
+
   const todayRecord = records.find((r) => r.employeeId === currentUser.id && r.workDate === today);
   const isCheckedIn = !!todayRecord?.checkInTime && !todayRecord?.checkOutTime;
-  const checkInTime = todayRecord?.checkInTime ? todayRecord.checkInTime.split('T')[1]?.slice(0, 8) || todayRecord.checkInTime : '08:00:00';
-  const [elapsedSeconds, setElapsedSeconds] = useState(2 * 3600 + 15 * 60);
+  const checkInTime = todayRecord?.checkInTime
+    ? (todayRecord.checkInTime.includes('T') ? todayRecord.checkInTime.split('T')[1]?.slice(0, 8) : todayRecord.checkInTime)
+    : '--:--:--';
+
+  const todayKey = `${currentUser.id}_${today}`;
+  const todayShifts = (assignments[todayKey] || []).filter((a) => a.status !== 'CANCELLED');
+  const activeShiftName = todayShifts.length > 0
+    ? `${todayShifts[0].snapshotShiftName} (${todayShifts[0].snapshotStartTime.slice(0, 5)} - ${todayShifts[0].snapshotEndTime.slice(0, 5)})`
+    : 'Chưa có ca xếp lịch hôm nay';
+
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
-    if (isCheckedIn) {
+    if (isCheckedIn && todayRecord?.checkInTime) {
+      const inDate = new Date(todayRecord.checkInTime);
+      const diffSec = Math.max(0, Math.floor((Date.now() - inDate.getTime()) / 1000));
+      setElapsedSeconds(diffSec);
+
       timer = setInterval(() => {
         setElapsedSeconds((prev) => prev + 1);
       }, 1000);
+    } else {
+      setElapsedSeconds(0);
     }
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isCheckedIn]);
+  }, [isCheckedIn, todayRecord?.checkInTime]);
 
   const formatElapsed = (sec: number) => {
     const h = Math.floor(sec / 3600);
@@ -73,7 +95,7 @@ export const QuickAttendanceCard: React.FC = () => {
         />
         <div>
           <div style={{ fontWeight: 600, fontSize: 'var(--font-body-md)' }}>{currentUser.fullName}</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{currentUser.employeeCode} • Ca Sáng (08:00 - 17:00)</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{currentUser.employeeCode} • {activeShiftName}</div>
         </div>
       </div>
 
@@ -81,15 +103,24 @@ export const QuickAttendanceCard: React.FC = () => {
         <div
           style={{
             padding: '10px 14px',
-            backgroundColor: '#f6ffed',
-            border: '1px solid #b7eb8f',
+            backgroundColor: todayRecord?.status === 'LATE' ? '#fffbe6' : '#f6ffed',
+            border: `1px solid ${todayRecord?.status === 'LATE' ? '#ffe58f' : '#b7eb8f'}`,
             borderRadius: 'var(--radius-md)',
             marginBottom: 14,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#389e0d', fontSize: 'var(--font-caption)', fontWeight: 600 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              color: todayRecord?.status === 'LATE' ? '#d46b08' : '#389e0d',
+              fontSize: 'var(--font-caption)',
+              fontWeight: 600,
+            }}
+          >
             <CheckCircle size={15} />
-            Đã check-in lúc {checkInTime} (Đúng giờ)
+            Đã check-in lúc {checkInTime} {todayRecord?.status === 'LATE' ? '(Đi muộn)' : '(Đúng giờ)'}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>
             <Clock size={13} />

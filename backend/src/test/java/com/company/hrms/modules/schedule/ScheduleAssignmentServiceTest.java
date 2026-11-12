@@ -219,7 +219,7 @@ public class ScheduleAssignmentServiceTest {
 
         sampleShift.setMaxStaffing(1);
 
-        when(scheduleRepository.findById(10L)).thenReturn(Optional.of(draftSchedule));
+        when(scheduleRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(draftSchedule));
         when(employeeRepository.findByUserIdAndDeletedAtIsNull(99L)).thenReturn(Optional.of(standardEmployee));
         when(workShiftRepository.findByIdAndDeletedAtIsNull(100L)).thenReturn(Optional.of(sampleShift));
 

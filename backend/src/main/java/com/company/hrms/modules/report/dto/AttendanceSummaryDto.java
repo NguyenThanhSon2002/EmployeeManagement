@@ -21,6 +21,9 @@ public class AttendanceSummaryDto {
     @JsonProperty("total_working_days")
     private Long totalWorkingDays = 0L;
 
+    @JsonProperty("total_scheduled_hours")
+    private BigDecimal totalScheduledHours = BigDecimal.ZERO;
+
     @JsonProperty("total_actual_hours")
     private BigDecimal totalActualHours = BigDecimal.ZERO;
 
@@ -52,6 +55,8 @@ public class AttendanceSummaryDto {
     public void setBranchName(String branchName) { this.branchName = branchName; }
     public Long getTotalWorkingDays() { return totalWorkingDays; }
     public void setTotalWorkingDays(Long totalWorkingDays) { this.totalWorkingDays = totalWorkingDays; }
+    public BigDecimal getTotalScheduledHours() { return totalScheduledHours; }
+    public void setTotalScheduledHours(BigDecimal totalScheduledHours) { this.totalScheduledHours = totalScheduledHours; }
     public BigDecimal getTotalActualHours() { return totalActualHours; }
     public void setTotalActualHours(BigDecimal totalActualHours) { this.totalActualHours = totalActualHours; }
     public BigDecimal getTotalRegularHours() { return totalRegularHours; }

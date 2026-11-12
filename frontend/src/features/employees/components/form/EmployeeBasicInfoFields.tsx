@@ -55,7 +55,7 @@ export const EmployeeBasicInfoFields: React.FC<EmployeeBasicInfoFieldsProps> = (
               color: '#334155',
             }}
           >
-            Mã Nhân Viên <span style={{ color: '#DC2626' }}>*</span>
+            Mã Nhân Viên {initialData && <span style={{ color: '#DC2626' }}>*</span>}
           </label>
           <input
             type="text"
@@ -63,7 +63,7 @@ export const EmployeeBasicInfoFields: React.FC<EmployeeBasicInfoFieldsProps> = (
             value={formData.employeeCode}
             onChange={(e) => updateField('employeeCode', e.target.value.toUpperCase())}
             disabled={!!initialData}
-            placeholder="VD: EMP-101"
+            placeholder={initialData ? "VD: EMP-001" : "Để trống để tự động cấp mã tuần tự (VD: EMP-022)"}
             style={{
               width: '100%',
               fontFamily: 'monospace',

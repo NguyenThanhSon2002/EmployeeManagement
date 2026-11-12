@@ -198,7 +198,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => {
             id: empSchedule.employee_id,
             employeeCode: empSchedule.employee_code,
             fullName: empSchedule.full_name,
-            email: `${empSchedule.employee_code.toLowerCase()}@example.com`,
+            email: dirEmp?.email || (empSchedule.employee_code ? `${empSchedule.employee_code.toLowerCase()}@company.com` : ''),
             phoneNumber: dirEmp?.phoneNumber || '',
             branchId: (empSchedule as any).home_branch_id || dirEmp?.branchId || data.branch_id || branchId,
             positionId: dirEmp?.positionId || 3,
