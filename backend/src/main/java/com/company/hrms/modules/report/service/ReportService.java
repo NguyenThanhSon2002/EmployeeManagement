@@ -7,10 +7,14 @@ import com.company.hrms.modules.branch.repository.BranchRepository;
 import com.company.hrms.modules.employee.domain.Employee;
 import com.company.hrms.modules.employee.repository.EmployeeRepository;
 import com.company.hrms.modules.report.dto.AttendanceSummaryDto;
+import com.company.hrms.modules.schedule.domain.ShiftAssignment;
+import com.company.hrms.modules.schedule.repository.ShiftAssignmentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
@@ -22,14 +26,17 @@ public class ReportService {
     private final AttendanceRecordRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
     private final BranchRepository branchRepository;
+    private final ShiftAssignmentRepository shiftAssignmentRepository;
 
     public ReportService(
             AttendanceRecordRepository attendanceRepository,
             EmployeeRepository employeeRepository,
-            BranchRepository branchRepository) {
+            BranchRepository branchRepository,
+            ShiftAssignmentRepository shiftAssignmentRepository) {
         this.attendanceRepository = attendanceRepository;
         this.employeeRepository = employeeRepository;
         this.branchRepository = branchRepository;
+        this.shiftAssignmentRepository = shiftAssignmentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -46,6 +53,13 @@ public class ReportService {
 
         Map<Long, List<AttendanceRecord>> recordsByEmp = records.stream()
                 .collect(Collectors.groupingBy(AttendanceRecord::getEmployeeId));
+
+        List<Long> empIds = employees.stream().map(Employee::getId).collect(Collectors.toList());
+        List<ShiftAssignment> assignments = empIds.isEmpty() ? Collections.emptyList()
+                : shiftAssignmentRepository.findAllByEmployeeIdInAndWorkDateBetween(empIds, fromDate, toDate);
+        Map<Long, List<ShiftAssignment>> assignmentsByEmp = assignments.stream()
+                .filter(a -> a.getStatus() == null || !"CANCELLED".equalsIgnoreCase(a.getStatus()))
+                .collect(Collectors.groupingBy(ShiftAssignment::getEmployeeId));
 
         Map<Long, String> branchMap = branchRepository.findAll().stream()
                 .collect(Collectors.toMap(Branch::getId, Branch::getBranchName));
@@ -79,6 +93,18 @@ public class ReportService {
                     if (r.getEarlyLeaveMinutes() != null && r.getEarlyLeaveMinutes() > 0) earlyLeaveCount++;
                 }
             }
+
+            List<ShiftAssignment> empAssignments = assignmentsByEmp.getOrDefault(emp.getId(), Collections.emptyList());
+            long totalScheduledMinutes = 0;
+            for (ShiftAssignment sa : empAssignments) {
+                if (sa.getPlannedStartTime() != null && sa.getPlannedEndTime() != null) {
+                    long shiftMin = Math.max(0, Duration.between(sa.getPlannedStartTime(), sa.getPlannedEndTime()).toMinutes());
+                    int breakMin = sa.getSnapshotBreakMinutes() != null ? sa.getSnapshotBreakMinutes() : 0;
+                    totalScheduledMinutes += Math.max(0, shiftMin - breakMin);
+                }
+            }
+            BigDecimal totalScheduled = BigDecimal.valueOf(totalScheduledMinutes).divide(new BigDecimal("60"), 2, RoundingMode.HALF_UP);
+            summary.setTotalScheduledHours(totalScheduled);
 
             summary.setTotalWorkingDays(workingDays);
             summary.setTotalActualHours(totalActual);

@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
-import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
-import { Download, Search } from 'lucide-react';
+import { reportService, type AttendanceSummary } from '../api/reportService';
+import { Download, Search, Calendar, Loader2, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 
 export const LateEarlyReport: React.FC = () => {
-  const { records } = useAttendanceStore();
   const { employees, branches } = useDirectoryStore();
   const { currentRole, currentUser } = useAuthStore();
 
@@ -15,76 +14,190 @@ export const LateEarlyReport: React.FC = () => {
 
   const [branchFilter, setBranchFilter] = useState<number | null>(!isDirector ? userBranchId : null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [onlyViolations, setOnlyViolations] = useState<boolean>(true);
+
+  const currentDate = new Date();
+  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1);
+
+  const [summaryList, setSummaryList] = useState<AttendanceSummary[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const effectiveBranchId = !isDirector ? userBranchId : branchFilter;
 
-  // Collect records with infractions
-  const violationRecords = records.filter(
-    (r) => r.lateMinutes > 0 || r.earlyLeaveMinutes > 0 || r.status === 'MISSING_CHECKOUT' || r.status === 'LATE'
-  );
+  // Fetch real summary data from backend
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    reportService
+      .getAttendanceSummary(effectiveBranchId || undefined, selectedYear, selectedMonth)
+      .then((res) => {
+        if (isMounted) {
+          setSummaryList(res || []);
+        }
+      })
+      .catch((err) => {
+        console.warn('Backend attendance-summary failed in LateEarlyReport:', err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
 
-  const filteredViolations = violationRecords.filter((r) => {
-    const emp = employees.find((e) => e.id === r.employeeId);
-    if (!emp) return false;
-    if (effectiveBranchId && emp.branchId !== effectiveBranchId) return false;
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveBranchId, selectedYear, selectedMonth]);
+
+  const reportData = (summaryList.length > 0
+    ? summaryList.map((item) => {
+        const lateCount = item.late_count || 0;
+        const earlyCount = item.early_leave_count || 0;
+        const totalViolations = lateCount + earlyCount;
+
+        return {
+          employeeId: item.employee_id,
+          employeeCode: item.employee_code,
+          fullName: item.full_name,
+          branchName: item.branch_name,
+          workingDays: item.total_working_days || 0,
+          lateCount,
+          earlyCount,
+          totalViolations,
+        };
+      })
+    : employees.map((emp) => {
+        const branch = branches.find((b) => b.id === emp.branchId);
+        return {
+          employeeId: emp.id,
+          employeeCode: emp.employeeCode,
+          fullName: emp.fullName,
+          branchName: branch?.branchName || '',
+          workingDays: 0,
+          lateCount: 0,
+          earlyCount: 0,
+          totalViolations: 0,
+        };
+      })
+  ).filter((item) => {
+    if (onlyViolations && item.totalViolations === 0) return false;
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
-      return emp.fullName.toLowerCase().includes(q) || emp.employeeCode.toLowerCase().includes(q);
+      return item.fullName.toLowerCase().includes(q) || item.employeeCode.toLowerCase().includes(q);
     }
     return true;
   });
+
+  const totalLateCount = summaryList.reduce((sum, item) => sum + (item.late_count || 0), 0);
+  const totalEarlyCount = summaryList.reduce((sum, item) => sum + (item.early_leave_count || 0), 0);
+  const totalViolatingEmployees = summaryList.filter(
+    (item) => (item.late_count || 0) > 0 || (item.early_leave_count || 0) > 0
+  ).length;
 
   const handleExportCsv = () => {
     const columns = [
       { key: 'employeeCode', header: 'Mã NV' },
       { key: 'fullName', header: 'Họ và tên' },
       { key: 'branchName', header: 'Chi nhánh' },
-      { key: 'workDate', header: 'Ngày vi phạm' },
-      { key: 'violationType', header: 'Hành vi vi phạm' },
-      { key: 'minutes', header: 'Thời lượng (phút)' },
-      { key: 'checkIn', header: 'Giờ vào' },
-      { key: 'checkOut', header: 'Giờ ra' },
-      { key: 'isResolved', header: 'Trạng thái giải trình' },
+      { key: 'workingDays', header: 'Số ngày làm việc' },
+      { key: 'lateCount', header: 'Số lần đi muộn' },
+      { key: 'earlyCount', header: 'Số lần về sớm' },
+      { key: 'totalViolations', header: 'Tổng vi phạm' },
+      { key: 'warningLevel', header: 'Mức cảnh báo' },
     ];
 
-    const dataRows = filteredViolations.map((r) => {
-      const emp = employees.find((e) => e.id === r.employeeId);
-      const branch = branches.find((b) => b.id === emp?.branchId);
-
-      let vType = 'Đi muộn';
-      let mins = r.lateMinutes;
-      if (r.status === 'MISSING_CHECKOUT') {
-        vType = 'Thiếu Check-out';
-        mins = 0;
-      } else if (r.earlyLeaveMinutes > 0) {
-        vType = 'Về sớm';
-        mins = r.earlyLeaveMinutes;
-      }
-
-      return {
-        employeeCode: emp?.employeeCode || '',
-        fullName: emp?.fullName || '',
-        branchName: branch?.branchName || '',
-        workDate: r.workDate,
-        violationType: vType,
-        minutes: mins > 0 ? mins.toString() : '-',
-        checkIn: r.checkInTime ? r.checkInTime.split('T')[1]?.substring(0, 5) || '' : '',
-        checkOut: r.checkOutTime ? r.checkOutTime.split('T')[1]?.substring(0, 5) || '' : '',
-        isResolved: r.isManuallyCorrected ? 'Đã giải trình hợp lệ' : 'Chưa giải trình',
-      };
-    });
+    const dataRows = reportData.map((d) => ({
+      employeeCode: d.employeeCode,
+      fullName: d.fullName,
+      branchName: d.branchName,
+      workingDays: d.workingDays.toString(),
+      lateCount: d.lateCount.toString(),
+      earlyCount: d.earlyCount.toString(),
+      totalViolations: d.totalViolations.toString(),
+      warningLevel:
+        d.totalViolations === 0
+          ? 'Tốt (0 vi phạm)'
+          : d.totalViolations < 3
+          ? 'Nhắc nhở (1-2 lần)'
+          : 'Kỷ luật (>= 3 lần)',
+    }));
 
     exportToCsv(
-      'BaoCao_ViPham_DiMuon_VeSom.csv',
+      `BaoCao_ViPham_DiMuon_VeSom_${selectedMonth}_${selectedYear}.csv`,
       dataRows,
       columns,
-      'Báo cáo Vi phạm Thời gian Lao động (Đi muộn / Về sớm / Thiếu quét thẻ)'
+      `Báo cáo Thống kê Vi phạm Đi muộn / Về sớm (Tháng ${selectedMonth}/${selectedYear})`
     );
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Toolbar */}
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              backgroundColor: '#FFF1F0',
+              color: '#F5222D',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AlertTriangle size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>Nhân sự có vi phạm</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: '#CF1322' }}>{totalViolatingEmployees}</div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              backgroundColor: '#FFF7E6',
+              color: '#FA8C16',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Clock size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>Tổng lượt đi muộn</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: '#D46B08' }}>{totalLateCount}</div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              backgroundColor: '#F6FFED',
+              color: '#52C41A',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <CheckCircle size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>Tổng lượt về sớm</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: '#389E0D' }}>{totalEarlyCount}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter toolbar */}
       <div
         className="card"
         style={{
@@ -97,6 +210,35 @@ export const LateEarlyReport: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Month / Year selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Calendar size={18} style={{ color: 'var(--color-text-secondary)' }} />
+            <select
+              className="input"
+              style={{ width: 110, padding: '6px 10px', fontSize: '13px' }}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  Tháng {m}
+                </option>
+              ))}
+            </select>
+            <select
+              className="input"
+              style={{ width: 100, padding: '6px 10px', fontSize: '13px' }}
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              {[2024, 2025, 2026, 2027].map((y) => (
+                <option key={y} value={y}>
+                  Năm {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <select
             className="input"
             style={{
@@ -126,7 +268,7 @@ export const LateEarlyReport: React.FC = () => {
             ))}
           </select>
 
-          <div style={{ position: 'relative', width: 280 }}>
+          <div style={{ position: 'relative', width: 240 }}>
             <Search size={16} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--color-text-muted)' }} />
             <input
               type="text"
@@ -137,77 +279,95 @@ export const LateEarlyReport: React.FC = () => {
               style={{ paddingLeft: 34, width: '100%' }}
             />
           </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
+            <input
+              type="checkbox"
+              checked={onlyViolations}
+              onChange={(e) => setOnlyViolations(e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            <span>Chỉ hiện NV có vi phạm</span>
+          </label>
         </div>
 
-        <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
+        <button type="button" className="btn btn-primary" onClick={handleExportCsv} disabled={isLoading}>
           <Download size={16} /> Xuất Báo Cáo Vi Phạm
         </button>
       </div>
 
       {/* Table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th>Mã NV</th>
-              <th>Họ và tên</th>
-              <th>Chi nhánh</th>
-              <th>Ngày</th>
-              <th>Giờ vào / ra</th>
-              <th>Hành vi</th>
-              <th style={{ textAlign: 'right' }}>Thời lượng</th>
-              <th>Trạng thái giải trình</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredViolations.length === 0 ? (
+        {isLoading ? (
+          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            <Loader2 className="animate-spin" size={32} style={{ margin: '0 auto 12px' }} />
+            <p>Đang tải dữ liệu vi phạm chấm công...</p>
+          </div>
+        ) : (
+          <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-secondary)' }}>
-                  Không có trường hợp vi phạm đi muộn hoặc thiếu check-out nào.
-                </td>
+                <th>Mã NV</th>
+                <th>Họ và tên</th>
+                <th>Chi nhánh</th>
+                <th style={{ textAlign: 'right' }}>Ngày làm việc</th>
+                <th style={{ textAlign: 'right' }}>Đi muộn (lần)</th>
+                <th style={{ textAlign: 'right' }}>Về sớm (lần)</th>
+                <th style={{ textAlign: 'right' }}>Tổng vi phạm</th>
+                <th>Mức độ cảnh báo</th>
               </tr>
-            ) : (
-              filteredViolations.map((r) => {
-                const emp = employees.find((e) => e.id === r.employeeId);
-                const branch = branches.find((b) => b.id === emp?.branchId);
+            </thead>
+            <tbody>
+              {reportData.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-secondary)' }}>
+                    {onlyViolations
+                      ? 'Không có trường hợp vi phạm đi muộn hoặc về sớm nào trong kỳ này.'
+                      : 'Không có dữ liệu nhân sự phù hợp.'}
+                  </td>
+                </tr>
+              ) : (
+                reportData.map((d) => {
+                  const isSevere = d.totalViolations >= 3;
+                  const isWarning = d.totalViolations > 0 && d.totalViolations < 3;
 
-                const inStr = r.checkInTime ? r.checkInTime.split('T')[1]?.substring(0, 5) : '--:--';
-                const outStr = r.checkOutTime ? r.checkOutTime.split('T')[1]?.substring(0, 5) : '--:--';
-
-                const isMissing = r.status === 'MISSING_CHECKOUT';
-
-                return (
-                  <tr key={r.id}>
-                    <td>
-                      <span style={{ fontWeight: 600 }}>{emp?.employeeCode}</span>
-                    </td>
-                    <td>{emp?.fullName}</td>
-                    <td>{branch?.branchName}</td>
-                    <td>{r.workDate}</td>
-                    <td>
-                      <span>{inStr} - {outStr}</span>
-                    </td>
-                    <td>
-                      <span className={`badge ${isMissing ? 'badge-danger' : 'badge-warning'}`}>
-                        {isMissing ? 'Thiếu Check-out' : r.lateMinutes > 0 ? 'Đi muộn' : 'Về sớm'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: '#cf1322' }}>
-                      {r.lateMinutes > 0 ? `+${r.lateMinutes} phút` : r.earlyLeaveMinutes > 0 ? `-${r.earlyLeaveMinutes} phút` : '-'}
-                    </td>
-                    <td>
-                      {r.isManuallyCorrected ? (
-                        <span className="badge badge-success">Đã giải trình</span>
-                      ) : (
-                        <span className="badge badge-warning">Chờ giải trình</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                  return (
+                    <tr key={d.employeeId}>
+                      <td>
+                        <span style={{ fontWeight: 600 }}>{d.employeeCode}</span>
+                      </td>
+                      <td>{d.fullName}</td>
+                      <td>{d.branchName}</td>
+                      <td style={{ textAlign: 'right' }}>{d.workingDays} ngày</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: d.lateCount > 0 ? '#CF1322' : 'inherit' }}>
+                        {d.lateCount > 0 ? `${d.lateCount} lần` : '-'}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: d.earlyCount > 0 ? '#FA8C16' : 'inherit' }}>
+                        {d.earlyCount > 0 ? `${d.earlyCount} lần` : '-'}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                        {d.totalViolations > 0 ? (
+                          <span style={{ color: isSevere ? '#CF1322' : '#D46B08' }}>{d.totalViolations}</span>
+                        ) : (
+                          <span style={{ color: '#389E0D' }}>0</span>
+                        )}
+                      </td>
+                      <td>
+                        {isSevere ? (
+                          <span className="badge badge-danger">Kỷ luật (≥ 3 lần)</span>
+                        ) : isWarning ? (
+                          <span className="badge badge-warning">Nhắc nhở</span>
+                        ) : (
+                          <span className="badge badge-success">Tốt (Tuân thủ)</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

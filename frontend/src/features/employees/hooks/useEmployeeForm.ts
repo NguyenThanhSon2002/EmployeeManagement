@@ -89,7 +89,7 @@ export function useEmployeeForm({
       });
     } else {
       setFormData({
-        employeeCode: `EMP-${Math.floor(100 + Math.random() * 900)}`,
+        employeeCode: '',
         fullName: '',
         email: '',
         phoneNumber: '',
@@ -136,7 +136,7 @@ export function useEmployeeForm({
   const validate = (): boolean => {
     const err: Record<string, string> = {};
 
-    if (!formData.employeeCode.trim()) {
+    if (initialData && !formData.employeeCode.trim()) {
       err.employeeCode = 'Mã nhân viên không được để trống';
     }
 

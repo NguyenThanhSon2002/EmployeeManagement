@@ -6,6 +6,7 @@ export interface AttendanceSummary {
   full_name: string;
   branch_name: string;
   total_working_days: number;
+  total_scheduled_hours?: number;
   total_actual_hours: number;
   total_regular_hours: number;
   total_overtime_hours: number;

@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDirectoryStore } from '@/shared/directory/useDirectoryStore';
-import { useScheduleStore } from '@/features/schedule/store/useScheduleStore';
-import { useAttendanceStore } from '@/features/attendance/store/useAttendanceStore';
 import { useAuthStore } from '@/shared/auth/useAuthStore';
-import { calculateShiftDurations } from '@/utils/schedule-calc.utils';
 import { exportToCsv } from '@/utils/csv-exporter.utils';
-import { Download, Search } from 'lucide-react';
+import { reportService, type AttendanceSummary } from '../api/reportService';
+import { Download, Search, Calendar, Loader2 } from 'lucide-react';
 
 export const ScheduledVsActualTable: React.FC = () => {
-  const { assignments } = useScheduleStore();
-  const { records } = useAttendanceStore();
   const { employees, branches } = useDirectoryStore();
   const { currentRole, currentUser } = useAuthStore();
 
@@ -19,46 +15,71 @@ export const ScheduledVsActualTable: React.FC = () => {
   const [branchFilter, setBranchFilter] = useState<number | null>(!isDirector ? userBranchId : null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const currentDate = new Date();
+  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1);
+
+  const [summaryList, setSummaryList] = useState<AttendanceSummary[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const effectiveBranchId = !isDirector ? userBranchId : branchFilter;
 
-  const comparisonData = employees.map((emp) => {
-    const branch = branches.find((b) => b.id === emp.branchId);
+  // Fetch real summary data from backend
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    reportService
+      .getAttendanceSummary(effectiveBranchId || undefined, selectedYear, selectedMonth)
+      .then((res) => {
+        if (isMounted) {
+          setSummaryList(res || []);
+        }
+      })
+      .catch((err) => {
+        console.warn('Backend attendance-summary failed in ScheduledVsActualTable:', err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
 
-    // Sum scheduled hours
-    const empAssignments = Object.values(assignments).flat().filter(
-      (a) => a.employeeId === emp.id && a.status === 'ASSIGNED'
-    );
-    let scheduledHours = 0;
-    for (const a of empAssignments) {
-      const { netHours } = calculateShiftDurations(
-        a.snapshotStartTime,
-        a.snapshotEndTime,
-        a.snapshotBreakMinutes,
-        a.snapshotCrossMidnight
-      );
-      scheduledHours += netHours;
-    }
-
-    // Actual hours
-    const empRecords = records.filter((r) => r.employeeId === emp.id);
-    const actualHours = empRecords.reduce((acc, r) => acc + (r.actualHours || 0), 0);
-
-    const diffHours = actualHours - scheduledHours;
-    const fulfillmentRate = scheduledHours > 0 ? (actualHours / scheduledHours) * 100 : (actualHours > 0 ? 100 : 0);
-
-    return {
-      employeeId: emp.id,
-      employeeCode: emp.employeeCode,
-      fullName: emp.fullName,
-      branchId: emp.branchId,
-      branchName: branch?.branchName || '',
-      scheduledHours,
-      actualHours,
-      diffHours,
-      fulfillmentRate,
+    return () => {
+      isMounted = false;
     };
-  }).filter((item) => {
-    if (effectiveBranchId && item.branchId !== effectiveBranchId) return false;
+  }, [effectiveBranchId, selectedYear, selectedMonth]);
+
+  const comparisonData = (summaryList.length > 0
+    ? summaryList.map((item) => {
+        const scheduledHours = item.total_scheduled_hours || 0;
+        const actualHours = item.total_actual_hours || 0;
+        const diffHours = actualHours - scheduledHours;
+        const fulfillmentRate =
+          scheduledHours > 0 ? (actualHours / scheduledHours) * 100 : (actualHours > 0 ? 100 : 0);
+
+        return {
+          employeeId: item.employee_id,
+          employeeCode: item.employee_code,
+          fullName: item.full_name,
+          branchName: item.branch_name,
+          scheduledHours,
+          actualHours,
+          diffHours,
+          fulfillmentRate,
+        };
+      })
+    : employees.map((emp) => {
+        const branch = branches.find((b) => b.id === emp.branchId);
+        return {
+          employeeId: emp.id,
+          employeeCode: emp.employeeCode,
+          fullName: emp.fullName,
+          branchName: branch?.branchName || '',
+          scheduledHours: 0,
+          actualHours: 0,
+          diffHours: 0,
+          fulfillmentRate: 0,
+        };
+      })
+  ).filter((item) => {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       return item.fullName.toLowerCase().includes(q) || item.employeeCode.toLowerCase().includes(q);
@@ -83,15 +104,15 @@ export const ScheduledVsActualTable: React.FC = () => {
       branchName: d.branchName,
       scheduledHours: d.scheduledHours.toFixed(1),
       actualHours: d.actualHours.toFixed(1),
-      diffHours: (d.diffHours > 0 ? `+${d.diffHours.toFixed(1)}` : d.diffHours.toFixed(1)),
+      diffHours: d.diffHours > 0 ? `+${d.diffHours.toFixed(1)}` : d.diffHours.toFixed(1),
       fulfillmentRate: `${d.fulfillmentRate.toFixed(1)}%`,
     }));
 
     exportToCsv(
-      'DoiChieu_KeHoach_ThucTe.csv',
+      `DoiChieu_KeHoach_ThucTe_${selectedMonth}_${selectedYear}.csv`,
       dataRows,
       columns,
-      'Báo cáo Đối chiếu Giờ Kế Hoạch vs Giờ Thực Tế'
+      `Báo cáo Đối chiếu Giờ Kế Hoạch vs Giờ Thực Tế (Tháng ${selectedMonth}/${selectedYear})`
     );
   };
 
@@ -110,6 +131,35 @@ export const ScheduledVsActualTable: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Month / Year selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Calendar size={18} style={{ color: 'var(--color-text-secondary)' }} />
+            <select
+              className="input"
+              style={{ width: 110, padding: '6px 10px', fontSize: '13px' }}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  Tháng {m}
+                </option>
+              ))}
+            </select>
+            <select
+              className="input"
+              style={{ width: 100, padding: '6px 10px', fontSize: '13px' }}
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              {[2024, 2025, 2026, 2027].map((y) => (
+                <option key={y} value={y}>
+                  Năm {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <select
             className="input"
             style={{
@@ -152,85 +202,103 @@ export const ScheduledVsActualTable: React.FC = () => {
           </div>
         </div>
 
-        <button type="button" className="btn btn-primary" onClick={handleExportCsv}>
+        <button type="button" className="btn btn-primary" onClick={handleExportCsv} disabled={isLoading}>
           <Download size={16} /> Xuất Báo Cáo Đối Chiếu
         </button>
       </div>
 
       {/* Comparison Table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th>Mã NV</th>
-              <th>Họ và tên</th>
-              <th>Chi nhánh</th>
-              <th style={{ textAlign: 'right' }}>Kế hoạch (Scheduled)</th>
-              <th style={{ textAlign: 'right' }}>Thực tế (Actual)</th>
-              <th style={{ textAlign: 'right' }}>Chênh lệch (Diff)</th>
-              <th style={{ textAlign: 'center' }}>Tỷ lệ hoàn thành</th>
-              <th>Đánh giá</th>
-            </tr>
-          </thead>
-          <tbody>
-            {comparisonData.map((d) => {
-              const isUnder = d.diffHours < -1.0;
-              const isOver = d.diffHours > 1.0;
-
-              return (
-                <tr key={d.employeeId}>
-                  <td>
-                    <span style={{ fontWeight: 600 }}>{d.employeeCode}</span>
-                  </td>
-                  <td>{d.fullName}</td>
-                  <td>{d.branchName}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 500 }}>{d.scheduledHours.toFixed(1)}h</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-primary)' }}>
-                    {d.actualHours.toFixed(1)}h
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    <span style={{ color: isUnder ? '#cf1322' : isOver ? '#0958d9' : '#389e0d' }}>
-                      {d.diffHours > 0 ? `+${d.diffHours.toFixed(1)}h` : `${d.diffHours.toFixed(1)}h`}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <div
-                        style={{
-                          width: 60,
-                          height: 8,
-                          backgroundColor: 'var(--color-border)',
-                          borderRadius: 4,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: `${Math.min(100, d.fulfillmentRate)}%`,
-                            height: '100%',
-                            backgroundColor: isUnder ? '#f5222d' : isOver ? '#1890ff' : '#52c41a',
-                          }}
-                        />
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 600 }}>
-                        {d.fulfillmentRate.toFixed(0)}%
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    {isUnder ? (
-                      <span className="badge badge-danger">Thiếu công</span>
-                    ) : isOver ? (
-                      <span className="badge badge-info">Vượt kế hoạch / OT</span>
-                    ) : (
-                      <span className="badge badge-success">Đạt chuẩn 100%</span>
-                    )}
+        {isLoading ? (
+          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            <Loader2 className="animate-spin" size={32} style={{ margin: '0 auto 12px' }} />
+            <p>Đang tải dữ liệu đối chiếu kế hoạch vs thực tế...</p>
+          </div>
+        ) : (
+          <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th>Mã NV</th>
+                <th>Họ và tên</th>
+                <th>Chi nhánh</th>
+                <th style={{ textAlign: 'right' }}>Kế hoạch (Scheduled)</th>
+                <th style={{ textAlign: 'right' }}>Thực tế (Actual)</th>
+                <th style={{ textAlign: 'right' }}>Chênh lệch (Diff)</th>
+                <th style={{ textAlign: 'center' }}>Tỷ lệ hoàn thành</th>
+                <th>Đánh giá</th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparisonData.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-secondary)' }}>
+                    Không có dữ liệu nhân sự phù hợp với điều kiện tìm kiếm.
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ) : (
+                comparisonData.map((d) => {
+                  const isUnder = d.scheduledHours > 0 && d.diffHours < -1.0;
+                  const isOver = d.scheduledHours > 0 && d.diffHours > 1.0;
+                  const isZeroPlan = d.scheduledHours === 0;
+
+                  return (
+                    <tr key={d.employeeId}>
+                      <td>
+                        <span style={{ fontWeight: 600 }}>{d.employeeCode}</span>
+                      </td>
+                      <td>{d.fullName}</td>
+                      <td>{d.branchName}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 500 }}>{d.scheduledHours.toFixed(1)}h</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-primary)' }}>
+                        {d.actualHours.toFixed(1)}h
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                        <span style={{ color: isUnder ? '#cf1322' : isOver ? '#0958d9' : '#389e0d' }}>
+                          {d.diffHours > 0 ? `+${d.diffHours.toFixed(1)}h` : `${d.diffHours.toFixed(1)}h`}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <div
+                            style={{
+                              width: 60,
+                              height: 8,
+                              backgroundColor: 'var(--color-border)',
+                              borderRadius: 4,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: `${Math.min(100, d.fulfillmentRate)}%`,
+                                height: '100%',
+                                backgroundColor: isUnder ? '#f5222d' : isOver ? '#1890ff' : '#52c41a',
+                              }}
+                            />
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 600 }}>
+                            {d.fulfillmentRate.toFixed(0)}%
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        {isZeroPlan ? (
+                          <span className="badge badge-secondary">Chưa xếp ca</span>
+                        ) : isUnder ? (
+                          <span className="badge badge-danger">Thiếu công</span>
+                        ) : isOver ? (
+                          <span className="badge badge-info">Vượt kế hoạch / OT</span>
+                        ) : (
+                          <span className="badge badge-success">Đạt chuẩn 100%</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
